@@ -1034,9 +1034,8 @@ materials, attendance tracking, and collaborative learning tools.''',
                   const SizedBox(height: 40),
 
                   // Version Info
-                
-                    _buildStatsCard(),
-                    const SizedBox(height: 40),
+                  _buildStatsCard(),
+                  const SizedBox(height: 40),
 
                   // Contact Section
                   Container(
