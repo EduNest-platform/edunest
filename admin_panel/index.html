@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <!-- Cache control to prevent unnecessary reloading -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>EduNest Admin Panel</title>
+  <link rel="stylesheet" href="style.css?v=1.2">
+</head>
+<body>
+  <div class="main-bg"></div>
+  <div id="loginPage" class="login-page">
+    <div class="login-card">
+      <div class="logo-large">🎓</div>
+      <h1 class="login-title">EduNest Admin</h1>
+      <p class="login-subtitle">Administrative Dashboard</p>
+      <form id="loginForm">
+        <input id="email" type="email" placeholder="Admin Email" required />
+        <input id="password" type="password" placeholder="Password" required />
+        <button type="submit">Login</button>
+      </form>
+      <div id="authError" class="error-msg"></div>
+      <div id="connectionStatus" style="margin-top:10px;"></div>
+    </div>
+  </div>
+  <!-- Load Supabase library and clients before login.js -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <script src="supabaseClient.js"></script>
+  <script src="supabaseAdmin.js"></script>
+  <script src="login.js?v=1.2"></script>
+</body>
+</html> 

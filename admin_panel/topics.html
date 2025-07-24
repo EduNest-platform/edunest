@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manage Topics - EduNest Admin</title>
+  <link rel="stylesheet" href="topics.css">
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <script src="supabaseClient.js"></script>
+</head>
+<body>
+  <div class="main-bg"></div>
+  <!-- Header -->
+  <header class="header" style="background: linear-gradient(120deg,#6366f1 0%,#60a5fa 50%,#a78bfa 100%); box-shadow: 0 4px 24px rgba(99,102,241,0.13); border-bottom-left-radius: 18px; border-bottom-right-radius: 18px; position: relative; z-index: 10;">
+    <div class="header-content">
+      <div class="appbar-top-row">
+        <div class="appbar-title-center">
+          <span class="page-title">Manage Topics</span>
+        </div>
+        <div class="appbar-right">
+          <a href="subjects.html" class="back-btn">Back</a>
+        </div>
+      </div>
+      <div class="college-branch-card">
+        <span id="contextCollege" class="college-branch-line college-name">College</span>
+        <span class="context-separator">→</span>
+        <span id="contextBranch" class="college-branch-line branch-name">Branch</span>
+        <span class="context-separator">→</span>
+        <span id="contextSemester" class="college-branch-line semester-name">Semester</span>
+        <span class="context-separator">→</span>
+        <span id="contextSubject" class="college-branch-line subject-name">Subject</span>
+      </div>
+    </div>
+  </header>
+  <main class="main-content">
+    <!-- Add Topic Section -->
+    <section class="upload-section">
+      <div class="section-header">
+        <h2><span class="section-icon" aria-label="Add">➕</span> Add New Topic</h2>
+        <p id="addTopicDescription">Add a new topic for this subject</p>
+      </div>
+      <form id="addTopicForm" class="upload-form" autocomplete="off">
+        <div class="form-group">
+          <label for="topicNameInput">Topic Name *</label>
+          <input type="text" id="topicNameInput" placeholder="Topic name" required aria-label="Topic Name">
+        </div>
+        <button type="submit" class="submit-btn compact" aria-label="Add Topic"><span class="btn-icon">➕</span>Add Topic</button>
+      </form>
+    </section>
+    <!-- Topics List Section -->
+    <section class="list-section">
+      <div class="section-header" style="display: flex; flex-direction: column; gap: 10px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+          <h2 style="margin-bottom:0;"><span class="section-icon" aria-label="Topics">🗂️</span> All Topics</h2>
+          <div class="topics-controls" style="display: flex; gap: 10px; align-items: center;">
+            <input type="text" id="topicSearchInput" class="topic-search" placeholder="Search topics..." aria-label="Search topics">
+            <select id="topicSortSelect" class="topic-sort" aria-label="Sort topics">
+              <option value="az">A-Z</option>
+              <option value="za">Z-A</option>
+              <option value="newest">Newest</option>
+              <option value="oldest">Oldest</option>
+            </select>
+          </div>
+        </div>
+        <p id="topicsListDescription">Manage topics for this subject</p>
+      </div>
+      <div class="list-container">
+        <div id="topicsList" class="topics-grid"></div>
+        <div id="emptyState" class="empty-state hidden">
+          <div class="empty-icon" aria-label="No Topics">🗂️</div>
+          <h3>No topics found</h3>
+          <p>Start by adding your first topic above. Topics help organize your subject's content and questions.</p>
+        </div>
+      </div>
+    </section>
+    <div id="loadingOverlay" class="loading-overlay hidden">
+      <div class="loading-spinner"></div>
+      <p>Loading topics...</p>
+    </div>
+  </main>
+  <script src="topics.js"></script>
+</body>
+</html> 

@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Edit Topic - EduNest Admin</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="topic_edit.css">
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <script src="supabaseClient.js"></script>
+</head>
+<body>
+  <div class="main-bg"></div>
+  <header class="header" style="background: linear-gradient(120deg,#6366f1 0%,#60a5fa 50%,#a78bfa 100%); box-shadow: 0 4px 24px rgba(99,102,241,0.13); border-bottom-left-radius: 18px; border-bottom-right-radius: 18px; position: relative; z-index: 10;">
+    <div class="header-content">
+      <div class="appbar-top-row">
+        <div class="appbar-title-center">
+          <span class="page-title">Edit Topic</span>
+        </div>
+        <div class="appbar-right">
+          <a href="topics.html" class="back-btn">Back</a>
+        </div>
+      </div>
+      <div class="college-branch-card">
+        <span id="contextCollege" class="college-branch-line college-name">College</span>
+        <span class="context-separator">→</span>
+        <span id="contextBranch" class="college-branch-line branch-name">Branch</span>
+        <span class="context-separator">→</span>
+        <span id="contextSemester" class="college-branch-line semester-name">Semester</span>
+        <span class="context-separator">→</span>
+        <span id="contextSubject" class="college-branch-line subject-name">Subject</span>
+        <span class="context-separator">→</span>
+        <span id="contextTopic" class="college-branch-line topic-name">Topic</span>
+      </div>
+    </div>
+    <style>
+      .header-content {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        justify-content: center;
+        padding: 2px 2vw 0px 2vw;
+        max-width: 1200px;
+        margin: 0 auto;
+        gap: 0;
+      }
+      .appbar-top-row {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        min-height: 42px;
+        position: relative;
+        padding-top: 2px;
+        padding-bottom: 2px;
+      }
+      .appbar-title-center {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 0;
+      }
+      .appbar-right {
+        position: absolute;
+        right: 2vw;
+        top: 50%;
+        transform: translateY(-50%);
+        display: flex;
+        align-items: center;
+      }
+      .page-title {
+        font-size: 1.2em;
+        font-weight: 900;
+        color: #fff;
+        letter-spacing: 0.5px;
+        text-shadow: 0 2px 8px #6366f1aa;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        text-align: center;
+        max-width: 60vw;
+      }
+      .back-btn {
+        background: rgba(255,255,255,0.85);
+        color: #6366f1;
+        border-radius: 8px;
+        padding: 5px 12px;
+        font-weight: 600;
+        font-size: 0.98em;
+        box-shadow: 0 2px 8px rgba(99,102,241,0.10);
+        text-decoration: none;
+        transition: background 0.2s, color 0.2s;
+        border: none;
+        outline: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 0;
+      }
+      .college-branch-card {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(120deg,rgba(255,255,255,0.92) 60%,rgba(236,241,255,0.85) 100%);
+        border-radius: 18px;
+        border: 1.5px solid #e0e7ff;
+        box-shadow: 0 6px 32px 0 #6366f133, 0 1.5px 8px #6366f122;
+        backdrop-filter: blur(2.5px);
+        padding: 8px 3vw 8px 3vw;
+        min-width: 120px;
+        max-width: 98vw;
+        transition: box-shadow 0.18s, border 0.18s, background 0.18s;
+        margin-top: 10px;
+        flex-wrap: wrap;
+        gap: 0;
+      }
+      .context-separator {
+        color: #94a3b8;
+        font-weight: 400;
+        font-size: 1.1em;
+        margin: 0 6px;
+        user-select: none;
+      }
+      .college-branch-line {
+        max-width: 22vw;
+        font-size: 1em;
+        margin-bottom: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        text-align: center;
+      }
+      .college-name {
+        color: #6366f1;
+        font-weight: 700;
+        font-size: 1.18em;
+        letter-spacing: 0.3px;
+        margin-bottom: 7px;
+        text-shadow: 0 1px 8px #6366f122;
+      }
+      .branch-name {
+        color: #334155;
+        font-weight: 600;
+        font-size: 1.04em;
+        letter-spacing: 0.1px;
+        margin-top: 2px;
+        margin-bottom: 7px;
+        opacity: 0.92;
+      }
+      .semester-name {
+        color: #0ea5e9;
+        font-weight: 600;
+        font-size: 1.04em;
+        letter-spacing: 0.1px;
+        margin-top: 2px;
+        margin-bottom: 7px;
+        opacity: 0.92;
+      }
+      .subject-name {
+        color: #a21caf;
+        font-weight: 600;
+        font-size: 1.04em;
+        letter-spacing: 0.1px;
+        margin-top: 2px;
+        opacity: 0.92;
+      }
+      .topic-name {
+        color: #f59e42;
+        font-weight: 600;
+        font-size: 1.04em;
+        letter-spacing: 0.1px;
+        margin-top: 2px;
+        opacity: 0.92;
+      }
+      @media (max-width: 700px) {
+        .appbar-top-row {
+          flex-direction: row;
+          justify-content: center;
+          min-height: 32px;
+          padding-top: 0;
+          padding-bottom: 0;
+        }
+        .appbar-title-center {
+          flex: unset;
+          justify-content: center;
+        }
+        .appbar-right {
+          position: static;
+          transform: none;
+          right: unset;
+          top: unset;
+          margin-left: 12px;
+        }
+        .page-title {
+          font-size: 1.05em;
+          max-width: 60vw;
+        }
+        .college-branch-card {
+          padding: 7px 2vw 7px 2vw;
+          border-radius: 12px;
+        }
+        .college-branch-line {
+          max-width: 38vw;
+          font-size: 0.95em;
+        }
+        .context-separator {
+          margin: 0 3px;
+          font-size: 1em;
+        }
+      }
+      @media (min-width: 701px) {
+        .header-content {
+          padding-bottom: 12px;
+        }
+        .appbar-top-row {
+          margin-bottom: 10px;
+        }
+        .page-title {
+          font-size: 1.45em;
+          font-weight: 950;
+          letter-spacing: 0.7px;
+          text-shadow: 0 3px 12px #6366f1bb;
+        }
+        .appbar-right {
+          right: 2vw;
+          top: 50%;
+          transform: translateY(-50%);
+          padding-right: 2px;
+        }
+        .back-btn {
+          box-shadow: 0 2px 12px rgba(99,102,241,0.13);
+          border: 1.5px solid #c7d2fe;
+          transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+        }
+        .back-btn:hover, .back-btn:focus {
+          background: #6366f1;
+          color: #fff;
+          box-shadow: 0 4px 18px #6366f1aa;
+        }
+        .college-branch-card {
+          margin-top: 0;
+          margin-bottom: 2px;
+          box-shadow: 0 8px 32px 0 #6366f155, 0 2px 12px #6366f133;
+          border: 2px solid #c7d2fe;
+          padding: 10px 3vw 10px 3vw;
+        }
+      }
+    </style>
+  </header>
+  <main class="main-content">
+    <section class="edit-section">
+      <div class="edit-section-header">Edit Topic</div>
+      <div class="topic-name-row" style="display:flex;align-items:center;gap:10px;margin-bottom:18px;">
+        <span id="topicNameDisplay" class="topic-name-display" style="font-size:1.18em;font-weight:700;color:#3730a3;word-break:break-word;"></span>
+        <button id="editTopicNameBtn" class="edit-topic-name-btn" title="Edit Topic Name" aria-label="Edit Topic Name" style="background:none;border:none;cursor:pointer;padding:2px 4px;display:flex;align-items:center;">
+          <svg width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 13.5V16h2.5l7.06-7.06-2.5-2.5L4 13.5zm11.71-6.29a1.003 1.003 0 0 0 0-1.42l-2.5-2.5a1.003 1.003 0 0 0-1.42 0l-1.34 1.34 3.92 3.92 1.34-1.34z" fill="#6366f1"/></svg>
+        </button>
+      </div>
+      <form id="editTopicForm">
+        <div class="topic-content-group">
+          <div class="topic-content-label">Topic Content / Description</div>
+          <textarea id="topicContentInput" rows="6" placeholder="Paste or write topic content here..."></textarea>
+        </div>
+        <button type="submit" class="submit-btn">Save Topic</button>
+      </form>
+      <div id="editTopicNameArea" class="edit-topic-name-area" style="display:none;margin-bottom:12px;">
+        <input type="text" id="topicNameInput" class="topic-name-input" style="padding:8px 12px;border-radius:7px;border:1.5px solid #d1d5db;font-size:1em;max-width:320px;">
+        <button id="saveTopicNameBtn" class="submit-btn" style="padding:7px 14px;font-size:0.98em;margin-left:8px;">Save</button>
+        <button id="cancelTopicNameBtn" class="submit-btn" style="padding:7px 14px;font-size:0.98em;background:#e5e7eb;color:#334155;margin-left:4px;">Cancel</button>
+      </div>
+    </section>
+    <section class="questions-section">
+      <div class="questions-section-header">
+        <h2>📝 Questions</h2>
+        <div class="ai-options" style="display: flex; gap: 15px; align-items: center; margin-bottom: 15px;">
+          <div class="option-group">
+            <label style="font-weight: 600; color: #374151; margin-right: 8px;">Questions:</label>
+            <select id="questionCountSelect" style="padding: 6px 12px; border-radius: 6px; border: 1.5px solid #d1d5db; font-size: 0.95em;">
+              <option value="5">5 Questions</option>
+              <option value="10" selected>10 Questions</option>
+              <option value="15">15 Questions</option>
+            </select>
+          </div>
+          <div class="option-group">
+            <label style="font-weight: 600; color: #374151; margin-right: 8px;">Difficulty:</label>
+            <select id="difficultySelect" style="padding: 6px 12px; border-radius: 6px; border: 1.5px solid #d1d5db; font-size: 0.95em;">
+              <option value="beginner" selected>Beginner</option>
+              <option value="intermediate">Intermediate</option>
+              <option value="advanced">Advanced</option>
+            </select>
+          </div>
+        </div>
+        <button id="generateQuestionsBtn" class="submit-btn">Generate Questions with AI</button>
+      </div>
+      
+      <!-- Questions by Difficulty Cards -->
+      <div id="questionsCardsContainer" class="questions-cards-container">
+        <!-- Cards will be dynamically generated here -->
+      </div>
+      
+      <div id="questionsEmptyState" class="empty-state hidden">No questions yet. Generate questions above.</div>
+    </section>
+
+    <!-- Questions Modal -->
+    <div id="questionsModal" class="questions-modal hidden">
+      <div class="modal-overlay"></div>
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 id="modalTitle">Questions</h3>
+          <button id="closeModalBtn" class="close-modal-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div id="modalQuestionsList" class="modal-questions-list">
+            <!-- Questions will be loaded here -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <section id="savedDescriptionsSection" class="saved-descriptions-section">
+      <div class="saved-descriptions-header">Saved Topic Descriptions</div>
+      <div id="savedDescriptionsList" class="saved-descriptions-list"></div>
+    </section>
+    <div id="loadingOverlay" class="loading-overlay hidden">
+      <div class="loading-spinner"></div>
+      <p>Loading topic...</p>
+    </div>
+  </main>
+  <script src="topic_edit.js"></script>
+  <style>
+    .question-row {
+      background: #f1f5f9;
+      border-radius: 10px;
+      padding: 18px 20px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.03);
+      margin-bottom: 0;
+      transition: box-shadow 0.2s;
+    }
+    .question-row:hover {
+      box-shadow: 0 4px 16px rgba(100,116,139,0.10);
+    }
+    .edit-btn, .delete-btn {
+      background: linear-gradient(90deg,#6366f1 0%,#818cf8 100%);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 8px 16px;
+      font-size: 1em;
+      cursor: pointer;
+      margin-right: 8px;
+      transition: background 0.2s;
+    }
+    .edit-btn:hover, .delete-btn:hover {
+      background: linear-gradient(90deg,#818cf8 0%,#6366f1 100%);
+    }
+    .delete-btn {
+      background: #f87171;
+      color: #fff;
+      margin-right: 0;
+    }
+    .delete-btn:hover {
+      background: #ef4444;
+    }
+  </style>
+</body>
+</html> 

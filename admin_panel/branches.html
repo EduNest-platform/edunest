@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Branch Management - EduNest Admin</title>
+    <link rel="stylesheet" href="branches.css">
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="supabaseClient.js"></script>
+</head>
+<body>
+    <div class="main-bg"></div>
+    
+    <!-- Header -->
+    <header class="header" style="background: linear-gradient(120deg,#6366f1 0%,#60a5fa 50%,#a78bfa 100%); box-shadow: 0 4px 24px rgba(99,102,241,0.13); border-bottom-left-radius: 18px; border-bottom-right-radius: 18px; position: relative; z-index: 10;">
+        <div class="header-content">
+            <div class="appbar-top-row">
+                <div class="appbar-left">
+                    <span class="appbar-logo">🏫</span>
+                    <span class="appbar-appname">EduNest</span>
+                </div>
+                <div class="appbar-title-center">
+                    <span class="page-title">Branch Management</span>
+                </div>
+                <div class="appbar-right">
+                    <a href="colleges.html" class="back-btn">Back</a>
+                </div>
+            </div>
+            <div class="college-badge-row">
+                <span id="selectedCollegeName" class="college-badge">All Colleges</span>
+            </div>
+        </div>
+        <style>
+            .header-content {
+                display: flex;
+                flex-direction: column;
+                align-items: stretch;
+                justify-content: center;
+                padding: 10px 3vw 6px 3vw;
+                max-width: 1200px;
+                margin: 0 auto;
+                gap: 0;
+            }
+            .appbar-top-row {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                width: 100%;
+                gap: 0;
+            }
+            .appbar-left {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                min-width: 120px;
+            }
+            .appbar-logo {
+                font-size: 1.3em;
+                filter: drop-shadow(0 2px 8px #818cf8aa);
+            }
+            .appbar-appname {
+                font-size: 1.1em;
+                font-weight: 900;
+                color: #fff;
+                letter-spacing: 1px;
+                text-shadow: 0 2px 8px #6366f1aa;
+                font-family: 'Poppins', 'Segoe UI', Arial, sans-serif;
+            }
+            .appbar-title-center {
+                flex: 1;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                min-width: 0;
+            }
+            .page-title {
+                font-size: 2em;
+                font-weight: 900;
+                color: #fff;
+                letter-spacing: 0.5px;
+                text-shadow: 0 2px 8px #6366f1aa;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                text-align: center;
+                max-width: 70vw;
+            }
+            .appbar-right {
+                display: flex;
+                align-items: center;
+                min-width: 80px;
+                justify-content: flex-end;
+            }
+            .back-btn {
+                background: rgba(255,255,255,0.85);
+                color: #6366f1;
+                border-radius: 8px;
+                padding: 5px 12px;
+                font-weight: 600;
+                font-size: 0.98em;
+                box-shadow: 0 2px 8px rgba(99,102,241,0.10);
+                text-decoration: none;
+                transition: background 0.2s, color 0.2s;
+                border: none;
+                outline: none;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                min-width: 0;
+            }
+            .college-badge-row {
+                display: flex;
+                justify-content: center;
+                width: 100%;
+                margin-top: 4px;
+            }
+            .college-badge {
+                display: inline-block;
+                background: rgba(255,255,255,0.95);
+                color: #6366f1;
+                font-weight: 700;
+                font-size: 1.13em;
+                border-radius: 999px;
+                padding: 5px 22px;
+                box-shadow: 0 1px 6px #6366f122;
+                letter-spacing: 0.3px;
+                max-width: 90vw;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                text-align: center;
+            }
+            @media (max-width: 700px) {
+                .appbar-left {
+                    display: none;
+                }
+                .appbar-title-center {
+                    flex: 1;
+                    justify-content: center;
+                }
+                .page-title {
+                    font-size: 1.3em;
+                    max-width: 90vw;
+                }
+                .college-badge-row {
+                    margin-top: 2px;
+                }
+                .college-badge {
+                    font-size: 1em;
+                    padding: 3px 12px;
+                }
+            }
+            @media (min-width: 701px) {
+                .appbar-appname {
+                    font-size: 1.7em;
+                    font-weight: 900;
+                }
+            }
+        </style>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Add Branch Section -->
+        <section class="add-section">
+            <div class="section-header">
+                <h2>Add New Branch</h2>
+                <p id="addBranchDescription">Create a new branch for a specific college</p>
+            </div>
+            <form class="add-form" onsubmit="event.preventDefault(); addBranch();">
+                <div class="form-group">
+                    <label>College</label>
+                    <div id="selectedCollegeDisplay" class="selected-college-display"></div>
+                </div>
+                <div class="form-group">
+                    <label for="branchName">Branch Name *</label>
+                    <input type="text" id="branchName" placeholder="e.g., Computer Science, Mechanical Engineering" required>
+                </div>
+                <button type="submit" class="submit-btn">
+                    <span class="btn-icon">➕</span>Add Branch
+                </button>
+            </form>
+        </section>
+
+        <!-- Message Display -->
+        <div id="branchMsg" class="message"></div>
+
+        <!-- Branches List Section -->
+        <section class="list-section">
+            <div class="section-header">
+                <h2 id="branchesListTitle">All Branches</h2>
+                <p id="branchesListDescription">Manage existing branches across all colleges</p>
+                <div class="list-stats">
+                    <div class="stat-item">
+                        <span class="stat-number" id="branchCount">0</span>
+                        <span class="stat-label">Total Branches</span>
+                    </div>
+                </div>
+                <div class="search-bar" style="margin-top:18px;">
+                    <input type="text" id="branchSearchInput" placeholder="Search branches..." style="width:100%;max-width:340px;padding:10px 14px;border-radius:8px;border:1.5px solid #d1d5db;font-size:1em;" />
+                </div>
+            </div>
+            <div class="list-container">
+                <div id="branchList" class="branches-grid"></div>
+                <div id="emptyState" class="empty-state hidden">
+                    <div class="empty-icon">🏫</div>
+                    <h3>No Branches Found</h3>
+                    <p>Start by adding your first branch above.</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay hidden">
+        <div class="loading-spinner"></div>
+        <p>Loading branches...</p>
+    </div>
+
+    <script src="branches.js"></script>
+</body>
+</html> 

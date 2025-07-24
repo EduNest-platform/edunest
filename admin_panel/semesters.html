@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Semester Management - EduNest Admin</title>
+    <link rel="stylesheet" href="semesters.css">
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="supabaseClient.js"></script>
+</head>
+<body>
+    <div class="main-bg"></div>
+    
+    <!-- Header -->
+    <header class="header" style="background: linear-gradient(120deg,#6366f1 0%,#60a5fa 50%,#a78bfa 100%); box-shadow: 0 4px 24px rgba(99,102,241,0.13); border-bottom-left-radius: 18px; border-bottom-right-radius: 18px; position: relative; z-index: 10;">
+        <div class="header-content">
+            <div class="appbar-top-row">
+                <div class="appbar-left">
+                    <span class="appbar-logo">🏫</span>
+                    <span class="appbar-appname">EduNest</span>
+                </div>
+                <div class="appbar-title-center">
+                    <span class="page-title">Semester Management</span>
+                    <div class="college-branch-card">
+                        <span id="selectedCollegeName" class="college-branch-line college-name">All Colleges</span>
+                        <span id="selectedBranchName" class="college-branch-line branch-name">All Branches</span>
+                    </div>
+                </div>
+                <div class="appbar-right">
+                    <a href="branches.html" class="back-btn">Back</a>
+                </div>
+            </div>
+        </div>
+        <style>
+            .header-content {
+                display: flex;
+                flex-direction: column;
+                align-items: stretch;
+                justify-content: center;
+                padding: 10px 3vw 6px 3vw;
+                max-width: 1200px;
+                margin: 0 auto;
+                gap: 0;
+            }
+            .appbar-top-row {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                width: 100%;
+                gap: 0;
+            }
+            .appbar-left {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                min-width: 120px;
+            }
+            .appbar-logo {
+                font-size: 1.3em;
+                filter: drop-shadow(0 2px 8px #818cf8aa);
+            }
+            .appbar-appname {
+                font-size: 1.1em;
+                font-weight: 900;
+                color: #fff;
+                letter-spacing: 1px;
+                text-shadow: 0 2px 8px #6366f1aa;
+                font-family: 'Poppins', 'Segoe UI', Arial, sans-serif;
+            }
+            .appbar-title-center {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                min-width: 0;
+            }
+            .page-title {
+                font-size: 2em;
+                font-weight: 900;
+                color: #fff;
+                letter-spacing: 0.5px;
+                text-shadow: 0 2px 8px #6366f1aa;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                text-align: center;
+                max-width: 70vw;
+            }
+            .appbar-right {
+                display: flex;
+                align-items: center;
+                min-width: 80px;
+                justify-content: flex-end;
+            }
+            .back-btn {
+                background: rgba(255,255,255,0.85);
+                color: #6366f1;
+                border-radius: 8px;
+                padding: 5px 12px;
+                font-weight: 600;
+                font-size: 0.98em;
+                box-shadow: 0 2px 8px rgba(99,102,241,0.10);
+                text-decoration: none;
+                transition: background 0.2s, color 0.2s;
+                border: none;
+                outline: none;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                min-width: 0;
+            }
+            .college-badge-row {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                width: 100%;
+                margin-top: 4px;
+                gap: 0;
+            }
+            .college-branch-card {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                background: linear-gradient(120deg,rgba(255,255,255,0.92) 60%,rgba(236,241,255,0.85) 100%);
+                border-radius: 32px;
+                border: 1.5px solid #e0e7ff;
+                box-shadow: 0 6px 32px 0 #6366f133, 0 1.5px 8px #6366f122;
+                backdrop-filter: blur(2.5px);
+                padding: 10px 64px 8px 64px;
+                min-width: 260px;
+                max-width: 80vw;
+                transition: box-shadow 0.18s, border 0.18s, background 0.18s;
+            }
+            .college-branch-card:hover {
+                box-shadow: 0 10px 40px 0 #6366f155, 0 2px 12px #6366f144;
+                border: 1.5px solid #a5b4fc;
+                background: linear-gradient(120deg,rgba(255,255,255,0.97) 60%,rgba(236,241,255,0.93) 100%);
+            }
+            .college-branch-line {
+                display: block;
+                text-align: center;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                max-width: 70vw;
+            }
+            .college-name {
+                color: #6366f1;
+                font-weight: 700;
+                font-size: 1.18em;
+                letter-spacing: 0.3px;
+                margin-bottom: 7px;
+                text-shadow: 0 1px 8px #6366f122;
+            }
+            .branch-name {
+                color: #334155;
+                font-weight: 600;
+                font-size: 1.04em;
+                letter-spacing: 0.1px;
+                margin-top: 2px;
+                opacity: 0.92;
+            }
+            @media (max-width: 700px) {
+                .appbar-left {
+                    display: none;
+                }
+                .appbar-title-center {
+                    flex: 1;
+                    justify-content: center;
+                    align-items: stretch;
+                    width: 100%;
+                }
+                .page-title {
+                    font-size: 1.3em;
+                    max-width: 90vw;
+                }
+                .college-branch-card {
+                    margin: 0 auto;
+                    width: 100%;
+                    max-width: 98vw;
+                }
+                .college-branch-line {
+                    max-width: 90vw;
+                }
+                .college-name {
+                    font-size: 1.04em;
+                    margin-bottom: 4px;
+                }
+                .branch-name {
+                    font-size: 0.97em;
+                }
+            }
+            @media (min-width: 701px) {
+                .appbar-appname {
+                    font-size: 1.7em;
+                    font-weight: 900;
+                }
+            }
+        </style>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Add Semester Section -->
+        <section class="add-section">
+            <div class="section-header">
+                <h2>Add New Semester</h2>
+                <p id="addSemesterDescription">Create a new semester for a specific branch</p>
+            </div>
+            <form class="add-form" onsubmit="event.preventDefault(); addSemester();">
+                <div class="form-group">
+                    <label>Branch</label>
+                    <div id="selectedBranchDisplay" class="selected-branch-display"></div>
+                </div>
+                <div class="form-group">
+                    <label for="semesterName">Semester Name *</label>
+                    <input type="text" id="semesterName" placeholder="e.g., 1st Semester, 2nd Semester, Final Year" required>
+                </div>
+                <button type="submit" class="submit-btn">
+                    <span class="btn-icon">➕</span>Add Semester
+                </button>
+            </form>
+        </section>
+
+        <!-- Message Display -->
+        <div id="semesterMsg" class="message"></div>
+
+        <!-- Semesters List Section -->
+        <section class="list-section">
+            <div class="section-header">
+                <h2>All Semesters</h2>
+                <p id="semestersListDescription"></p>
+                <div class="list-stats">
+                    <div class="stat-item">
+                        <span class="stat-number" id="semesterCount">0</span>
+                        <span class="stat-label">Total Semesters</span>
+                    </div>
+                </div>
+                <div class="search-bar" style="margin-top:18px;">
+                    <input type="text" id="semesterSearchInput" placeholder="Search semesters..." style="width:100%;max-width:340px;padding:10px 14px;border-radius:8px;border:1.5px solid #d1d5db;font-size:1em;" />
+                </div>
+            </div>
+            <div class="list-container">
+                <div id="semesterList" class="semesters-grid"></div>
+                <div id="emptyState" class="empty-state hidden">
+                    <div class="empty-icon">📚</div>
+                    <h3>No Semesters Found</h3>
+                    <p>Start by adding your first semester above.</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay hidden">
+        <div class="loading-spinner"></div>
+        <p>Loading semesters...</p>
+    </div>
+
+    <script src="semesters.js"></script>
+</body>
+</html> 

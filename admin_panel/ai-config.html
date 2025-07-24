@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>AI Configuration - EduNest Admin</title>
+  <link rel="stylesheet" href="style.css?v=1.2">
+  <link rel="stylesheet" href="ai-config.css?v=1.0">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script src="supabaseClient.js?v=1.2"></script>
+</head>
+<body>
+  <div class="main-bg"></div>
+  
+  <!-- Hamburger Menu Button -->
+  <button class="hamburger-btn" onclick="toggleMobileMenu()">
+    <div class="hamburger-icon">
+      <div class="hamburger-line"></div>
+      <div class="hamburger-line"></div>
+      <div class="hamburger-line"></div>
+    </div>
+  </button>
+  
+  <!-- Mobile Navigation Container -->
+  <div class="mobile-nav-container" id="mobileNavContainer">
+    <div class="mobile-nav-backdrop" onclick="closeMobileMenu()"></div>
+    <div class="mobile-sidebar">
+      <div class="mobile-header">
+        <div class="mobile-logo">🎓<span>EduNest</span></div>
+        <button class="mobile-close-btn" onclick="closeMobileMenu()">✕</button>
+      </div>
+      
+      <nav class="mobile-nav-menu">
+        <a href="dashboard.html" class="mobile-nav-item">
+          <span class="mobile-nav-icon">📊</span>
+          Overview
+        </a>
+        <a href="colleges.html" class="mobile-nav-item">
+          <span class="mobile-nav-icon">🏗️</span>
+          Hierarchy
+        </a>
+        <a href="ai-config.html" class="mobile-nav-item active">
+          <span class="mobile-nav-icon">🤖</span>
+          AI Config
+        </a>
+      </nav>
+      
+      <div class="mobile-user-info">
+        <div class="mobile-user-avatar">👤</div>
+        <div class="mobile-user-name">Admin</div>
+        <div class="mobile-user-role">Administrator</div>
+        <button class="mobile-logout-btn" onclick="logout()">Logout</button>
+      </div>
+    </div>
+  </div>
+  
+  <main class="main-content mobile-main-content">
+    <!-- AI Configuration Section -->
+    <section id="ai-config-section" class="content-section">
+      <div class="welcome-section">
+        <h1>🤖 AI Configuration</h1>
+        <p>Manage AI tokens and settings for question generation</p>
+      </div>
+
+      <div class="ai-config-grid">
+        <!-- Gemini API Key Management -->
+        <div class="ai-config-card">
+          <div class="ai-config-header">
+            <div class="ai-config-icon">🔑</div>
+            <div class="ai-config-title">
+              <h3>Gemini API Key</h3>
+              <p>Manage Gemini API key for question generation</p>
+            </div>
+          </div>
+          <div class="ai-config-content">
+            <div class="token-status">
+              <span class="status-label">Status:</span>
+              <span class="status-badge" id="geminiKeyStatus">Checking...</span>
+            </div>
+            <div class="token-usage">
+              <span class="status-label">Usage Count:</span>
+              <span class="stat-value" id="geminiUsageCount">-</span>
+            </div>
+            <div class="token-info">
+              <label for="geminiKeyInput">API Key:</label>
+              <div class="token-input-group">
+                <input type="password" id="geminiKeyInput" placeholder="AIza..." class="token-input" autocomplete="off" spellcheck="false">
+                <button class="toggle-visibility-btn" onclick="toggleGeminiKeyVisibility()">
+                  <span id="geminiVisibilityIcon">👁️</span>
+                </button>
+              </div>
+              <div class="token-help">
+                <small style="color: #6b7280; font-style: italic;">
+                  💡 Enter your Gemini API key (starts with "AIza"). Saving will replace any existing key.
+                </small>
+              </div>
+            </div>
+            <div class="token-actions">
+              <button class="save-token-btn" onclick="saveGeminiApiKey()">
+                <span class="btn-icon">💾</span>
+                Save/Replace Key
+              </button>
+              <button class="clear-token-btn" onclick="clearGeminiApiKey()">
+                <span class="btn-icon">🗑️</span>
+                Clear Key
+              </button>
+              <button class="debug-btn" onclick="debugGeminiKeyInput()">
+                <span class="btn-icon">🐛</span>
+                Debug
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AI Configuration Message -->
+      <div id="aiConfigMessage" class="message"></div>
+    </section>
+
+    <footer class="footer">
+      <div class="footer-content">
+        <div class="footer-left">
+          <span class="footer-logo">🎓 EduNest</span>
+          <span class="footer-text">AI Configuration &copy; 2024</span>
+        </div>
+        <div class="footer-right">
+          <span class="footer-status" id="connectionStatus">🟢 Connected</span>
+        </div>
+      </div>
+    </footer>
+  </main>
+  
+  <!-- Loading Overlay -->
+  <div id="loadingOverlay" class="loading-overlay hidden">
+    <div class="loading-spinner"></div>
+    <p id="loadingText">Loading...</p>
+  </div>
+
+  <script src="login.js"></script>
+  <script src="ai-config.js?v=1.0"></script>
+</body>
+</html> 

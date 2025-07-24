@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "187767165102",
+    "project_id": "edunest-desktop",
+    "storage_bucket": "edunest-desktop.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:187767165102:android:68434e26bf7b4190851d3f",
+        "android_client_info": {
+          "package_name": "com.ranojit.edunest"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAcpAutInkxAA5mpDpgmJsmcUezDwpSmRs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

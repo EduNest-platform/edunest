@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduNest - Download for Desktop & Mobile</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
+    <style>
+        :root {
+            --primary: #667eea;
+            --secondary: #764ba2;
+            --accent: #28a745;
+            --bg: #f4f6fb;
+            --text: #222;
+            --radius: 18px;
+        }
+        html, body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+        }
+        body {
+            min-height: 100vh;
+        }
+        /* Navbar styles */
+        .navbar {
+            width: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            padding: 0 32px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 2px 12px rgba(102,126,234,0.06);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .navbar .brand-name {
+            font-size: 1.35rem;
+            font-weight: 800;
+            letter-spacing: 1.5px;
+            color: #fff;
+            text-shadow: 0 2px 8px rgba(102,126,234,0.13);
+        }
+        .hero {
+            width: 100%;
+            min-height: 160px;
+            background: linear-gradient(120deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            padding: 32px 0 28px 0;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 6px 32px 0 rgba(102,126,234,0.10);
+        }
+        .hero-animated-bg {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 0;
+            pointer-events: none;
+            background: radial-gradient(circle at 20% 40%, rgba(255,255,255,0.10) 0, transparent 60%),
+                        radial-gradient(circle at 80% 60%, rgba(255,255,255,0.13) 0, transparent 70%);
+            animation: bgMove 7s linear infinite alternate;
+            opacity: 0.9;
+        }
+        @keyframes bgMove {
+            0% { background-position: 20% 40%, 80% 60%; }
+            100% { background-position: 30% 50%, 70% 50%; }
+        }
+        .hero-content {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            gap: 48px;
+            animation: fadeInUp 1.2s cubic-bezier(.23,1.01,.32,1) 0.1s both;
+            background: rgba(255,255,255,0.10);
+            border-radius: 28px;
+            padding: 32px 48px;
+            box-shadow: 0 8px 32px 0 rgba(102,126,234,0.13);
+            border: 1.5px solid rgba(255,255,255,0.18);
+            backdrop-filter: blur(10px);
+        }
+        .hero-icon {
+            margin: 0 32px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .hero-icon .glow {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 160px;
+            height: 160px;
+            background: radial-gradient(circle, #fff 0%, #667eea 40%, #764ba2 100%, transparent 80%);
+            opacity: 0.22;
+            filter: blur(24px);
+            transform: translate(-50%, -50%);
+            z-index: 0;
+            pointer-events: none;
+        }
+        .hero-icon lottie-player {
+            width: 110px !important;
+            height: 110px !important;
+            z-index: 1;
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes floatIcon {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-18px); }
+        }
+        .hero-text {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            justify-content: center;
+            min-width: 220px;
+        }
+        .hero h1 {
+            font-size: 1.7rem;
+            margin-bottom: 8px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            text-align: left;
+            text-shadow: 0 2px 8px rgba(102,126,234,0.13);
+        }
+        .hero p {
+            font-size: 1.08rem;
+            opacity: 0.98;
+            margin-bottom: 0;
+            text-align: left;
+            text-shadow: 0 1px 4px rgba(102,126,234,0.10);
+        }
+        .downloads-section {
+            display: flex;
+            gap: 40px;
+            justify-content: center;
+            align-items: flex-start;
+            margin: 0 auto;
+            max-width: 1100px;
+            padding: 48px 24px 24px 24px;
+            flex-wrap: wrap;
+        }
+        .download-card {
+            background: #fff;
+            border-radius: var(--radius);
+            box-shadow: 0 6px 32px rgba(102,126,234,0.08);
+            flex: 1 1 340px;
+            max-width: 420px;
+            min-width: 300px;
+            padding: 36px 28px 28px 28px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+        .download-card .platform-icon {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            color: var(--primary);
+        }
+        .download-card h2 {
+            font-size: 1.4rem;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+        .download-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            padding: 14px 0;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            color: #fff;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin: 18px 0 8px 0;
+            transition: background 0.2s, box-shadow 0.2s;
+            box-shadow: 0 2px 8px rgba(102,126,234,0.10);
+        }
+        .download-btn i {
+            margin-right: 10px;
+        }
+        .download-btn:hover {
+            background: linear-gradient(90deg, var(--secondary), var(--primary));
+            box-shadow: 0 4px 16px rgba(102,126,234,0.13);
+        }
+        .alt-link {
+            color: var(--primary);
+            text-decoration: underline;
+            font-size: 0.98rem;
+            margin-bottom: 10px;
+        }
+        .qr-section {
+            margin: 18px 0 0 0;
+            text-align: center;
+        }
+        .qr-section .qr-label {
+            color: #666;
+            font-size: 13px;
+            margin-top: 8px;
+        }
+        .instructions {
+            width: 100%;
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 16px 18px;
+            margin-top: 18px;
+            font-size: 0.98rem;
+        }
+        .instructions h3 {
+            color: var(--primary);
+            font-size: 1.08rem;
+            margin-bottom: 8px;
+        }
+        .instructions ol {
+            padding-left: 18px;
+            color: #444;
+        }
+        .system-req {
+            width: 100%;
+            background: #e9ecef;
+            border-radius: 8px;
+            padding: 10px 14px;
+            margin-top: 14px;
+            font-size: 0.97rem;
+        }
+        .feature-section {
+            max-width: 1100px;
+            margin: 0 auto 40px auto;
+            padding: 0 24px;
+            display: flex;
+            gap: 32px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .feature-card {
+            background: #fff;
+            border-radius: 14px;
+            box-shadow: 0 2px 12px rgba(102,126,234,0.07);
+            flex: 1 1 220px;
+            max-width: 320px;
+            min-width: 200px;
+            padding: 28px 20px 22px 20px;
+            text-align: center;
+            margin-bottom: 18px;
+        }
+        .feature-card i {
+            font-size: 2rem;
+            color: var(--secondary);
+            margin-bottom: 10px;
+        }
+        .feature-card h4 {
+            font-size: 1.1rem;
+            margin-bottom: 8px;
+            color: var(--primary);
+        }
+        .feature-card p {
+            font-size: 0.97rem;
+            color: #444;
+        }
+        .footer {
+            width: 100%;
+            background: #222;
+            color: #fff;
+            text-align: center;
+            padding: 28px 0 18px 0;
+            font-size: 1rem;
+            margin-top: 40px;
+        }
+        .footer a {
+            color: #fff;
+            text-decoration: underline;
+            margin: 0 6px;
+        }
+        @media (max-width: 900px) {
+            .hero-content {
+                gap: 18px;
+                padding: 18px 8px;
+            }
+            .hero-icon {
+                margin: 0 10px;
+            }
+            .downloads-section {
+                flex-direction: column;
+                gap: 24px;
+                padding: 36px 8px 8px 8px;
+            }
+            .feature-section {
+                flex-direction: column;
+                gap: 18px;
+            }
+        }
+        @media (max-width: 600px) {
+            .hero-content {
+                flex-direction: column;
+                gap: 12px;
+                padding: 14px 4px;
+            }
+            .hero-text {
+                align-items: center;
+                text-align: center;
+            }
+            .downloads-section {
+                flex-direction: column-reverse !important;
+            }
+        }
+        @media (max-width: 700px) {
+            .navbar {
+                padding: 0 10px;
+                height: 40px;
+            }
+            .navbar .brand-name {
+                font-size: 1.05rem;
+        }
+            .hero {
+                padding: 18px 0 12px 0;
+                min-height: 120px;
+            }
+            .hero-content {
+                flex-direction: column;
+                gap: 18px;
+                padding: 12px 6px;
+                border-radius: 18px;
+                box-shadow: 0 4px 18px 0 rgba(102,126,234,0.13);
+                margin: 0 6px;
+            }
+            .hero-icon {
+                margin: 0;
+            }
+            .hero-icon lottie-player {
+                width: 90px !important;
+                height: 90px !important;
+            }
+            .hero-text {
+                align-items: center;
+                text-align: center;
+                min-width: 0;
+            }
+            .hero h1 {
+                font-size: 1.15rem;
+                margin-bottom: 4px;
+            }
+            .hero p {
+                font-size: 0.93rem;
+            }
+            .hero {
+                margin-bottom: 18px;
+            }
+            .downloads-section {
+                flex-direction: column-reverse !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <span class="brand-name">EduNest</span>
+    </div>
+    <div class="hero">
+        <div class="hero-animated-bg"></div>
+        <div class="hero-content">
+            <div class="hero-icon">
+                <span class="glow"></span>
+                <lottie-player src="https://assets2.lottiefiles.com/packages/lf20_4kx2q32n.json" background="transparent" speed="1" loop autoplay></lottie-player>
+            </div>
+            <div class="hero-text">
+                <h1>Smart Learning, Anywhere</h1>
+                <p>Download EduNest for Windows & Android. Experience seamless, modern education on any device.</p>
+            </div>
+        </div>
+    </div>
+    <div id="downloads" class="downloads-section">
+        <!-- Windows Download Card -->
+        <div class="download-card">
+            <div class="platform-icon"><i class="fa-brands fa-windows"></i></div>
+            <h2>Download for Windows</h2>
+                <a href="https://github.com/Ranojitdas/EduNest-desktop/releases/download/v1.0.0/EduNestInstaller.exe" class="download-btn" id="windowsDownload" download>
+                    <i class="fa-solid fa-download"></i> Download EduNest for Windows
+                </a>
+            <a href="https://github.com/Ranojitdas/EduNest-desktop/releases/download/v1.0.0/EduNestInstaller.exe" class="alt-link" id="windowsAltLink" target="_blank">Alternative Link</a>
+                <div class="qr-section">
+                    <div id="windows-qrcode"></div>
+                    <div class="qr-label">Scan to download on your PC</div>
+                </div>
+                <div class="instructions">
+                <h3>🖥️ Installation Instructions</h3>
+                    <ol>
+                        <li>Download the ZIP or Installer using the button above</li>
+                        <li>Extract the ZIP (if applicable)</li>
+                        <li>Double-click <b>EduNest.exe</b> to launch the app</li>
+                    <li>If you see a Windows Defender warning, click "More info" → "Run anyway"</li>
+                    </ol>
+                </div>
+                <div class="system-req">
+                <b>System Requirements:</b><br>
+                    Windows 10/11, 64-bit | ~100MB free space
+                </div>
+            </div>
+        <!-- Android Download Card -->
+        <div class="download-card">
+            <div class="platform-icon"><i class="fa-brands fa-android"></i></div>
+            <h2>Download for Android</h2>
+                <a href="https://drive.google.com/uc?export=download&id=1c8bFc67_RNe0tAkvSdMDb5cqR9xr3EHi" class="download-btn" id="primaryDownload" download>
+                    <i class="fa-solid fa-download"></i> Download APK
+                </a>
+            <a href="https://drive.google.com/file/d/1c8bFc67_RNe0tAkvSdMDb5cqR9xr3EHi/view?usp=sharing" class="alt-link" id="alternativeDownload" target="_blank">Open in New Tab</a>
+                <div class="qr-section">
+                    <div id="apk-qrcode"></div>
+                    <div class="qr-label">Scan to download on your phone</div>
+                </div>
+                <div class="instructions">
+                <h3>📋 Installation Instructions</h3>
+                    <ol>
+                        <li><b>Download the APK</b> using any method above</li>
+                        <li><b>Enable Unknown Sources:</b>
+                            <ul style="margin-top: 5px; padding-left: 20px;">
+                                <li>Go to Settings → Security</li>
+                                <li>Enable "Unknown sources" or "Install unknown apps"</li>
+                                <li>Allow your browser/file manager</li>
+                            </ul>
+                        </li>
+                        <li><b>Install the App:</b>
+                            <ul style="margin-top: 5px; padding-left: 20px;">
+                                <li>Open the downloaded APK file</li>
+                                <li>Tap "Install" and wait for completion</li>
+                                <li>Open EduNest from your app drawer</li>
+                            </ul>
+                        </li>
+                    </ol>
+                </div>
+                <div class="system-req">
+                <b>System Requirements:</b><br>
+                    Android 5.0+ | ~50MB free space
+                </div>
+            </div>
+    </div>
+    <div id="features" class="feature-section">
+        <div class="feature-card">
+            <i class="fa-solid fa-bolt"></i>
+            <h4>Fast & Lightweight</h4>
+            <p>EduNest launches instantly and runs smoothly on all supported devices.</p>
+        </div>
+        <div class="feature-card">
+            <i class="fa-solid fa-lock"></i>
+            <h4>Secure & Private</h4>
+            <p>Your data is protected with industry-standard security and privacy practices.</p>
+            </div>
+        <div class="feature-card">
+            <i class="fa-solid fa-cloud-arrow-down"></i>
+            <h4>Cloud Sync</h4>
+            <p>Access your learning progress and resources from anywhere, anytime.</p>
+        </div>
+        <div class="feature-card">
+            <i class="fa-solid fa-headset"></i>
+            <h4>24/7 Support</h4>
+            <p>Our team is always here to help you with any issues or questions.</p>
+        </div>
+    </div>
+    <div class="footer">
+        <p>Made with ❤️ for better education &nbsp;|&nbsp; &copy; 2024 EduNest &nbsp;|&nbsp; <a href="mailto:support@edunest.com">Contact Support</a></p>
+    </div>
+    <script>
+        // QR for APK
+            const apkUrl = 'https://drive.google.com/uc?export=download&id=1c8bFc67_RNe0tAkvSdMDb5cqR9xr3EHi';
+            const apkQrcodeElement = document.getElementById('apk-qrcode');
+            apkQrcodeElement.innerHTML = '';
+            new QRCode(apkQrcodeElement, {
+                text: apkUrl,
+            width: 140,
+            height: 140,
+                colorDark : "#000000",
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.H
+            });
+        // QR for Windows
+            const windowsUrl = document.getElementById('windowsDownload').href;
+            const windowsQrcodeElement = document.getElementById('windows-qrcode');
+            windowsQrcodeElement.innerHTML = '';
+            new QRCode(windowsQrcodeElement, {
+                text: windowsUrl,
+            width: 140,
+            height: 140,
+                colorDark : "#000000",
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.H
+            });
+        // Alt link for Windows (placeholder)
+        document.getElementById('windowsAltLink').href = windowsUrl;
+    </script>
+</body>
+</html> 

@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assigned Tests - EduNest Admin</title>
+    <link rel="stylesheet" href="assigned_tests.css">
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+    <script src="supabaseClient.js"></script>
+    <script src="supabaseAdmin.js"></script>
+</head>
+<body>
+    <div class="main-bg"></div>
+    
+    <!-- Context Selection Modal -->
+    <div id="contextModal" class="context-modal">
+        <div class="context-modal-content">
+            <div class="context-modal-header">
+                <h2>Select Context</h2>
+                <p>Choose the college, branch, and semester to view assigned tests</p>
+            </div>
+            <div class="context-form">
+                <div class="form-group">
+                    <label for="collegeSelect">College</label>
+                    <select id="collegeSelect" required>
+                        <option value="">Select College</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="branchSelect">Branch</label>
+                    <select id="branchSelect" required>
+                        <option value="">Select Branch</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="semesterSelect">Semester</label>
+                    <select id="semesterSelect" required>
+                        <option value="">Select Semester</option>
+                    </select>
+                </div>
+                <button id="contextContinueBtn" class="context-continue-btn">Continue</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Header -->
+    <header class="header" style="background: linear-gradient(120deg,#6366f1 0%,#60a5fa 50%,#a78bfa 100%); box-shadow: 0 4px 24px rgba(99,102,241,0.13); border-bottom-left-radius: 18px; border-bottom-right-radius: 18px; position: relative; z-index: 10;">
+        <div class="header-content">
+            <div class="appbar-top-row">
+                <div class="appbar-left">
+                    <span class="appbar-logo">🏫</span>
+                    <span class="appbar-appname">EduNest</span>
+                </div>
+                <div class="appbar-title-center">
+                    <span class="page-title">Assigned Tests</span>
+                    <div class="college-branch-card">
+                        <span id="contextCollege" class="college-branch-line college-name">All Colleges</span>
+                        <span id="contextBranch" class="college-branch-line branch-name">All Branches</span>
+                        <span id="contextSemester" class="college-branch-line semester-name">All Semesters</span>
+                    </div>
+                </div>
+                <div class="appbar-right">
+                    <span class="back-btn">Standalone Mode</span>
+                </div>
+            </div>
+        </div>
+        <style>
+            .header-content {
+                display: flex;
+                flex-direction: column;
+                align-items: stretch;
+                justify-content: center;
+                padding: 10px 3vw 6px 3vw;
+                max-width: 1200px;
+                margin: 0 auto;
+                gap: 0;
+            }
+            .appbar-top-row {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                width: 100%;
+                gap: 0;
+            }
+            .appbar-left {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                min-width: 120px;
+            }
+            .appbar-logo {
+                font-size: 1.3em;
+                filter: drop-shadow(0 2px 8px #818cf8aa);
+            }
+            .appbar-appname {
+                font-size: 1.1em;
+                font-weight: 900;
+                color: #fff;
+                letter-spacing: 1px;
+                text-shadow: 0 2px 8px #6366f1aa;
+                font-family: 'Poppins', 'Segoe UI', Arial, sans-serif;
+            }
+            .appbar-title-center {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                min-width: 0;
+            }
+            .page-title {
+                font-size: 2em;
+                font-weight: 900;
+                color: #fff;
+                letter-spacing: 0.5px;
+                text-shadow: 0 2px 8px #6366f1aa;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                text-align: center;
+                max-width: 70vw;
+            }
+            .appbar-right {
+                display: flex;
+                align-items: center;
+                min-width: 80px;
+                justify-content: flex-end;
+            }
+            .back-btn {
+                background: rgba(255,255,255,0.85);
+                color: #6366f1;
+                border-radius: 8px;
+                padding: 5px 12px;
+                font-weight: 600;
+                font-size: 0.98em;
+                box-shadow: 0 2px 8px rgba(99,102,241,0.10);
+                text-decoration: none;
+                transition: background 0.2s, color 0.2s;
+                border: none;
+                outline: none;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                min-width: 0;
+            }
+            .college-branch-card {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                background: linear-gradient(120deg,rgba(255,255,255,0.92) 60%,rgba(236,241,255,0.85) 100%);
+                border-radius: 32px;
+                border: 1.5px solid #e0e7ff;
+                box-shadow: 0 6px 32px 0 #6366f133, 0 1.5px 8px #6366f122;
+                backdrop-filter: blur(2.5px);
+                padding: 10px 64px 8px 64px;
+                min-width: 260px;
+                max-width: 80vw;
+                transition: box-shadow 0.18s, border 0.18s, background 0.18s;
+                margin-top: 10px;
+            }
+            .college-branch-line {
+                display: block;
+                text-align: center;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                max-width: 70vw;
+            }
+            .college-name {
+                color: #6366f1;
+                font-weight: 700;
+                font-size: 1.18em;
+                letter-spacing: 0.3px;
+                margin-bottom: 7px;
+                text-shadow: 0 1px 8px #6366f122;
+            }
+            .branch-name {
+                color: #334155;
+                font-weight: 600;
+                font-size: 1.04em;
+                letter-spacing: 0.1px;
+                margin-top: 2px;
+                margin-bottom: 7px;
+                opacity: 0.92;
+            }
+            .semester-name {
+                color: #0ea5e9;
+                font-weight: 600;
+                font-size: 1.04em;
+                letter-spacing: 0.1px;
+                margin-top: 2px;
+                opacity: 0.92;
+            }
+            @media (max-width: 700px) {
+                .appbar-left {
+                    display: none;
+                }
+                .appbar-title-center {
+                    flex: 1;
+                    justify-content: center;
+                    align-items: stretch;
+                    width: 100%;
+                }
+                .page-title {
+                    font-size: 1.15em;
+                    max-width: 98vw;
+                }
+                .college-branch-card {
+                    margin: 8px auto 0 auto;
+                    width: 100%;
+                    max-width: 98vw;
+                    min-width: 0;
+                    padding: 7px 8vw 7px 8vw;
+                    border-radius: 18px;
+                }
+                .college-branch-line {
+                    max-width: 90vw;
+                }
+                .college-name {
+                    font-size: 1em;
+                    margin-bottom: 3px;
+                }
+                .branch-name, .semester-name {
+                    font-size: 0.95em;
+                    margin-bottom: 3px;
+                }
+            }
+        </style>
+    </header>
+
+    <!-- Main Content -->
+    <div class="main-content" id="mainContent" style="display: none;">
+        <!-- Search and Filter Section -->
+        <div class="search-section">
+            <div class="search-container">
+                <input type="text" id="testSearchInput" placeholder="Search assigned tests..." class="search-input">
+                <div class="search-icon">🔍</div>
+            </div>
+            <div class="filter-container">
+                <select id="statusFilter" class="filter-select">
+                    <option value="">All Status</option>
+                    <option value="active">Active</option>
+                    <option value="completed">Completed</option>
+                    <option value="expired">Expired</option>
+                </select>
+                <select id="difficultyFilter" class="filter-select">
+                    <option value="">All Difficulties</option>
+                    <option value="beginner">Easy</option>
+                    <option value="intermediate">Medium</option>
+                    <option value="advanced">Hard</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Stats Section -->
+        <div class="stats-section">
+            <div class="stat-card">
+                <div class="stat-icon">📊</div>
+                <div class="stat-content">
+                    <div class="stat-number" id="totalTests">0</div>
+                    <div class="stat-label">Total Tests</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">✅</div>
+                <div class="stat-content">
+                    <div class="stat-number" id="completedTests">0</div>
+                    <div class="stat-label">Completed</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">⏰</div>
+                <div class="stat-content">
+                    <div class="stat-number" id="activeTests">0</div>
+                    <div class="stat-label">Active</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tests List Section -->
+        <div class="list-section">
+            <div class="section-header">
+                <h2>Assigned Tests</h2>
+                <p>View and manage all assigned tests and their attendees</p>
+                <div class="list-stats">
+                    <div class="stat-item">
+                        <span class="stat-number" id="listTotalTests">0</span>
+                        <span class="stat-label">Tests</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="list-container">
+                <div id="assignedTestsList" class="tests-grid">
+                    <!-- Tests will be loaded here -->
+                </div>
+                
+                <div id="emptyState" class="empty-state hidden">
+                    <div class="empty-icon">📝</div>
+                    <h3>No Assigned Tests</h3>
+                    <p>No tests have been assigned yet. Tests will appear here once they are created and assigned to students.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay hidden">
+        <div class="loading-spinner"></div>
+        <p>Loading assigned tests...</p>
+    </div>
+
+    <!-- Attendees Modal -->
+    <div id="attendeesModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">Test Attendees</h3>
+                <div class="modal-actions">
+                    <button id="downloadPdfBtn" class="download-btn" onclick="downloadAttendeesPDF()">
+                        📄 Download PDF
+                    </button>
+                    <button class="close-btn" onclick="closeAttendeesModal()">×</button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div id="attendeesList" class="attendees-list">
+                    <!-- Attendees will be loaded here -->
+                </div>
+                <div id="attendeesEmptyState" class="empty-state hidden">
+                    <div class="empty-icon">👥</div>
+                    <h3>No Attendees</h3>
+                    <p>No students have attended this test yet.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="assigned_tests_standalone.js"></script>
+</body>
+</html> 

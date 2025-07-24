@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manual Question Entry - EduNest Admin</title>
+  <link rel="stylesheet" href="question_entry.css">
+</head>
+<body>
+  <div class="main-bg"></div>
+  <!-- Context Selection Modal -->
+  <div id="contextModal" class="context-modal" style="display:none;">
+    <div class="context-modal-content">
+      <div class="modal-header">
+        <span class="modal-badge">🏫</span>
+        <h3>Select Context</h3>
+        <div class="modal-desc">Please select the College, Branch, and Semester before adding questions.</div>
+      </div>
+      <div class="modal-form-group">
+        <label for="collegeSelect">College *</label>
+        <select id="collegeSelect" required>
+          <option value="">Select College</option>
+        </select>
+      </div>
+      <div class="modal-form-group">
+        <label for="branchSelect">Branch *</label>
+        <select id="branchSelect" required>
+          <option value="">Select Branch</option>
+        </select>
+      </div>
+      <div class="modal-form-group">
+        <label for="semesterSelect">Semester *</label>
+        <select id="semesterSelect" required>
+          <option value="">Select Semester</option>
+        </select>
+      </div>
+      <button id="contextContinueBtn" class="modal-continue-btn">Continue</button>
+    </div>
+  </div>
+  <!-- Question Set Modal (Step 2) -->
+  <div id="questionSetModal" class="context-modal" style="display:none;">
+    <div class="context-modal-content">
+      <div class="modal-header">
+        <span class="modal-badge">📝</span>
+        <h3>Set Test Name & Number of Questions</h3>
+        <div class="modal-desc">Enter a name for this test and how many questions you want to add.</div>
+      </div>
+      <div class="modal-form-group">
+        <label for="testNameInput">Test Name *</label>
+        <input type="text" id="testNameInput" required placeholder="e.g., Unit Test 1, Chapter 3 Quiz" style="width:100%;padding:10px 14px;border-radius:8px;border:1.5px solid #d1d5db;font-size:1em;">
+      </div>
+      <div class="modal-form-group">
+        <label for="subjectInput">Subject *</label>
+        <select id="subjectInput" style="width:100%;padding:10px 14px;border-radius:8px;border:1.5px solid #d1d5db;font-size:1em;">
+          <option value="">No Specific Subject</option>
+          <!-- Options will be populated by JS -->
+        </select>
+      </div>
+      <div class="modal-form-group">
+        <label for="numQuestionsInput">Number of Questions *</label>
+        <input type="number" id="numQuestionsInput" min="1" max="50" value="5" required style="width:100%;padding:10px 14px;border-radius:8px;border:1.5px solid #d1d5db;font-size:1em;">
+      </div>
+      <div class="modal-form-group">
+        <label for="testDurationInput">Test Duration (minutes) *</label>
+        <input type="number" id="testDurationInput" min="1" max="300" value="30" required style="width:100%;padding:10px 14px;border-radius:8px;border:1.5px solid #d1d5db;font-size:1em;">
+      </div>
+      <button id="questionSetContinueBtn" class="modal-continue-btn">Continue</button>
+    </div>
+  </div>
+  <!-- Review Modal (Step 3) -->
+  <div id="reviewModal" class="context-modal" style="display:none;">
+    <div class="context-modal-content" style="max-width:700px;width:98vw;">
+      <div class="modal-header">
+        <span class="modal-badge">🔍</span>
+        <h3>Review Questions</h3>
+        <div class="modal-desc">Please review all questions before submitting. You can edit any question by clicking Edit.</div>
+      </div>
+      <div id="reviewQuestionsList" style="max-height:50vh;overflow-y:auto;margin-bottom:18px;"></div>
+      <div style="display:flex;justify-content:space-between;gap:12px;">
+        <button id="reviewBackBtn" class="modal-continue-btn" style="background:#e0e7ef;color:#334155;">Back</button>
+        <button id="submitAllBtn" class="modal-continue-btn">Submit All</button>
+      </div>
+    </div>
+  </div>
+  <header class="header" style="background: linear-gradient(120deg,#6366f1 0%,#60a5fa 50%,#a78bfa 100%); box-shadow: 0 4px 24px rgba(99,102,241,0.13); border-bottom-left-radius: 18px; border-bottom-right-radius: 18px; position: relative; z-index: 10;">
+    <div class="header-content">
+      <div class="appbar-top-row">
+        <div class="appbar-left">
+          <span class="appbar-logo">🏫</span>
+          <span class="appbar-appname">EduNest</span>
+        </div>
+        <div class="appbar-title-center">
+          <span class="page-title">Manual Question Entry</span>
+          <div class="college-branch-card">
+            <span id="contextCollege" class="college-branch-line college-name">College</span>
+            <span id="contextBranch" class="college-branch-line branch-name">Branch</span>
+            <span id="contextSemester" class="college-branch-line semester-name">Semester</span>
+          </div>
+        </div>
+        <div class="appbar-right">
+          <a href="dashboard.html" class="back-btn">
+            <span class="back-btn-text-full">Back to Dashboard</span>
+            <span class="back-btn-text-short">Back</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </header>
+  <main class="main-content modern-bg">
+    <section class="question-entry-section modern-card">
+      <form id="questionForm" style="display:block;">
+        <div class="form-group">
+          <label for="questionText">Question <span id="questionNumberLabel">1</span></label>
+          <textarea id="questionText" required placeholder="Enter the question here..."></textarea>
+        </div>
+        <div class="form-group">
+          <label>Options *</label>
+          <div class="options-list">
+            <div class="option-item">
+              <input type="radio" name="correctOption" value="A" id="optionA_radio" required>
+              <input type="text" id="optionA" placeholder="Option A" required>
+              <label for="optionA_radio">A</label>
+            </div>
+            <div class="option-item">
+              <input type="radio" name="correctOption" value="B" id="optionB_radio">
+              <input type="text" id="optionB" placeholder="Option B" required>
+              <label for="optionB_radio">B</label>
+            </div>
+            <div class="option-item">
+              <input type="radio" name="correctOption" value="C" id="optionC_radio">
+              <input type="text" id="optionC" placeholder="Option C" required>
+              <label for="optionC_radio">C</label>
+            </div>
+            <div class="option-item">
+              <input type="radio" name="correctOption" value="D" id="optionD_radio">
+              <input type="text" id="optionD" placeholder="Option D" required>
+              <label for="optionD_radio">D</label>
+            </div>
+          </div>
+        </div>
+        <div class="form-note">* All fields are required. Please double-check before submitting.</div>
+      </form>
+      <div id="questionMsg" class="message"></div>
+    </section>
+  </main>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script src="question_entry.js"></script>
+</body>
+</html> 
