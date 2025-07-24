@@ -940,12 +940,16 @@ class _HomeDesktopState extends State<HomeDesktop>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'A new version ( 24latestVersion) of EduNest is available!',
+                          'A new version (' +
+                              latestVersion +
+                              ') of EduNest is available!',
                         ),
                         const SizedBox(height: 10),
-                        const Text('See what\'s new:'),
+                        const Text(
+                          'Update to see the latest features and improvements!',
+                        ),
                         const SizedBox(height: 10),
-                        WhatsNewDialog(),
+                        // WhatsNewDialog(), // Removed from update dialog
                       ],
                     ),
                     actions: [
