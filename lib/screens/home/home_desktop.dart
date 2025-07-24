@@ -64,6 +64,7 @@ class HomeDesktop extends StatefulWidget {
 class _HomeDesktopState extends State<HomeDesktop>
     with SingleTickerProviderStateMixin {
   double _opacity = 0.0;
+  bool _didCheckUpdate = false;
 
   @override
   void initState() {
@@ -73,7 +74,18 @@ class _HomeDesktopState extends State<HomeDesktop>
         _opacity = 1.0;
       });
     });
-    _checkForUpdate();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_didCheckUpdate &&
+        (Theme.of(context).platform == TargetPlatform.windows ||
+            Theme.of(context).platform == TargetPlatform.linux ||
+            Theme.of(context).platform == TargetPlatform.macOS)) {
+      _didCheckUpdate = true;
+      _checkForUpdate();
+    }
   }
 
   @override
@@ -869,13 +881,6 @@ class _HomeDesktopState extends State<HomeDesktop>
   }
 
   Future<void> _checkForUpdate() async {
-    // Only check for updates on desktop
-    if (!(kIsWeb ||
-        Theme.of(context).platform == TargetPlatform.windows ||
-        Theme.of(context).platform == TargetPlatform.linux ||
-        Theme.of(context).platform == TargetPlatform.macOS)) {
-      return;
-    }
     try {
       final response = await http.get(Uri.parse(latestJsonUrl));
       if (response.statusCode == 200) {

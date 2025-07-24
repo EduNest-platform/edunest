@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 // Centralized update info
-const String currentVersion = '1..0'; // Update for each release
+const String currentVersion = '1.1.0'; // Update for each release
 const String latestJsonUrl =
     'https://raw.githubusercontent.com/Ranojitdas/EduNest-desktop/main/latest.json';
 
@@ -14,6 +14,7 @@ class WhatsNewDialog extends StatelessWidget {
     'Bug fixes and performance improvements',
     'Timer added to practice tests',
     'Improves Subject view screen',
+    'Academic info screen updated',
   ];
 
   const WhatsNewDialog({super.key});

@@ -1,6 +1,6 @@
 [Setup]
 AppName=EduNest
-AppVersion=1.0.0
+AppVersion=1.1.0
 DefaultDirName={pf}\EduNest
 DefaultGroupName=EduNest
 UninstallDisplayIcon={app}\EduNest.exe
@@ -21,11 +21,4 @@ Name: "{userdesktop}\\EduNest"; Filename: "{app}\\EduNest.exe"; Tasks: desktopic
 Name: "desktopicon"; Description: "Create a &desktop shortcut"; GroupDescription: "Additional icons:"
 
 [Code]
-function InitializeSetup(): Boolean;
-begin
-  if DirExists(ExpandConstant('{app}')) then
-  begin
-    MsgBox('An existing version of EduNest was found. The installer will upgrade your app and preserve your settings.', mbInformation, MB_OK);
-  end;
-  Result := True;
-end;
+
