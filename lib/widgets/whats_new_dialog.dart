@@ -95,6 +95,7 @@ class WhatsNewDialog extends StatelessWidget {
     'Timer added to practice tests',
     'Improves Subject view screen',
     'Academic info screen updated',
+    'Whats new dialog box updated'
   ];
 
   const WhatsNewDialog({super.key});

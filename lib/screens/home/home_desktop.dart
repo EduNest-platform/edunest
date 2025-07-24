@@ -21,6 +21,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import '../../widgets/whats_new_dialog.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class HomeDesktop extends StatefulWidget {
   final UserProfile? userProfile;
@@ -85,6 +86,7 @@ class _HomeDesktopState extends State<HomeDesktop>
             Theme.of(context).platform == TargetPlatform.macOS)) {
       _didCheckUpdate = true;
       _checkForUpdate();
+      _showWhatsNewIfNeeded();
     }
   }
 
@@ -880,6 +882,18 @@ class _HomeDesktopState extends State<HomeDesktop>
     );
   }
 
+  Future<void> _showWhatsNewIfNeeded() async {
+    final prefs = await SharedPreferences.getInstance();
+    final lastSeenVersion = prefs.getString('last_seen_version') ?? '';
+    if (lastSeenVersion != currentVersion) {
+      // Only show if not already seen for this version
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        showDialog(context: context, builder: (context) => WhatsNewDialog());
+      });
+      await prefs.setString('last_seen_version', currentVersion);
+    }
+  }
+
   Future<void> _checkForUpdate() async {
     try {
       final response = await http.get(Uri.parse(latestJsonUrl));
@@ -926,7 +940,7 @@ class _HomeDesktopState extends State<HomeDesktop>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'A new version ($latestVersion) of EduNest is available!',
+                          'A new version ( 24latestVersion) of EduNest is available!',
                         ),
                         const SizedBox(height: 10),
                         const Text('See what\'s new:'),
@@ -947,10 +961,13 @@ class _HomeDesktopState extends State<HomeDesktop>
                             borderRadius: BorderRadius.circular(8),
                           ),
                         ),
-                        onPressed: () {
+                        onPressed: () async {
                           Navigator.of(context).pop();
                           if (downloadUrl.isNotEmpty) {
                             _launchURL(downloadUrl);
+                            // Mark WhatsNew as unseen so it shows after update
+                            final prefs = await SharedPreferences.getInstance();
+                            await prefs.remove('last_seen_version');
                           }
                         },
                         child: const Text('Download'),
