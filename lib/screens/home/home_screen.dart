@@ -1734,7 +1734,7 @@ class _HomeScreenState extends State<HomeScreen>
                         icon: Icons.file_present_rounded,
                         title: file.name,
                         subtitle:
-                            '24${file.fileType} 26bull; Uploaded by 24${file.uploadedBy} 26bull; 24${_formatTimeAgo(file.uploadDate)}',
+                            '${file.fileType} • Uploaded by ${file.uploadedBy} • ${_formatTimeAgo(file.uploadDate)}',
                         color: _getFileTypeColor(file.fileType),
                       ),
                     )
@@ -1795,57 +1795,17 @@ class _HomeScreenState extends State<HomeScreen>
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.13),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: AppText(
-                        subtitle.split('•').first.trim(),
-                        style: GoogleFonts.poppins(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                          color: color,
-                        ),
-                      ),
-                    ),
                   ],
                 ),
                 const SizedBox(height: 6),
-                Row(
-                  children: [
-                    Icon(Icons.person, size: 13, color: Colors.grey.shade400),
-                    const SizedBox(width: 4),
-                    AppText(
-                      subtitle
-                          .split('•')[1]
-                          .replaceAll('Uploaded by', '')
-                          .trim(),
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Icon(
-                      Icons.access_time_rounded,
-                      size: 13,
-                      color: Colors.grey.shade400,
-                    ),
-                    const SizedBox(width: 4),
-                    AppText(
-                      subtitle.split('•').last.trim(),
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                  ],
+                AppText(
+                  subtitle,
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: Colors.grey.shade600,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
