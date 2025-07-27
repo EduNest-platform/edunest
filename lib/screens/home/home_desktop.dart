@@ -85,8 +85,7 @@ class _HomeDesktopState extends State<HomeDesktop>
             Theme.of(context).platform == TargetPlatform.linux ||
             Theme.of(context).platform == TargetPlatform.macOS)) {
       _didCheckUpdate = true;
-      _checkForUpdate();
-      _showWhatsNewIfNeeded();
+      _checkForUpdateAndWhatsNew();
     }
   }
 
@@ -882,6 +881,36 @@ class _HomeDesktopState extends State<HomeDesktop>
     );
   }
 
+  Future<void> _checkForUpdateAndWhatsNew() async {
+    bool updateAvailable = false;
+
+    // First check for updates
+    try {
+      final response = await http.get(Uri.parse(latestJsonUrl));
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final latestVersion = data['version']?.toString() ?? '';
+        final downloadUrl =
+            data['windows']?['download_url']?.toString() ??
+            data['download_url']?.toString() ??
+            '';
+        if (_isNewerVersion(latestVersion, currentVersion)) {
+          updateAvailable = true;
+          if (mounted) {
+            _showUpdateDialog(latestVersion, downloadUrl);
+          }
+        }
+      }
+    } catch (e) {
+      // Ignore update errors
+    }
+
+    // Only show What's New if no update is available
+    if (!updateAvailable) {
+      await _showWhatsNewIfNeeded();
+    }
+  }
+
   Future<void> _showWhatsNewIfNeeded() async {
     final prefs = await SharedPreferences.getInstance();
     final lastSeenVersion = prefs.getString('last_seen_version') ?? '';
@@ -894,97 +923,206 @@ class _HomeDesktopState extends State<HomeDesktop>
     }
   }
 
-  Future<void> _checkForUpdate() async {
-    try {
-      final response = await http.get(Uri.parse(latestJsonUrl));
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        final latestVersion = data['version']?.toString() ?? '';
-        final downloadUrl = data['download_url']?.toString() ?? '';
-        if (_isNewerVersion(latestVersion, currentVersion)) {
-          if (mounted) {
-            showDialog(
-              context: context,
-              barrierDismissible: true,
-              builder:
-                  (context) => AlertDialog(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(18),
+  void _showTestUpdateDialog() {
+    _showUpdateDialog(
+      '1.2.0',
+      'https://github.com/Ranojitdas/EduNest-desktop/releases/download/v1.2.0/EduNestUpdate.exe',
+    );
+  }
+
+  void _showUpdateDialog(String latestVersion, String downloadUrl) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder:
+          (context) => Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(24),
+            ),
+            elevation: 0,
+            backgroundColor: Colors.transparent,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Color(0xFF1E3A8A), // Darker blue
+                      Color(0xFF3B82F6), // Medium blue
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF1E3A8A).withOpacity(0.25),
+                      blurRadius: 20,
+                      offset: const Offset(0, 10),
                     ),
-                    title: Row(
-                      children: [
-                        Container(
-                          decoration: BoxDecoration(
-                            color: Colors.blue.withOpacity(0.12),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          padding: const EdgeInsets.all(8),
-                          child: const Icon(
-                            Icons.system_update_rounded,
-                            color: Colors.blue,
-                            size: 28,
-                          ),
+                  ],
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Header with icon
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(16),
                         ),
-                        const SizedBox(width: 12),
-                        const Text(
-                          'Update Available',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 20,
-                          ),
+                        child: const Icon(
+                          Icons.system_update_rounded,
+                          color: Colors.white,
+                          size: 32,
                         ),
-                      ],
-                    ),
-                    content: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'A new version (' +
-                              latestVersion +
-                              ') of EduNest is available!',
-                        ),
-                        const SizedBox(height: 10),
-                        const Text(
-                          'Update to see the latest features and improvements!',
-                        ),
-                        const SizedBox(height: 10),
-                        // WhatsNewDialog(), // Removed from update dialog
-                      ],
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        child: const Text('Later'),
                       ),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+                      const SizedBox(height: 20),
+                      // Title
+                      Text(
+                        'Update Available',
+                        style: GoogleFonts.poppins(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 12),
+                      // Version info
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          'Version $latestVersion',
+                          style: GoogleFonts.poppins(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
                           ),
                         ),
-                        onPressed: () async {
-                          Navigator.of(context).pop();
-                          if (downloadUrl.isNotEmpty) {
-                            _launchURL(downloadUrl);
-                            // Mark WhatsNew as unseen so it shows after update
-                            final prefs = await SharedPreferences.getInstance();
-                            await prefs.remove('last_seen_version');
-                          }
-                        },
-                        child: const Text('Download'),
+                      ),
+                      const SizedBox(height: 16),
+                      // Description
+                      Text(
+                        'A new version of EduNest is available with the latest features and improvements.',
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          color: Colors.white.withOpacity(0.9),
+                          height: 1.4,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 24),
+                      // Action buttons
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: TextButton(
+                                onPressed: () => Navigator.of(context).pop(),
+                                style: TextButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 16,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                child: Text(
+                                  'Later',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    Colors.white,
+                                    Colors.white.withOpacity(0.9),
+                                  ],
+                                ),
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.1),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: ElevatedButton(
+                                onPressed: () async {
+                                  Navigator.of(context).pop();
+                                  if (downloadUrl.isNotEmpty) {
+                                    _launchURL(downloadUrl);
+                                    // Mark WhatsNew as unseen so it shows after update
+                                    final prefs =
+                                        await SharedPreferences.getInstance();
+                                    await prefs.remove('last_seen_version');
+                                  }
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.transparent,
+                                  foregroundColor: const Color(0xFF1E3A8A),
+                                  shadowColor: Colors.transparent,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 16,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(
+                                      Icons.download_rounded,
+                                      size: 20,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Update',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-            );
-          }
-        }
-      }
-    } catch (e) {
-      // Ignore update errors
-    }
+                ),
+              ),
+            ),
+          ),
+    );
   }
 
   bool _isNewerVersion(String latest, String current) {
@@ -1012,31 +1150,176 @@ class _HomeDesktopState extends State<HomeDesktop>
       // ignore: use_build_context_synchronously
       await showDialog(
         context: context,
+        barrierDismissible: false,
         builder:
-            (context) => AlertDialog(
-              title: const Text('Open Download Page?'),
-              content: Text(
-                'This will open your browser to download the latest version.',
+            (context) => Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
               ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Cancel'),
+              elevation: 0,
+              backgroundColor: Colors.transparent,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 420),
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Color(0xFF1E3A8A), // Darker blue
+                        Color(0xFF3B82F6), // Medium blue
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF1E3A8A).withOpacity(0.25),
+                        blurRadius: 20,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Header with icon
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: const Icon(
+                            Icons.open_in_browser_rounded,
+                            color: Colors.white,
+                            size: 32,
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        // Title
+                        Text(
+                          'Open Download Page?',
+                          style: GoogleFonts.poppins(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 16),
+                        // Description
+                        Text(
+                          'This will open your browser to download the latest version.',
+                          style: GoogleFonts.poppins(
+                            fontSize: 16,
+                            color: Colors.white.withOpacity(0.9),
+                            height: 1.4,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 24),
+                        // Action buttons
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: TextButton(
+                                  onPressed: () => Navigator.of(context).pop(),
+                                  style: TextButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 16,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    'Cancel',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      Colors.white,
+                                      Colors.white.withOpacity(0.9),
+                                    ],
+                                  ),
+                                  borderRadius: BorderRadius.circular(12),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.1),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: ElevatedButton(
+                                  onPressed: () async {
+                                    Navigator.of(context).pop();
+                                    // ignore: deprecated_member_use
+                                    await Future.delayed(
+                                      const Duration(milliseconds: 100),
+                                    );
+                                    // ignore: deprecated_member_use
+                                    await Future.microtask(() async {
+                                      // ignore: deprecated_member_use
+                                      await launchUrl(Uri.parse(url));
+                                    });
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.transparent,
+                                    foregroundColor: const Color(0xFF1E3A8A),
+                                    shadowColor: Colors.transparent,
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 16,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const Icon(
+                                        Icons.open_in_new_rounded,
+                                        size: 20,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        'Open',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-                ElevatedButton(
-                  onPressed: () async {
-                    Navigator.of(context).pop();
-                    // ignore: deprecated_member_use
-                    await Future.delayed(const Duration(milliseconds: 100));
-                    // ignore: deprecated_member_use
-                    await Future.microtask(() async {
-                      // ignore: deprecated_member_use
-                      await launchUrl(Uri.parse(url));
-                    });
-                  },
-                  child: const Text('Open'),
-                ),
-              ],
+              ),
             ),
       );
     } catch (e) {}
