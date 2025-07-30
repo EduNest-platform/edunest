@@ -604,9 +604,7 @@ class _TestResultsListScreenState extends State<TestResultsListScreen> {
                                                         decoration: BoxDecoration(
                                                           color: AppTheme
                                                               .primaryBlue
-                                                              .withOpacity(
-                                                                0.07,
-                                                              ),
+                                                              .withValues(alpha: 0.07),
                                                           borderRadius:
                                                               BorderRadius.circular(
                                                                 12,
@@ -742,7 +740,7 @@ class _TestResultsListScreenState extends State<TestResultsListScreen> {
                                           ),
                                           decoration: BoxDecoration(
                                             color: AppTheme.primaryBlue
-                                                .withOpacity(0.07),
+                                                .withValues(alpha: 0.07),
                                             borderRadius: BorderRadius.circular(
                                               12,
                                             ),

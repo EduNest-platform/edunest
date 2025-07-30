@@ -1,0 +1,356 @@
+/* Mobile Navigation Styles - Separate file to avoid conflicts */
+
+/* Mobile Navigation Container */
+.mobile-nav-container {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+}
+
+.mobile-nav-container.open {
+  opacity: 1;
+  visibility: visible;
+  display: block;
+}
+
+/* Mobile Sidebar */
+.mobile-sidebar {
+  position: fixed;
+  top: 0;
+  left: -300px;
+  width: 280px;
+  height: 100vh;
+  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+  box-shadow: 4px 0 20px rgba(0, 0, 0, 0.3);
+  z-index: 1001;
+  transition: left 0.3s ease;
+  overflow-y: auto;
+}
+
+.mobile-nav-container.open .mobile-sidebar {
+  left: 0;
+}
+
+/* Mobile Header */
+.mobile-header {
+  padding: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.mobile-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: white;
+  font-size: 1.4em;
+  font-weight: 700;
+}
+
+.mobile-logo span {
+  font-size: 1.2em;
+}
+
+/* Close Button */
+.mobile-close-btn {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 1.5em;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 8px;
+  transition: background 0.2s;
+}
+
+.mobile-close-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Mobile Navigation Menu */
+.mobile-nav-menu {
+  padding: 20px 0;
+}
+
+.mobile-nav-item {
+  display: block;
+  padding: 16px 20px;
+  color: #cbd5e1;
+  text-decoration: none;
+  font-size: 1.1em;
+  font-weight: 500;
+  transition: all 0.2s;
+  border-left: 3px solid transparent;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.mobile-nav-item:hover,
+.mobile-nav-item.active {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border-left-color: #6366f1;
+}
+
+.mobile-nav-icon {
+  font-size: 1.2em;
+  width: 24px;
+  text-align: center;
+}
+
+/* Mobile User Info */
+.mobile-user-info {
+  padding: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  margin-top: auto;
+}
+
+.mobile-user-avatar {
+  width: 40px;
+  height: 40px;
+  background: #6366f1;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2em;
+  color: white;
+  margin-bottom: 12px;
+}
+
+.mobile-user-name {
+  color: white;
+  font-weight: 600;
+  font-size: 1.1em;
+  margin-bottom: 4px;
+}
+
+.mobile-user-role {
+  color: #cbd5e1;
+  font-size: 0.9em;
+}
+
+/* Mobile Logout Button */
+.mobile-logout-btn {
+  width: 100%;
+  padding: 12px 20px;
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 1em;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: 16px;
+}
+
+.mobile-logout-btn:hover {
+  background: linear-gradient(135deg, #b91c1c 0%, #991b1b 100%);
+  transform: translateY(-1px);
+}
+
+/* Hamburger Menu Button */
+.hamburger-btn {
+  display: none;
+  background: white;
+  border: 1px solid #e2e8f0;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 8px;
+  transition: all 0.2s;
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  z-index: 999;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.hamburger-btn:hover {
+  background: #f8fafc;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.hamburger-icon {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 24px;
+  height: 20px;
+}
+
+.hamburger-line {
+  width: 100%;
+  height: 3px;
+  background: #1e293b;
+  border-radius: 2px;
+  transition: all 0.3s ease;
+}
+
+.hamburger-btn.active .hamburger-line:nth-child(1) {
+  transform: rotate(45deg) translate(6px, 6px);
+}
+
+.hamburger-btn.active .hamburger-line:nth-child(2) {
+  opacity: 0;
+}
+
+.hamburger-btn.active .hamburger-line:nth-child(3) {
+  transform: rotate(-45deg) translate(6px, -6px);
+}
+
+/* Mobile Main Content */
+.mobile-main-content {
+  margin-left: 0;
+  transition: margin-left 0.3s ease;
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+  .hamburger-btn {
+    display: block;
+  }
+  
+  .mobile-nav-container {
+    display: block;
+  }
+  
+  .mobile-main-content {
+    margin-left: 0;
+  }
+  
+  .sidebar {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .mobile-sidebar {
+    width: 280px;
+  }
+  
+  .mobile-nav-container.open .mobile-sidebar {
+    left: 0;
+  }
+  
+  .hamburger-btn {
+    top: 15px;
+    left: 15px;
+  }
+  
+  .mobile-header {
+    padding: 16px;
+  }
+  
+  .mobile-nav-item {
+    padding: 14px 16px;
+    font-size: 1em;
+  }
+  
+  .mobile-user-info {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .mobile-logo {
+    font-size: 1.2em;
+  }
+  
+  .mobile-nav-item {
+    padding: 12px 14px;
+    font-size: 0.95em;
+  }
+  
+  .mobile-nav-icon {
+    font-size: 1.1em;
+    width: 20px;
+  }
+  
+  .hamburger-btn {
+    top: 10px;
+    left: 10px;
+  }
+  
+  .hamburger-icon {
+    width: 20px;
+    height: 16px;
+  }
+  
+  .hamburger-line {
+    height: 2px;
+  }
+}
+
+/* Animation for mobile nav items */
+.mobile-nav-item {
+  animation: slideInLeft 0.3s ease forwards;
+  opacity: 0;
+  transform: translateX(-20px);
+}
+
+.mobile-nav-item:nth-child(1) { animation-delay: 0.1s; }
+.mobile-nav-item:nth-child(2) { animation-delay: 0.2s; }
+.mobile-nav-item:nth-child(3) { animation-delay: 0.3s; }
+.mobile-nav-item:nth-child(4) { animation-delay: 0.4s; }
+.mobile-nav-item:nth-child(5) { animation-delay: 0.5s; }
+
+@keyframes slideInLeft {
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Touch device optimizations */
+@media (hover: none) and (pointer: coarse) {
+  .mobile-nav-item {
+    min-height: 44px;
+    padding: 12px 20px;
+  }
+  
+  .mobile-close-btn,
+  .hamburger-btn {
+    min-height: 44px;
+    min-width: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .mobile-logout-btn {
+    min-height: 44px;
+    font-size: 16px;
+  }
+}
+
+/* Prevent body scroll when menu is open */
+body.menu-open {
+  overflow: hidden;
+}
+
+/* Mobile backdrop */
+.mobile-nav-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: transparent;
+  cursor: pointer;
+} 
+ 
+ 
+ 
+ 

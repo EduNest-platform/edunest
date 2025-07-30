@@ -22,13 +22,18 @@ import 'services/supabase_service.dart';
 import 'services/network_service.dart';
 import 'services/session_tracking_service.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+// import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+// import 'package:firebase_performance/firebase_performance.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'firebase_options.dart';
 import 'package:flutter/foundation.dart'
-    show defaultTargetPlatform, TargetPlatform;
+    show defaultTargetPlatform, TargetPlatform, kIsWeb;
+import 'dart:io' show Platform;
 import 'package:window_manager/window_manager.dart';
+// import 'package:firebase_performance/firebase_performance.dart';
+import 'package:flutter/services.dart' show PlatformDispatcher;
+import 'dart:async';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -39,30 +44,58 @@ Future<void> clearAllAppData() async {
   await secureStorage.deleteAll();
 }
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+void main() {
+  runZonedGuarded(
+    () async {
+      WidgetsFlutterBinding.ensureInitialized();
 
-  // Only initialize window_manager on desktop platforms
-  if (defaultTargetPlatform == TargetPlatform.windows ||
-      defaultTargetPlatform == TargetPlatform.linux ||
-      defaultTargetPlatform == TargetPlatform.macOS) {
-    await windowManager.ensureInitialized();
-  }
+      // Only initialize window_manager on desktop platforms
+      if (defaultTargetPlatform == TargetPlatform.windows ||
+          defaultTargetPlatform == TargetPlatform.linux ||
+          defaultTargetPlatform == TargetPlatform.macOS) {
+        await windowManager.ensureInitialized();
+      }
 
-  // Initialize Firebase first!
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+      // Initialize Firebase first!
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
 
-  // Now initialize other services
-  await SupabaseService.init();
-  NetworkService().initialize();
+      // Enable Crashlytics and set up error handling only on supported platforms
+      final isCrashlyticsSupported =
+          kIsWeb || (Platform.isAndroid || Platform.isIOS);
+      print(
+        'Crashlytics supported: '
+        ' [33m$isCrashlyticsSupported [0m (kIsWeb: $kIsWeb, Platform: ${Platform.operatingSystem})',
+      );
+      // if (isCrashlyticsSupported) {
+      //   await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(
+      //     true,
+      //   );
+      //   FlutterError.onError =
+      //       FirebaseCrashlytics.instance.recordFlutterFatalError;
+      // }
 
-  // Only enable Crashlytics on Android/iOS
-  if (defaultTargetPlatform == TargetPlatform.android ||
-      defaultTargetPlatform == TargetPlatform.iOS) {
-    FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
-  }
+      // // Initialize Firebase Performance
+      // await FirebasePerformance.instance;
 
-  runApp(const MyApp());
+      // Now initialize other services
+      await SupabaseService.init();
+      NetworkService().initialize();
+
+      runApp(const MyApp());
+    },
+    (error, stack) {
+      final isCrashlyticsSupported =
+          kIsWeb || (Platform.isAndroid || Platform.isIOS);
+      // if (isCrashlyticsSupported) {
+      //   FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+      // } else {
+      // Optionally print or handle errors differently on unsupported platforms
+      print('Unhandled error: $error\n$stack');
+      // }
+    },
+  );
 }
 
 class MyApp extends StatelessWidget {

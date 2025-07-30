@@ -92,7 +92,7 @@ class _AcademicPathReviewScreenState extends State<AcademicPathReviewScreen> {
                                   style: GoogleFonts.poppins(
                                     fontSize: nameFontSize,
                                     fontWeight: FontWeight.w500,
-                                    color: Colors.white.withOpacity(0.9),
+                                    color: Colors.white.withValues(alpha: 0.9),
                                   ),
                                 ),
                               ],
@@ -123,11 +123,11 @@ class _AcademicPathReviewScreenState extends State<AcademicPathReviewScreen> {
                                       decoration: BoxDecoration(
                                         gradient: LinearGradient(
                                           colors: [
-                                            AppTheme.primaryBlue.withOpacity(
-                                              0.1,
+                                            AppTheme.primaryBlue.withValues(
+                                              alpha: 0.1,
                                             ),
-                                            AppTheme.primaryLight.withOpacity(
-                                              0.05,
+                                            AppTheme.primaryLight.withValues(
+                                              alpha: 0.05,
                                             ),
                                           ],
                                           begin: Alignment.topLeft,
@@ -136,7 +136,7 @@ class _AcademicPathReviewScreenState extends State<AcademicPathReviewScreen> {
                                         borderRadius: BorderRadius.circular(20),
                                         border: Border.all(
                                           color: AppTheme.primaryBlue
-                                              .withOpacity(0.2),
+                                              .withValues(alpha: 0.2),
                                           width: 1.5,
                                         ),
                                       ),
@@ -185,7 +185,7 @@ class _AcademicPathReviewScreenState extends State<AcademicPathReviewScreen> {
                                               boxShadow: [
                                                 BoxShadow(
                                                   color: Colors.black
-                                                      .withOpacity(0.05),
+                                                      .withValues(alpha: 0.05),
                                                   blurRadius: 10,
                                                   offset: const Offset(0, 4),
                                                 ),
@@ -352,7 +352,7 @@ class _AcademicPathReviewScreenState extends State<AcademicPathReviewScreen> {
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
+            color: color.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(icon, color: color, size: 16),

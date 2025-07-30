@@ -26,3 +26,9 @@ if (document.readyState === 'loading') {
 } else {
   initializeSupabaseAdmin();
 } 
+
+// Add a global signup wrapper for admin signup
+window.supabaseAdminSignup = async function(email, password) {
+  if (!window.supabaseAdmin) throw new Error('Supabase Admin client not initialized');
+  return await window.supabaseAdmin.auth.signUp({ email, password });
+}; 

@@ -64,3 +64,17 @@
 
 # Flutter deferred components
 -keep class io.flutter.embedding.engine.deferredcomponents.** { *; } 
+
+# Play Core SplitCompat and deferred components
+-keep class com.google.android.play.core.splitcompat.SplitCompatApplication { *; }
+-keep class com.google.android.play.core.splitinstall.** { *; }
+-keep class com.google.android.play.core.tasks.** { *; }
+-dontwarn com.google.android.play.core.**
+
+# Firebase Crashlytics
+-keepattributes SourceFile,LineNumberTable
+-keep public class * extends java.lang.Exception
+
+# Firebase Performance
+-keep class com.google.firebase.perf.** { *; }
+-dontwarn com.google.firebase.perf.** 

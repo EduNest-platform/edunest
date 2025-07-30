@@ -8,6 +8,7 @@ class AttendanceRecord {
   final String? branch;
   final int? semester;
   final int? classNumber;
+  final DateTime? createdAt;
 
   AttendanceRecord({
     required this.id,
@@ -19,6 +20,7 @@ class AttendanceRecord {
     this.branch,
     this.semester,
     this.classNumber,
+    this.createdAt,
   });
 
   factory AttendanceRecord.fromJson(Map<String, dynamic> json) {
@@ -32,6 +34,10 @@ class AttendanceRecord {
       branch: json['branch'] as String?,
       semester: json['semester'] as int?,
       classNumber: json['class_number'] as int?,
+      createdAt:
+          json['created_at'] != null
+              ? DateTime.parse(json['created_at'] as String)
+              : null,
     );
   }
 
@@ -46,6 +52,7 @@ class AttendanceRecord {
       'branch': branch,
       'semester': semester,
       'class_number': classNumber,
+      'created_at': createdAt?.toIso8601String(),
     };
   }
 }

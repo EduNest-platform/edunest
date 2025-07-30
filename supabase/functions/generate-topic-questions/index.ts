@@ -280,9 +280,10 @@ async function checkExistingQuestions(topicId: string, difficulty: string): Prom
   }
 }
 
-// Helper: Detect topic type based on content
-function detectTopicType(topicName: string, topicContent: string): 'engineering' | 'coding' | 'general' {
-  const engineeringKeywords = [
+// Helper: Detect topic type and engineering branch based on content
+function detectTopicType(topicName: string, topicContent: string): { type: 'engineering' | 'coding' | 'hybrid_cs_coding' | 'cs_with_interviews' | 'general', branch?: string } {
+  // Computer Science & Information Technology
+  const csKeywords = [
     'compiler', 'lexical', 'syntax', 'semantic', 'parser', 'token', 'grammar',
     'automata', 'finite', 'state', 'machine', 'regular', 'expression',
     'algorithm', 'complexity', 'big o', 'time complexity', 'space complexity',
@@ -293,6 +294,83 @@ function detectTopicType(topicName: string, topicContent: string): 'engineering'
     'digital logic', 'boolean', 'gate', 'circuit', 'flip flop', 'register',
     'microprocessor', 'assembly', 'instruction', 'pipeline', 'cache',
     'software engineering', 'sdlc', 'waterfall', 'agile', 'testing'
+  ];
+
+  // Electrical Engineering
+  const eeKeywords = [
+    'electrical', 'power system', 'transformer', 'generator', 'motor', 'transmission',
+    'distribution', 'voltage', 'current', 'resistance', 'capacitance', 'inductance',
+    'circuit analysis', 'network theory', 'control system', 'feedback', 'pid',
+    'electromagnetic', 'magnetic field', 'electric field', 'electromagnetic induction',
+    'ac circuit', 'dc circuit', 'three phase', 'single phase', 'power factor',
+    'electrical machine', 'synchronous', 'asynchronous', 'induction motor',
+    'electrical measurement', 'instrumentation', 'transducer', 'sensor'
+  ];
+
+  // Electronics & Communication Engineering
+  const eceKeywords = [
+    'electronics', 'communication', 'signal processing', 'digital signal processing',
+    'analog circuit', 'digital circuit', 'amplifier', 'oscillator', 'filter',
+    'modulation', 'demodulation', 'am', 'fm', 'pm', 'psk', 'qpsk', 'fsk',
+    'antenna', 'wave propagation', 'microwave', 'optical fiber', 'satellite',
+    'mobile communication', 'cellular', 'wireless', 'bluetooth', 'wifi',
+    'vlsi', 'ic design', 'layout', 'fabrication', 'semiconductor', 'diode',
+    'transistor', 'mosfet', 'bjt', 'op-amp', 'adc', 'dac', 'microcontroller'
+  ];
+
+  // Mechanical Engineering
+  const meKeywords = [
+    'mechanical', 'thermodynamics', 'heat transfer', 'fluid mechanics', 'hydraulics',
+    'pneumatics', 'strength of materials', 'mechanics of materials', 'stress',
+    'strain', 'elasticity', 'plasticity', 'machine design', 'kinematics',
+    'dynamics', 'vibration', 'automobile', 'engine', 'turbine', 'pump',
+    'compressor', 'refrigeration', 'air conditioning', 'manufacturing',
+    'machining', 'welding', 'casting', 'forging', 'materials science',
+    'metallurgy', 'composite', 'ceramic', 'polymer', 'mechanical properties'
+  ];
+
+  // Civil Engineering
+  const ceKeywords = [
+    'civil', 'structural', 'concrete', 'steel', 'reinforcement', 'beam',
+    'column', 'slab', 'foundation', 'soil mechanics', 'geotechnical',
+    'surveying', 'transportation', 'highway', 'bridge', 'dam', 'tunnel',
+    'water resources', 'hydrology', 'irrigation', 'environmental',
+    'wastewater', 'air pollution', 'construction', 'project management',
+    'building', 'architecture', 'design', 'analysis', 'stability'
+  ];
+
+  // Chemical Engineering
+  const cheKeywords = [
+    'chemical', 'reaction engineering', 'process control', 'unit operation',
+    'distillation', 'absorption', 'adsorption', 'extraction', 'crystallization',
+    'fluid dynamics', 'heat exchanger', 'reactor', 'catalyst', 'kinetics',
+    'thermodynamics', 'phase equilibrium', 'mass transfer', 'heat transfer',
+    'polymer', 'petroleum', 'refinery', 'biochemical', 'fermentation',
+    'separation', 'filtration', 'centrifugation', 'evaporation', 'drying'
+  ];
+
+  // Production & Industrial Engineering
+  const piKeywords = [
+    'production', 'industrial', 'manufacturing', 'production planning', 'inventory',
+    'quality control', 'statistical process control', 'spc', 'six sigma', 'lean',
+    'operations research', 'linear programming', 'simulation', 'optimization', 'queuing',
+    'work study', 'method study', 'time study', 'motion study', 'ergonomics',
+    'facility layout', 'plant layout', 'material handling', 'conveyor', 'crane',
+    'supply chain', 'logistics', 'procurement', 'warehousing', 'distribution',
+    'maintenance', 'reliability', 'preventive maintenance', 'predictive maintenance',
+    'automation', 'robotics', 'cnc', 'cad', 'cam', 'cim', 'flexible manufacturing',
+    'just in time', 'jit', 'kanban', 'toyota production system', 'tps',
+    'industrial engineering', 'work measurement', 'standard time', 'productivity',
+    'capacity planning', 'aggregate planning', 'master production schedule', 'mrp'
+  ];
+
+  // General Engineering (common across branches)
+  const generalEngineeringKeywords = [
+    'engineering', 'design', 'analysis', 'calculation', 'formula', 'equation',
+    'theory', 'principle', 'law', 'model', 'simulation', 'optimization',
+    'efficiency', 'performance', 'specification', 'standard', 'code',
+    'safety', 'reliability', 'maintenance', 'inspection', 'testing',
+    'quality', 'control', 'measurement', 'instrumentation', 'automation'
   ];
   
   const codingKeywords = [
@@ -310,20 +388,56 @@ function detectTopicType(topicName: string, topicContent: string): 'engineering'
   
   const combinedText = (topicName + ' ' + topicContent).toLowerCase();
   
-  const engineeringScore = engineeringKeywords.filter(keyword => 
-    combinedText.includes(keyword)
-  ).length;
+  // Calculate scores for each engineering branch
+  const csScore = csKeywords.filter(keyword => combinedText.includes(keyword)).length;
+  const eeScore = eeKeywords.filter(keyword => combinedText.includes(keyword)).length;
+  const eceScore = eceKeywords.filter(keyword => combinedText.includes(keyword)).length;
+  const meScore = meKeywords.filter(keyword => combinedText.includes(keyword)).length;
+  const ceScore = ceKeywords.filter(keyword => combinedText.includes(keyword)).length;
+  const cheScore = cheKeywords.filter(keyword => combinedText.includes(keyword)).length;
+  const piScore = piKeywords.filter(keyword => combinedText.includes(keyword)).length;
+  const generalEngineeringScore = generalEngineeringKeywords.filter(keyword => combinedText.includes(keyword)).length;
   
-  const codingScore = codingKeywords.filter(keyword => 
-    combinedText.includes(keyword)
-  ).length;
+  const codingScore = codingKeywords.filter(keyword => combinedText.includes(keyword)).length;
   
-  if (engineeringScore > codingScore && engineeringScore >= 2) {
-    return 'engineering';
-  } else if (codingScore > engineeringScore && codingScore >= 2) {
-    return 'coding';
+  // Determine the dominant engineering branch
+  const branchScores = [
+    { branch: 'CS', score: csScore },
+    { branch: 'EE', score: eeScore },
+    { branch: 'ECE', score: eceScore },
+    { branch: 'ME', score: meScore },
+    { branch: 'CE', score: ceScore },
+    { branch: 'CHE', score: cheScore },
+    { branch: 'PI', score: piScore }
+  ];
+  
+  const dominantBranch = branchScores.reduce((max, current) => 
+    current.score > max.score ? current : max
+  );
+  
+  const totalEngineeringScore = csScore + eeScore + eceScore + meScore + ceScore + cheScore + piScore + generalEngineeringScore;
+  
+  // Check for hybrid CS + Coding topics
+  if (dominantBranch.branch === 'CS' && csScore >= 2 && codingScore >= 2) {
+    return { 
+      type: 'hybrid_cs_coding', 
+      branch: 'CS'
+    };
+  } else if (dominantBranch.branch === 'CS' && csScore >= 2) {
+    // Core CS subjects that are frequently asked in interviews
+    return { 
+      type: 'cs_with_interviews', 
+      branch: 'CS'
+    };
+  } else if (totalEngineeringScore > codingScore && totalEngineeringScore >= 2) {
+    return { 
+      type: 'engineering', 
+      branch: dominantBranch.score >= 2 ? dominantBranch.branch : 'General'
+    };
+  } else if (codingScore > totalEngineeringScore && codingScore >= 2) {
+    return { type: 'coding' };
   } else {
-    return 'general';
+    return { type: 'general' };
   }
 }
 
@@ -482,9 +596,11 @@ Deno.serve(async (req) => {
     console.log(`[INFO] Found ${existingQuestions.count} existing ${difficulty_level} questions for topic ${topic_id}`);
   }
 
-  // Detect topic type
-  const topicType = detectTopicType(topic.name, topic.content);
-  console.log(`[INFO] Detected topic type: ${topicType} for topic: ${topic.name}`);
+  // Detect topic type and engineering branch
+  const topicAnalysis = detectTopicType(topic.name, topic.content);
+  const topicType = topicAnalysis.type;
+  const engineeringBranch = topicAnalysis.branch;
+  console.log(`[INFO] Detected topic type: ${topicType}${engineeringBranch ? ` (${engineeringBranch})` : ''} for topic: ${topic.name}`);
 
   // Enhanced Gemini prompt with better structure and difficulty differentiation
   const geminiPrompt = `
@@ -496,15 +612,15 @@ TOPIC INFORMATION:
 - Topic Name: ${topic.name}
 - Topic Content: ${topic.content}
 - Difficulty Level: ${difficulty_level.toUpperCase()}
-- Topic Type: ${topicType.toUpperCase()}
+- Topic Type: ${topicType.toUpperCase()}${engineeringBranch ? ` (${engineeringBranch} Branch)` : ''}
 
 TOPIC TYPE DETECTION:
 Based on the topic content, determine if this is:
-1. ENGINEERING TOPIC (Computer Science, Electronics, Mechanical, etc.)
+1. ENGINEERING TOPIC (Computer Science, Electrical, Electronics, Mechanical, Civil, Chemical, etc.)
 2. CODING/PROGRAMMING TOPIC (Programming languages, algorithms, software development)
 3. GENERAL ACADEMIC TOPIC (Other subjects)
 
-DETECTED TOPIC TYPE: ${topicType.toUpperCase()}
+DETECTED TOPIC TYPE: ${topicType.toUpperCase()}${engineeringBranch ? ` (${engineeringBranch} Branch)` : ''}
 
 DIFFICULTY GUIDELINES - CREATE DISTINCT QUESTIONS FOR EACH LEVEL:
 
@@ -517,6 +633,21 @@ BEGINNER LEVEL QUESTIONS:
 - Avoid complex relationships or applications
 - Examples: "What is a compiler?", "Which phase does X?", "What tool is used for Y?"
 
+FOR ENGINEERING TOPICS (Beginner):
+- Include 2-3 basic GATE-style questions with specific years
+- Focus on fundamental concepts and basic problem-solving
+- Simple numerical problems and definitions
+- Only GATE-style questions should end with year references: "(GATE 2023)", "(GATE 2022)", "(GATE 2021)", "(GATE 2020)"
+- Examples: 
+  ${engineeringBranch === 'CS' ? '"What is the primary function of a lexical analyzer in a compiler? (GATE 2023)"' : ''}
+  ${engineeringBranch === 'EE' ? '"What is the unit of electrical resistance? (GATE 2023)"' : ''}
+  ${engineeringBranch === 'ECE' ? '"What is the frequency range of audio signals? (GATE 2023)"' : ''}
+  ${engineeringBranch === 'ME' ? '"What is the SI unit of temperature? (GATE 2023)"' : ''}
+  ${engineeringBranch === 'CE' ? '"What is the unit of stress? (GATE 2023)"' : ''}
+  ${engineeringBranch === 'CHE' ? '"What is the unit of concentration? (GATE 2023)"' : ''}
+  ${engineeringBranch === 'PI' ? '"What is the primary objective of production planning? (GATE 2023)"' : ''}
+  ${!engineeringBranch || engineeringBranch === 'General' ? '"Include 2-3 basic GATE-style questions with year references like (GATE 2023)"' : ''}
+
 INTERMEDIATE LEVEL QUESTIONS:
 - Focus on applications and relationships between concepts
 - "How does..." and "Why is..." type questions
@@ -526,19 +657,48 @@ INTERMEDIATE LEVEL QUESTIONS:
 - Error handling and optimization concepts
 
 FOR ENGINEERING TOPICS (Intermediate):
-- Include 3-4 GATE-style questions with specific years (similar to actual GATE exam questions)
-- Questions similar to what appears in GATE Computer Science/IT papers
+- Include EXACTLY 3-4 GATE-style questions with specific years (similar to actual GATE exam questions)
+- Questions similar to what appears in GATE ${engineeringBranch || 'Engineering'} papers
 - Focus on problem-solving and application
 - Include numerical problems where appropriate
 - Only GATE-style questions should end with year references: "(GATE 2023)", "(GATE 2022)", "(GATE 2021)", "(GATE 2020)"
-- Examples: "In a compiler, if the lexical analyzer uses a buffer of size 512 bytes, what is the maximum number of characters that can be looked ahead? (GATE 2023)"
+- Examples: 
+  ${engineeringBranch === 'CS' ? '"In a compiler, if the lexical analyzer uses a buffer of size 512 bytes, what is the maximum number of characters that can be looked ahead? (GATE 2023)"' : ''}
+  ${engineeringBranch === 'EE' ? '"A 3-phase transformer has a primary voltage of 11kV and secondary voltage of 440V. If the primary current is 100A, what is the secondary current? (GATE 2023)"' : ''}
+  ${engineeringBranch === 'ECE' ? '"In an AM modulation system, if the carrier frequency is 1MHz and modulating frequency is 10kHz, what are the sideband frequencies? (GATE 2023)"' : ''}
+  ${engineeringBranch === 'ME' ? '"A gas turbine has an efficiency of 30%. If the input heat is 1000 kJ, what is the work output? (GATE 2023)"' : ''}
+  ${engineeringBranch === 'CE' ? '"A simply supported beam of length 6m carries a uniformly distributed load of 10 kN/m. What is the maximum bending moment? (GATE 2023)"' : ''}
+  ${engineeringBranch === 'CHE' ? '"In a distillation column, if the relative volatility is 2.5 and the feed contains 40% component A, what is the minimum number of theoretical plates required? (GATE 2023)"' : ''}
+  ${engineeringBranch === 'PI' ? '"In a manufacturing plant, if the demand is 1000 units/day and the production rate is 1200 units/day, what is the cycle time? (GATE 2023)"' : ''}
+  ${!engineeringBranch || engineeringBranch === 'General' ? '"For engineering topics, include EXACTLY 3-4 GATE-style questions with specific year references like (GATE 2023)"' : ''}
+
+FOR CS SUBJECTS WITH INTERVIEWS (Intermediate):
+- Include EXACTLY 2-3 GATE-style questions (for academic preparation)
+- Include EXACTLY 1-2 interview-style questions (for placement preparation)
+- Include regular academic questions for the remaining count
+- GATE questions should end with year references: "(GATE 2023)", "(GATE 2022)", "(GATE 2021)", "(GATE 2020)"
+- Interview questions should end with company references: "(Google Interview)", "(Amazon SDE)", "(Microsoft)"
+- Examples: 
+  GATE: "What is the time complexity of the Banker's algorithm for deadlock avoidance? (GATE 2023)"
+  Interview: "Explain the difference between mutex and semaphore with examples. (Google Interview)"
 
 FOR CODING TOPICS (Intermediate):
-- Include interview-style questions
+- Include EXACTLY 1-2 interview-style questions
 - Questions similar to what tech companies ask
 - Focus on practical programming scenarios
 - Include company-specific question styles
-- Examples: "Google Interview: Given a string, write an algorithm to find the longest palindromic substring. What is the time complexity?"
+- Add company references: "(Google Interview)", "(Amazon SDE)", "(Microsoft)"
+- Examples: "Given a string, write an algorithm to find the longest palindromic substring. What is the time complexity? (Google Interview)"
+
+FOR HYBRID CS + CODING TOPICS (Intermediate):
+- Include EXACTLY 3-4 GATE-style questions (because it's CS engineering)
+- Include EXACTLY 1-2 interview-style questions (because it's also coding)
+- Include regular academic questions for the remaining count
+- GATE questions should end with year references: "(GATE 2023)", "(GATE 2022)", "(GATE 2021)", "(GATE 2020)"
+- Interview questions should end with company references: "(Google Interview)", "(Amazon SDE)", "(Microsoft)"
+- Examples: 
+  GATE: "In a compiler, if the lexical analyzer uses a buffer of size 512 bytes, what is the maximum number of characters that can be looked ahead? (GATE 2023)"
+  Interview: "Given a string, write an algorithm to find the longest palindromic substring. What is the time complexity? (Google Interview)"
 
 ADVANCED LEVEL QUESTIONS:
 - Focus on complex scenarios and critical analysis
@@ -549,19 +709,48 @@ ADVANCED LEVEL QUESTIONS:
 - Trade-offs and design decisions
 
 FOR ENGINEERING TOPICS (Advanced):
-- Include 3-4 complex GATE questions with specific years (similar to actual GATE exam questions)
+- Include EXACTLY 4-5 complex GATE questions with specific years (similar to actual GATE exam questions)
 - Questions requiring deep theoretical understanding
-- Algorithm analysis and optimization
+- Advanced problem-solving and analysis
 - Research-oriented questions
 - Only GATE-style questions should end with year references: "(GATE 2023)", "(GATE 2022)", "(GATE 2021)", "(GATE 2020)"
-- Examples: "Consider a compiler that uses a two-pass approach. If the first pass takes O(n) time and the second pass takes O(n log n) time, what is the overall time complexity? (GATE 2023)"
+- Examples: 
+  ${engineeringBranch === 'CS' ? '"Consider a compiler that uses a two-pass approach. If the first pass takes O(n) time and the second pass takes O(n log n) time, what is the overall time complexity? (GATE 2023)"' : ''}
+  ${engineeringBranch === 'EE' ? '"A synchronous generator has a synchronous reactance of 2.0 pu and is operating at 0.8 power factor lagging. If the terminal voltage is 1.0 pu, what is the excitation voltage? (GATE 2023)"' : ''}
+  ${engineeringBranch === 'ECE' ? '"In a digital communication system using QPSK, if the symbol rate is 1 Msymbols/s and the bit error rate is 10^-6, what is the required Eb/N0 ratio? (GATE 2023)"' : ''}
+  ${engineeringBranch === 'ME' ? '"A steam turbine operates between 500°C and 50°C. If the actual efficiency is 60% of the Carnot efficiency, what is the actual thermal efficiency? (GATE 2023)"' : ''}
+  ${engineeringBranch === 'CE' ? '"A reinforced concrete beam has a balanced section with 2% steel. If the concrete strength is 25 MPa and steel yield strength is 415 MPa, what is the moment of resistance? (GATE 2023)"' : ''}
+  ${engineeringBranch === 'CHE' ? '"In a catalytic reactor, if the reaction follows first-order kinetics with rate constant 0.1 min^-1 and the conversion is 90%, what is the space time required? (GATE 2023)"' : ''}
+  ${engineeringBranch === 'PI' ? '"In a lean manufacturing system with takt time of 2 minutes, if the total work content is 8 minutes and the line efficiency is 85%, what is the minimum number of workstations required? (GATE 2023)"' : ''}
+  ${!engineeringBranch || engineeringBranch === 'General' ? '"For advanced engineering topics, include EXACTLY 4-5 complex GATE-style questions with specific year references like (GATE 2023)"' : ''}
+
+FOR CS SUBJECTS WITH INTERVIEWS (Advanced):
+- Include EXACTLY 3-4 complex GATE questions (for academic preparation)
+- Include EXACTLY 2-3 advanced interview questions (for placement preparation)
+- Include regular academic questions for the remaining count
+- GATE questions should end with year references: "(GATE 2023)", "(GATE 2022)", "(GATE 2021)", "(GATE 2020)"
+- Interview questions should end with company references: "(Google Interview)", "(Amazon SDE)", "(Microsoft)", "(Meta)"
+- Examples: 
+  GATE: "Consider a compiler that uses a two-pass approach. If the first pass takes O(n) time and the second pass takes O(n log n) time, what is the overall time complexity? (GATE 2023)"
+  Interview: "Design a simple file system with basic operations. What are the key challenges? (Google Interview)"
 
 FOR CODING TOPICS (Advanced):
-- Include senior-level interview questions
-- System design questions
+- Include EXACTLY 2-3 advanced interview questions (suitable for engineering students)
+- Focus on algorithms, data structures, and problem-solving
 - Questions from top tech companies (Google, Amazon, Microsoft, etc.)
-- Focus on scalability and optimization
-- Examples: "Amazon Senior SDE Interview: Design a distributed cache system that can handle 1 million requests per second. What are the key challenges and how would you address them?"
+- Focus on coding challenges and optimization
+- Add company references: "(Google Interview)", "(Amazon SDE)", "(Microsoft)", "(Meta)"
+- Examples: "Given a binary tree, find the maximum path sum. What is the time complexity? (Google Interview)"
+
+FOR HYBRID CS + CODING TOPICS (Advanced):
+- Include EXACTLY 4-5 complex GATE-style questions (because it's CS engineering)
+- Include EXACTLY 2-3 advanced interview questions (suitable for engineering students)
+- Include regular academic questions for the remaining count
+- GATE questions should end with year references: "(GATE 2023)", "(GATE 2022)", "(GATE 2021)", "(GATE 2020)"
+- Interview questions should end with company references: "(Google Interview)", "(Amazon SDE)", "(Microsoft)", "(Meta)"
+- Examples: 
+  GATE: "Consider a compiler that uses a two-pass approach. If the first pass takes O(n) time and the second pass takes O(n log n) time, what is the overall time complexity? (GATE 2023)"
+  Interview: "Given a binary tree, find the maximum path sum. What is the time complexity? (Google Interview)"
 
 QUESTION REQUIREMENTS:
 1. Each question must have exactly 4 options (A, B, C, D)
@@ -577,14 +766,27 @@ QUESTION REQUIREMENTS:
 
 SPECIAL FORMATTING REQUIREMENTS:
 
-FOR ENGINEERING TOPICS (Intermediate & Advanced):
-- Include 3-4 GATE-style questions with specific year references: "(GATE 2023)", "(GATE 2022)", "(GATE 2021)", "(GATE 2020)"
+FOR ENGINEERING TOPICS (All Levels):
 - NEVER use just "(GATE)" - always include the year for GATE questions
 - Rotate between recent years: 2023, 2022, 2021, 2020
 - Other questions should be regular academic questions without year references
 - For numerical questions, ensure all calculations are accurate
 - Include problem-solving steps where relevant
-- Examples: "What is the time complexity of lexical analysis in a compiler? (GATE 2023)"
+
+GATE QUESTION COUNT BY DIFFICULTY:
+- BEGINNER: Include EXACTLY 2-3 basic GATE-style questions
+- INTERMEDIATE: Include EXACTLY 3-4 GATE-style questions  
+- ADVANCED: Include EXACTLY 4-5 complex GATE-style questions
+
+Branch-specific examples: 
+  ${engineeringBranch === 'CS' ? '"What is the time complexity of lexical analysis in a compiler? (GATE 2023)"' : ''}
+  ${engineeringBranch === 'EE' ? '"What is the power factor of a load drawing 10A at 220V with 2kW power? (GATE 2023)"' : ''}
+  ${engineeringBranch === 'ECE' ? '"What is the bandwidth of an AM signal with carrier frequency 1MHz and modulating frequency 5kHz? (GATE 2023)"' : ''}
+  ${engineeringBranch === 'ME' ? '"What is the thermal efficiency of a Carnot engine operating between 800K and 300K? (GATE 2023)"' : ''}
+  ${engineeringBranch === 'CE' ? '"What is the safe load capacity of a column with slenderness ratio 120 and yield stress 250 MPa? (GATE 2023)"' : ''}
+  ${engineeringBranch === 'CHE' ? '"What is the conversion in a CSTR with residence time 2 hours and rate constant 0.5 h^-1? (GATE 2023)"' : ''}
+  ${engineeringBranch === 'PI' ? '"What is the takt time for a production line with daily demand of 500 units and 8-hour shift? (GATE 2023)"' : ''}
+  ${!engineeringBranch || engineeringBranch === 'General' ? '"Include GATE-style questions with specific year references like (GATE 2023)"' : ''}
 
 FOR CODING TOPICS (Intermediate & Advanced):
 - Add company references at the END of questions: "(Google Interview)", "(Amazon SDE)", "(Microsoft)", "(Meta)"
@@ -592,6 +794,29 @@ FOR CODING TOPICS (Intermediate & Advanced):
 - For coding questions, include code snippets where appropriate
 - Focus on practical implementation scenarios
 - Examples: "Given an array, find the maximum subarray sum. What is the time complexity? (Google Interview)"
+
+QUESTION COUNT BY DIFFICULTY:
+
+FOR ENGINEERING TOPICS (EE, ECE, ME, CE, CHE, PI):
+- BEGINNER: EXACTLY 2-3 basic GATE-style questions
+- INTERMEDIATE: EXACTLY 3-4 GATE-style questions  
+- ADVANCED: EXACTLY 4-5 complex GATE-style questions
+- NO INTERVIEW QUESTIONS for these branches
+
+FOR CODING TOPICS (Programming, Web Development, etc.):
+- BEGINNER: Regular academic questions only (no interview questions)
+- INTERMEDIATE: EXACTLY 1-2 interview-style questions + regular academic questions
+- ADVANCED: EXACTLY 2-3 advanced interview questions + regular academic questions
+
+FOR HYBRID CS + CODING TOPICS (Data Structures, Algorithms, etc.):
+- BEGINNER: EXACTLY 2-3 basic GATE-style questions + regular academic questions
+- INTERMEDIATE: EXACTLY 3-4 GATE-style questions + EXACTLY 1-2 interview-style questions + regular academic questions
+- ADVANCED: EXACTLY 4-5 complex GATE-style questions + EXACTLY 2-3 advanced interview questions + regular academic questions
+
+FOR CS SUBJECTS WITH INTERVIEWS (OS, DBMS, Networks, etc.):
+- BEGINNER: EXACTLY 2-3 basic GATE-style questions + regular academic questions
+- INTERMEDIATE: EXACTLY 2-3 GATE-style questions + EXACTLY 1-2 interview-style questions + regular academic questions
+- ADVANCED: EXACTLY 3-4 complex GATE-style questions + EXACTLY 2-3 advanced interview questions + regular academic questions
 
 QUALITY REQUIREMENTS:
 - Questions must be factually accurate
@@ -623,10 +848,30 @@ IMPORTANT:
 - Make each question unique and appropriate for ${difficulty_level} level
 - Avoid questions that could be beginner-level if generating intermediate/advanced
 - Avoid questions that could be intermediate-level if generating beginner
-- For engineering topics, include GATE-style questions for intermediate/advanced
+- For engineering topics, include GATE-style questions for ALL difficulty levels
 - For coding topics, include interview-style questions for intermediate/advanced
 - VERIFY: Before returning, ensure each correctAnswer index (0-3) points to the correct option
-- For engineering topics (intermediate/advanced), include 3-4 GATE-style questions with year references like "(GATE 2023)", "(GATE 2022)", "(GATE 2021)", or "(GATE 2020)"
+- QUESTION COUNT REQUIREMENTS BY TOPIC TYPE:
+  * ENGINEERING TOPICS (EE, ECE, ME, CE, CHE, PI):
+    - BEGINNER: EXACTLY 2-3 basic GATE questions with year references
+    - INTERMEDIATE: EXACTLY 3-4 GATE questions with year references  
+    - ADVANCED: EXACTLY 4-5 complex GATE questions with year references
+    - NO INTERVIEW QUESTIONS for these branches
+  * CODING TOPICS (Programming, Web Development):
+    - BEGINNER: Regular academic questions only (no interview questions)
+    - INTERMEDIATE: EXACTLY 1-2 interview questions + regular academic questions
+    - ADVANCED: EXACTLY 2-3 advanced interview questions + regular academic questions
+  * HYBRID CS + CODING TOPICS (Data Structures, Algorithms):
+    - BEGINNER: EXACTLY 2-3 basic GATE questions + regular academic questions
+    - INTERMEDIATE: EXACTLY 3-4 GATE questions + EXACTLY 1-2 interview questions + regular academic questions
+    - ADVANCED: EXACTLY 4-5 complex GATE questions + EXACTLY 2-3 advanced interview questions + regular academic questions
+  * CS SUBJECTS WITH INTERVIEWS (OS, DBMS, Networks):
+    - BEGINNER: EXACTLY 2-3 basic GATE questions + regular academic questions
+    - INTERMEDIATE: EXACTLY 2-3 GATE questions + EXACTLY 1-2 interview questions + regular academic questions
+    - ADVANCED: EXACTLY 3-4 complex GATE questions + EXACTLY 2-3 advanced interview questions + regular academic questions
+- For ${engineeringBranch || 'engineering'} topics, ensure questions match the specific branch requirements and difficulty level
+- Use year references: "(GATE 2023)", "(GATE 2022)", "(GATE 2021)", or "(GATE 2020)"
+- Use interview references: "(Google Interview)", "(Amazon SDE)", "(Microsoft)", "(Meta)"
 
 Generate ${question_count} ${difficulty_level}-level questions now:`;
 
@@ -669,6 +914,7 @@ Generate ${question_count} ${difficulty_level}-level questions now:`;
       topic_id: topic_id,
       subject_id: topic.subject_id,
       topic_type: topicType,
+      engineering_branch: engineeringBranch,
       questions,
       difficulty_level,
       question_count: questions.length,

@@ -46,10 +46,6 @@
           <span class="mobile-nav-icon">🏗️</span>
           Hierarchy
         </a>
-        <a href="ai-config.html" class="mobile-nav-item">
-          <span class="mobile-nav-icon">🤖</span>
-          AI Config
-        </a>
         <a href="question_entry.html" class="mobile-nav-item">
           <span class="mobile-nav-icon">📝</span>
           Manual Question Entry
@@ -61,9 +57,10 @@
       </nav>
       
       <div class="mobile-user-info">
-        <div class="mobile-user-avatar">👤</div>
-        <div class="mobile-user-name">Admin</div>
-        <div class="mobile-user-role">Administrator</div>
+        <div class="mobile-user-avatar" id="mobileUserAvatar">👤</div>
+        <div class="mobile-user-name" id="mobileUserName">Loading...</div>
+        <div class="mobile-user-role" id="mobileUserRole">Loading...</div>
+        <div class="mobile-user-email" id="mobileUserEmail" style="font-size: 0.9em; color: #64748b; margin-top: 4px;">Loading...</div>
         <button class="mobile-logout-btn" onclick="logout()">Logout</button>
       </div>
     </div>
@@ -75,18 +72,18 @@
       <nav class="sidebar-nav">
         <button class="nav-btn active" onclick="showOverview()"><span class="nav-icon">📊</span> Overview</button>
         <button class="nav-btn" onclick="window.location.href='colleges.html'"><span class="nav-icon">🏗️</span> Hierarchy</button>
-        <button class="nav-btn" onclick="window.location.href='ai-config.html'"><span class="nav-icon">🤖</span> AI Config</button>
         <button class="nav-btn" onclick="window.location.href='question_entry.html'"><span class="nav-icon">📝</span> Manual Question Entry</button>
         <button class="nav-btn" onclick="window.location.href='assigned_tests.html'"><span class="nav-icon">📊</span> Assigned Tests</button>
       </nav>
       <div class="sidebar-footer">
         <div class="user-info modern-user-card">
           <div class="user-avatar">
-            <span class="avatar-circle">A</span>
+            <span class="avatar-circle" id="userAvatar">A</span>
           </div>
           <div class="user-details">
-            <div class="user-name">Admin</div>
-            <div class="user-role">Administrator</div>
+            <div class="user-name" id="userName">Loading...</div>
+            <div class="user-role" id="userRole">Loading...</div>
+            <div class="user-email" id="userEmail" style="font-size: 0.85em; color: #64748b; margin-top: 2px;">Loading...</div>
           </div>
         </div>
         <button class="logout-btn" onclick="logout()">Logout</button>
@@ -108,10 +105,6 @@
               <span class="action-icon">🏗️</span>
               Manage Hierarchy
             </button>
-            <button class="action-btn secondary" onclick="window.location.href='colleges.html'">
-              <span class="action-icon">🏫</span>
-              Add New College
-            </button>
             <button class="action-btn" onclick="window.location.href='question_entry.html'">
               <span class="action-icon">📝</span>
               Manual Question Entry
@@ -123,44 +116,8 @@
           </div>
         </div>
 
-        <div class="stats-grid">
-          <div class="stat-card clickable" onclick="window.location.href='colleges.html'">
-            <div class="stat-icon">🏫</div>
-            <div class="stat-content">
-              <div class="stat-number" id="collegeCount">0</div>
-              <div class="stat-label">Colleges</div>
-              <div class="stat-desc">Click to manage</div>
-            </div>
-            <div class="stat-arrow">→</div>
-          </div>
-          <div class="stat-card clickable" onclick="window.location.href='colleges.html'">
-            <div class="stat-icon">🏢</div>
-            <div class="stat-content">
-              <div class="stat-number" id="branchCount">0</div>
-              <div class="stat-label">Branches</div>
-              <div class="stat-desc">Click to manage</div>
-            </div>
-            <div class="stat-arrow">→</div>
-          </div>
-          <div class="stat-card clickable" onclick="window.location.href='colleges.html'">
-            <div class="stat-icon">📚</div>
-            <div class="stat-content">
-              <div class="stat-number" id="semesterCount">0</div>
-              <div class="stat-label">Semesters</div>
-              <div class="stat-desc">Click to manage</div>
-            </div>
-            <div class="stat-arrow">→</div>
-          </div>
-          <div class="stat-card clickable" onclick="window.location.href='colleges.html'">
-            <div class="stat-icon">📖</div>
-            <div class="stat-content">
-              <div class="stat-number" id="subjectCount">0</div>
-              <div class="stat-label">Subjects</div>
-              <div class="stat-desc">Click to manage</div>
-            </div>
-            <div class="stat-arrow">→</div>
-          </div>
-        </div>
+        <!-- Remove the stats-grid section below -->
+        <!-- <div class="stats-grid"> ... </div> -->
       </section>
 
 
@@ -283,6 +240,7 @@
   </div>
 
   <script src="login.js"></script>
+  <script src="supabaseAdmin.js"></script>
   <script src="app.js?v=1.1"></script>
 </body>
 </html> 

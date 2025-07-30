@@ -99,7 +99,7 @@ class _LabManualsScreenState extends State<LabManualsScreen> {
         border: Border.all(color: Colors.green.shade900, width: 1.3),
         boxShadow: [
           BoxShadow(
-            color: Colors.green.shade900.withOpacity(0.13),
+            color: Colors.green.shade900.withValues(alpha: 0.13),
             blurRadius: 16,
             offset: const Offset(0, 4),
           ),
@@ -113,10 +113,10 @@ class _LabManualsScreenState extends State<LabManualsScreen> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.green.shade900.withOpacity(0.08),
+                  color: Colors.green.shade900.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: Colors.green.shade900.withOpacity(0.18),
+                    color: Colors.green.shade900.withValues(alpha: 0.18),
                   ),
                 ),
                 child: Icon(
@@ -602,7 +602,7 @@ class _LabManualsScreenState extends State<LabManualsScreen> {
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: AppTheme.labManualsIcon.withOpacity(0.08),
+                        color: AppTheme.labManualsIcon.withValues(alpha: 0.08),
                         blurRadius: 16,
                         offset: const Offset(0, 4),
                       ),

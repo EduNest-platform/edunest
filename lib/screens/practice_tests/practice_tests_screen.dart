@@ -13,7 +13,7 @@ import '../../widgets/app_text.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/error_message_service.dart';
-import '../../mixins/performance_mixin.dart';
+// import '../../mixins/performance_mixin.dart';
 import 'package:flutter/foundation.dart';
 import '../../widgets/desktop_sidebar.dart';
 
@@ -25,7 +25,7 @@ class PracticeTestsScreen extends StatefulWidget {
 }
 
 class _PracticeTestsScreenState extends State<PracticeTestsScreen>
-    with NetworkAwareMixin, PerformanceMixin {
+    with NetworkAwareMixin {
   List<Subject> _subjects = [];
   bool _isLoading = true;
   String? _error;
@@ -326,7 +326,7 @@ class _PracticeTestsScreenState extends State<PracticeTestsScreen>
   @override
   void initState() {
     super.initState();
-    startScreenMonitoring('practice_tests_screen');
+    // startScreenMonitoring('practice_tests_screen');
     _loadSavedSubjectColors().then((_) => _loadUserProfileAndSubjects());
   }
 
@@ -350,7 +350,7 @@ class _PracticeTestsScreenState extends State<PracticeTestsScreen>
   }
 
   Future<void> _loadUserProfileAndSubjects() async {
-    await startOperationTrace('practice_tests_data_loading');
+    // await startOperationTrace('practice_tests_data_loading');
 
     // Check network connectivity first
     final networkStatus = await _networkService.isConnected();
@@ -360,7 +360,7 @@ class _PracticeTestsScreenState extends State<PracticeTestsScreen>
         _hasNetworkError = true;
         _isLoading = false;
       });
-      await stopOperationTrace('practice_tests_data_loading');
+      // await stopOperationTrace('practice_tests_data_loading');
       return;
     }
 
@@ -379,7 +379,7 @@ class _PracticeTestsScreenState extends State<PracticeTestsScreen>
           _error = 'Profile incomplete. Please set your college and semester.';
           _isLoading = false;
         });
-        await stopOperationTrace('practice_tests_data_loading');
+        // await stopOperationTrace('practice_tests_data_loading');
         return;
       }
       _userProfile = profile;
@@ -405,7 +405,7 @@ class _PracticeTestsScreenState extends State<PracticeTestsScreen>
 
       // Check onboarding tip after profile is loaded
       await _checkOnboardingTip();
-      await stopOperationTrace('practice_tests_data_loading');
+      // await stopOperationTrace('practice_tests_data_loading');
     } catch (e) {
       final message = ErrorMessageService.getFriendlyMessage(e);
       if (mounted) {
@@ -413,7 +413,7 @@ class _PracticeTestsScreenState extends State<PracticeTestsScreen>
           SnackBar(content: Text(message), backgroundColor: Colors.red),
         );
       }
-      await stopOperationTrace('practice_tests_data_loading');
+      // await stopOperationTrace('practice_tests_data_loading');
     }
   }
 
@@ -1133,7 +1133,9 @@ class _PracticeTestsScreenState extends State<PracticeTestsScreen>
                                         BoxShadow(
                                           color: _getSubjectColorScheme(
                                             0,
-                                          )['gradient'][0].withOpacity(0.18),
+                                          )['gradient'][0].withValues(
+                                            alpha: 0.18,
+                                          ),
                                           blurRadius: 16,
                                           offset: const Offset(0, 6),
                                         ),
@@ -1170,7 +1172,7 @@ class _PracticeTestsScreenState extends State<PracticeTestsScreen>
                                                 ),
                                                 decoration: BoxDecoration(
                                                   color: Colors.white
-                                                      .withOpacity(0.15),
+                                                      .withValues(alpha: 0.15),
                                                   borderRadius:
                                                       BorderRadius.circular(12),
                                                 ),
@@ -1188,8 +1190,8 @@ class _PracticeTestsScreenState extends State<PracticeTestsScreen>
                                           'Tap any subject icon to change its color',
                                           style: GoogleFonts.poppins(
                                             fontSize: 12,
-                                            color: Colors.white.withOpacity(
-                                              0.92,
+                                            color: Colors.white.withValues(
+                                              alpha: 0.92,
                                             ),
                                           ),
                                           textAlign: TextAlign.center,
@@ -1494,7 +1496,7 @@ class _PracticeTestsScreenState extends State<PracticeTestsScreen>
                           BoxShadow(
                             color: _getSubjectColorScheme(
                               0,
-                            )['gradient'][0].withOpacity(0.18),
+                            )['gradient'][0].withValues(alpha: 0.18),
                             blurRadius: 16,
                             offset: const Offset(0, 6),
                           ),
@@ -1528,7 +1530,7 @@ class _PracticeTestsScreenState extends State<PracticeTestsScreen>
                                 child: Container(
                                   padding: const EdgeInsets.all(2),
                                   decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.15),
+                                    color: Colors.white.withValues(alpha: 0.15),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: const Icon(
@@ -1545,7 +1547,7 @@ class _PracticeTestsScreenState extends State<PracticeTestsScreen>
                             'Tap any subject icon to change its color',
                             style: GoogleFonts.poppins(
                               fontSize: 12,
-                              color: Colors.white.withOpacity(0.92),
+                              color: Colors.white.withValues(alpha: 0.92),
                             ),
                             textAlign: TextAlign.center,
                           ),
@@ -1563,7 +1565,7 @@ class _PracticeTestsScreenState extends State<PracticeTestsScreen>
 
   @override
   void dispose() {
-    stopScreenMonitoring();
+    // stopScreenMonitoring();
     super.dispose();
   }
 }

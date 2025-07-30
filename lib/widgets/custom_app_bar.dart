@@ -103,7 +103,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
                 ? []
                 : [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.08),
+                    color: Colors.black.withValues(alpha: 0.08),
                     blurRadius: 6,
                     offset: const Offset(0, 2),
                   ),
@@ -112,7 +112,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
             isDesktop
                 ? Border(
                   bottom: BorderSide(
-                    color: AppTheme.primaryBlue.withOpacity(0.10),
+                    color: AppTheme.primaryBlue.withValues(alpha: 0.10),
                     width: 2,
                   ),
                 )

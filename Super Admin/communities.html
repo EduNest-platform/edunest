@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Manage Communities - Super Admin</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', Arial, sans-serif;
+      margin: 0;
+      background: linear-gradient(120deg, #a1c4fd 0%, #c2e9fb 100%);
+      min-height: 100vh;
+      color: #232946;
+    }
+    .container {
+      max-width: 900px;
+      margin: 48px auto 0 auto;
+      background: #fff;
+      border-radius: 28px;
+      box-shadow: 0 12px 40px rgba(102,126,234,0.18), 0 2px 8px rgba(76, 61, 128, 0.09);
+      padding: 48px 40px 40px 40px;
+      position: relative;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      margin-bottom: 28px;
+      background: linear-gradient(90deg, #e0e7ff 60%, #f8fafc 100%);
+      border-radius: 22px;
+      box-shadow: 0 4px 24px #667eea18;
+      padding: 32px 28px 28px 28px;
+      position: relative;
+      flex-wrap: wrap;
+    }
+    .header-icon {
+      background: linear-gradient(135deg, #667eea 60%, #764ba2 100%);
+      color: #fff;
+      border-radius: 50%;
+      padding: 26px;
+      font-size: 3.4em;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 18px #667eea33, 0 1.5px 4px #764ba233;
+      min-width: 90px;
+      min-height: 90px;
+      max-width: 100px;
+      max-height: 100px;
+    }
+    .header-title-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .header-title {
+      color: #2d3a4a;
+      font-size: 2.4em;
+      font-weight: 900;
+      margin: 0;
+      letter-spacing: -1.2px;
+      line-height: 1.1;
+      text-shadow: 0 2px 8px #e0e7ff;
+    }
+    .header-subtitle {
+      color: #667eea;
+      font-size: 1.18em;
+      font-weight: 500;
+      letter-spacing: 0.01em;
+      margin-top: 2px;
+    }
+    .header-divider {
+      position: absolute;
+      left: 28px;
+      right: 28px;
+      bottom: 0;
+      height: 2.5px;
+      background: linear-gradient(90deg, #667eea22 0%, #fff 100%);
+      border-radius: 2px;
+      box-shadow: 0 2px 8px #667eea11;
+    }
+    .back-btn {
+      background: linear-gradient(90deg, #667eea 60%, #764ba2 100%);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      padding: 12px 28px;
+      font-weight: 700;
+      font-size: 1.13em;
+      cursor: pointer;
+      transition: background 0.2s, box-shadow 0.2s;
+      margin-bottom: 32px;
+      box-shadow: 0 2px 8px #667eea22;
+      text-decoration: none;
+      display: inline-block;
+      letter-spacing: 0.01em;
+    }
+    .back-btn:hover {
+      background: linear-gradient(90deg, #5a67d8 60%, #6b47b6 100%);
+      box-shadow: 0 4px 16px #667eea33;
+    }
+    .add-community-form {
+      display: flex;
+      gap: 18px;
+      margin-bottom: 38px;
+      align-items: flex-end;
+      background: linear-gradient(90deg, #e0e7ff 60%, #f8fafc 100%);
+      border-radius: 16px;
+      padding: 22px 22px 14px 22px;
+      box-shadow: 0 2px 8px #e0e6ed;
+      flex-wrap: wrap;
+    }
+    .add-community-form select, .add-community-form input, .add-community-form textarea {
+      padding: 14px 16px;
+      border-radius: 10px;
+      border: 1.5px solid #bfc7e6;
+      font-size: 1.13em;
+      background: #f4f7fa;
+      transition: border 0.2s, box-shadow 0.2s;
+      flex: 1 1 220px;
+      box-shadow: 0 1px 4px #e0e7ff33;
+    }
+    .add-community-form textarea {
+      resize: vertical;
+      min-height: 44px;
+      max-height: 120px;
+    }
+    .add-community-form select:focus, .add-community-form input:focus, .add-community-form textarea:focus {
+      border: 1.5px solid #667eea;
+      box-shadow: 0 0 0 2px #667eea22;
+      outline: none;
+    }
+    .add-community-form button {
+      background: linear-gradient(90deg, #667eea 60%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      padding: 14px 32px 14px 22px;
+      font-size: 1.13em;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s, box-shadow 0.2s;
+      box-shadow: 0 2px 8px rgba(102,126,234,0.08);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      letter-spacing: 0.01em;
+    }
+    .add-community-form button:hover {
+      background: linear-gradient(90deg, #5a67d8 60%, #6b47b6 100%);
+      box-shadow: 0 4px 16px #667eea33;
+    }
+    .message {
+      min-height: 24px;
+      margin-bottom: 22px;
+      font-size: 1.13em;
+      font-weight: 600;
+      border-radius: 9px;
+      padding: 12px 0 12px 18px;
+      transition: color 0.2s, background 0.2s;
+      box-shadow: 0 1px 4px #e0e7ff33;
+    }
+    .success {
+      color: #28a745;
+      background: #eafaf1;
+    }
+    .error {
+      color: #d32f2f;
+      background: #fff0f0;
+    }
+    .communities-list {
+      margin-bottom: 24px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 28px;
+    }
+    .community-card {
+      background: linear-gradient(120deg, #f8fafc 60%, #e0e7ff 100%);
+      border-radius: 18px;
+      box-shadow: 0 2px 12px #e0e6ed, 0 1px 4px #667eea11;
+      padding: 26px 22px 18px 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      position: relative;
+      transition: box-shadow 0.2s, transform 0.2s;
+      border: 1.5px solid #e0e7ff;
+      min-width: 0;
+      word-break: break-word;
+      margin-bottom: 8px;
+    }
+    .community-card:hover {
+      box-shadow: 0 6px 24px #667eea22, 0 2px 8px #764ba211;
+      transform: translateY(-2px) scale(1.01);
+      border: 1.5px solid #667eea44;
+    }
+    .community-title {
+      font-size: 1.22em;
+      font-weight: 800;
+      color: #4f46e5;
+      margin-bottom: 2px;
+      letter-spacing: 0.01em;
+      word-break: break-word;
+      text-align: left;
+    }
+    .community-college {
+      color: #667eea;
+      font-size: 1.05em;
+      margin-bottom: 8px;
+      font-weight: 500;
+      letter-spacing: 0.01em;
+    }
+    .community-desc {
+      color: #232946;
+      font-size: 1.01em;
+      margin-bottom: 8px;
+      font-weight: 400;
+      letter-spacing: 0.01em;
+      word-break: break-word;
+      text-align: left;
+    }
+    .community-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-start;
+    }
+    .edit-btn, .delete-btn {
+      border: none;
+      border-radius: 9px;
+      padding: 10px 22px;
+      font-size: 1em;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s, box-shadow 0.2s;
+      box-shadow: 0 1px 4px #e0e7ff33;
+      letter-spacing: 0.01em;
+      min-width: 0;
+    }
+    .admin-btn {
+      background: linear-gradient(90deg, #06b6d4 0%, #22d3ee 100%);
+      color: #fff;
+      border: 2px solid #06b6d4;
+      border-radius: 12px;
+      padding: 11px 26px 11px 18px;
+      font-size: 1.08em;
+      font-weight: 800;
+      cursor: pointer;
+      transition: background 0.2s, box-shadow 0.2s, border 0.2s;
+      box-shadow: 0 2px 12px #06b6d433, 0 1px 4px #22d3ee33;
+      letter-spacing: 0.01em;
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-right: 6px;
+      text-decoration: none;
+    }
+    .admin-btn:hover {
+      background: linear-gradient(90deg, #22d3ee 0%, #06b6d4 100%);
+      box-shadow: 0 6px 24px #06b6d433;
+      border-color: #22d3ee;
+    }
+    .edit-btn {
+      background: linear-gradient(90deg, #22c55e 60%, #16a34a 100%);
+      color: #fff;
+      border: 1.5px solid #22c55e;
+    }
+    .edit-btn:hover {
+      background: linear-gradient(90deg, #16a34a 60%, #22c55e 100%);
+      box-shadow: 0 4px 16px #22c55e33;
+      border-color: #16a34a;
+    }
+    .delete-btn {
+      background: linear-gradient(90deg, #ef4444 60%, #f87171 100%);
+      color: #fff;
+    }
+    .delete-btn:hover {
+      background: linear-gradient(90deg, #f87171 60%, #ef4444 100%);
+      box-shadow: 0 4px 16px #ef444433;
+    }
+    .admins-btn {
+      background: linear-gradient(90deg, #667eea 60%, #764ba2 100%);
+      color: #fff;
+      border: none;
+      border-radius: 9px;
+      padding: 10px 18px;
+      font-size: 1em;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.2s, box-shadow 0.2s;
+      box-shadow: 0 1px 4px #e0e7ff33;
+      letter-spacing: 0.01em;
+    }
+    .admins-btn:hover {
+      background: linear-gradient(90deg, #5a67d8 60%, #6b47b6 100%);
+      box-shadow: 0 4px 16px #667eea33;
+    }
+    @media (max-width: 900px) {
+      .container { padding: 18px 2vw; }
+      .back-btn {
+        font-size: 1.05em;
+        padding: 10px 24px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+      }
+      .header { 
+        padding: 20px 2vw 20px 2vw; 
+        border-radius: 18px;
+        gap: 18px;
+      }
+      .header-icon {
+        font-size: 2.8em;
+        padding: 20px;
+        min-width: 70px;
+        min-height: 70px;
+        max-width: 80px;
+        max-height: 80px;
+      }
+      .header-title {
+        font-size: 2.0em;
+      }
+      .header-subtitle {
+        font-size: 1.1em;
+      }
+      .community-card { padding: 14px 6px 10px 6px; border-radius: 10px; }
+      .community-title { font-size: 1.08em; }
+      .community-desc { font-size: 0.98em; }
+      .community-actions { gap: 7px; }
+      .edit-btn, .delete-btn, .admin-btn { padding: 8px 10px; font-size: 0.97em; border-radius: 7px; }
+    }
+    @media (max-width: 700px) {
+      .container { padding: 12px 16px; }
+      .back-btn {
+        font-size: 1.0em;
+        padding: 8px 20px;
+        border-radius: 8px;
+        margin-bottom: 16px;
+        width: fit-content;
+      }
+      .header {
+        flex-direction: row;
+        align-items: center;
+        gap: 12px;
+        padding: 16px 12px;
+        border-radius: 12px;
+        margin-bottom: 20px;
+      }
+      .header-icon {
+        font-size: 2.0em;
+        padding: 12px;
+        min-width: 50px;
+        min-height: 50px;
+        max-width: 60px;
+        max-height: 60px;
+      }
+      .header-title { 
+        font-size: 1.4em; 
+        margin-bottom: 2px;
+      }
+      .header-subtitle {
+        font-size: 0.95em;
+      }
+      .add-community-form {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 2px;
+        padding: 2px 0 2px 0;
+        border-radius: 0;
+        border: none;
+        box-shadow: none;
+        background: transparent;
+        margin-bottom: 8px;
+      }
+      .add-community-form select, .add-community-form input {
+        width: 100%;
+        min-width: 0;
+        font-size: 0.85em;
+        padding: 2px 5px;
+        border-radius: 3px;
+        margin-bottom: 0;
+        border: 1px solid #bfc7e6;
+        background: #f9fafe;
+        min-height: 24px;
+        max-height: 32px;
+        box-shadow: none;
+      }
+      .add-community-form textarea {
+        width: 100%;
+        min-width: 0;
+        font-size: 0.85em;
+        padding: 2px 5px;
+        border-radius: 3px;
+        margin-bottom: 0;
+        border: 1px solid #bfc7e6;
+        background: #f9fafe;
+        min-height: 22px;
+        max-height: 40px;
+        box-shadow: none;
+      }
+      .add-community-form button {
+        width: 100%;
+        margin: 0;
+        font-size: 0.95em;
+        padding: 6px 0;
+        min-height: 24px;
+        border-radius: 3px;
+        box-shadow: none;
+        background: linear-gradient(90deg, #667eea 60%, #764ba2 100%);
+      }
+      .community-card { padding: 6px 2px 4px 2px; border-radius: 6px; }
+      .communities-list { grid-template-columns: 1fr; gap: 5px; }
+      .community-actions { flex-direction: row; gap: 4px; }
+      .edit-btn, .delete-btn, .admin-btn { width: 32%; font-size: 0.92em; padding: 6px 0; border-radius: 4px; }
+      .admins-btn { width: 36%; font-size: 0.92em; padding: 6px 0; border-radius: 4px; text-align: center; justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a href="dashboard.html" class="back-btn">← Back to Dashboard</a>
+    <div class="header">
+      <div class="header-icon">🌐</div>
+      <div class="header-title-group">
+        <div class="header-title">Manage Communities</div>
+        <div class="header-subtitle">Add, view, edit, and delete communities.</div>
+      </div>
+      <div class="header-divider"></div>
+    </div>
+    <form class="add-community-form" onsubmit="addCommunity(event)">
+      <select id="communityCollege" required>
+        <option value="">Select College</option>
+      </select>
+      <textarea id="communityDesc" placeholder="Description (optional)"></textarea>
+      <button type="submit"><span>➕</span> Add Community</button>
+    </form>
+    <div id="message" class="message"></div>
+    <div class="communities-list" id="communitiesList"></div>
+  </div>
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <script src="supabaseAdmin.js"></script>
+  <script src="supabaseClient.js"></script>
+  <script src="communities.js"></script>
+  <script>
+// Enhance community card rendering to include a more prominent "Manage Admins" button with icon
+document.addEventListener('DOMContentLoaded', function() {
+  const list = document.getElementById('communitiesList');
+  if (!list) return;
+  if (typeof window.loadCommunities === 'function') {
+    const origLoadCommunities = window.loadCommunities;
+    window.loadCommunities = async function() {
+      await origLoadCommunities();
+      // Re-render with improved admin button
+      const communities = Array.from(list.querySelectorAll('.community-card'));
+      communities.forEach(card => {
+        const id = card.id.replace('community-', '');
+        if (!card.querySelector('.admin-btn')) {
+          const adminBtn = document.createElement('a');
+          adminBtn.href = `community_admins.html?community_id=${id}`;
+          adminBtn.className = 'admin-btn';
+          adminBtn.innerHTML = '<span style="font-size:1.3em;vertical-align:middle;">👥</span> <span style="vertical-align:middle;">Manage Admins</span>';
+          card.querySelector('.community-actions').prepend(adminBtn);
+        }
+      });
+    };
+    window.loadCommunities();
+  }
+});
+</script>
+</body>
+</html> 

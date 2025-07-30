@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../theme/app_theme.dart';
 import 'package:flutter/foundation.dart';
 import '../../widgets/desktop_sidebar.dart';
+import '../../services/supabase_service.dart';
 
 class HelpSupportScreen extends StatefulWidget {
   const HelpSupportScreen({super.key});
@@ -32,6 +33,17 @@ class _HelpSupportScreenState extends State<HelpSupportScreen>
     if (await canLaunchUrl(Uri.parse(url))) {
       await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
     }
+  }
+
+  void _showFeedbackDialog() {
+    showDialog(context: context, builder: (context) => FeedbackDialog());
+  }
+
+  void _showFeedbackDialogWithType(String type) {
+    showDialog(
+      context: context,
+      builder: (context) => FeedbackDialog(initialType: type),
+    );
   }
 
   @override
@@ -210,8 +222,8 @@ class _HelpSupportScreenState extends State<HelpSupportScreen>
                                       gradientStart: Colors.red,
                                       gradientEnd: Colors.red.shade600,
                                       onTap:
-                                          () => _launchURL(
-                                            'mailto:ranojitdas362@gmail.com?subject=Bug Report',
+                                          () => _showFeedbackDialogWithType(
+                                            'Bug',
                                           ),
                                       isDesktop: true,
                                     ),
@@ -226,8 +238,8 @@ class _HelpSupportScreenState extends State<HelpSupportScreen>
                                       gradientStart: Colors.orange,
                                       gradientEnd: Colors.orange.shade600,
                                       onTap:
-                                          () => _launchURL(
-                                            'mailto:ranojitdas362@gmail.com?subject=Feature Request',
+                                          () => _showFeedbackDialogWithType(
+                                            'Feature',
                                           ),
                                       isDesktop: true,
                                     ),
@@ -495,10 +507,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen>
                         color: Colors.red,
                         gradientStart: Colors.red,
                         gradientEnd: Colors.red.shade600,
-                        onTap:
-                            () => _launchURL(
-                              'mailto:ranojitdas362@gmail.com?subject=Bug Report',
-                            ),
+                        onTap: () => _showFeedbackDialogWithType('Bug'),
                       ),
                       _buildQuickActionCard(
                         icon: Icons.lightbulb_rounded,
@@ -507,10 +516,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen>
                         color: Colors.orange,
                         gradientStart: Colors.orange,
                         gradientEnd: Colors.orange.shade600,
-                        onTap:
-                            () => _launchURL(
-                              'mailto:ranojitdas362@gmail.com?subject=Feature Request',
-                            ),
+                        onTap: () => _showFeedbackDialogWithType('Feature'),
                       ),
                     ],
                   ),
@@ -653,12 +659,14 @@ class _HelpSupportScreenState extends State<HelpSupportScreen>
                 borderRadius: BorderRadius.circular(isDesktop ? 24 : 16),
                 border: Border.all(
                   color:
-                      isHovered ? color.withOpacity(0.3) : Colors.grey.shade200,
+                      isHovered
+                          ? color.withValues(alpha: 0.3)
+                          : Colors.grey.shade200,
                   width: 1.5,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: color.withOpacity(isHovered ? 0.15 : 0.08),
+                    color: color.withValues(alpha: isHovered ? 0.15 : 0.08),
                     blurRadius: isHovered ? 24 : 16,
                     offset: const Offset(0, 4),
                   ),
@@ -680,7 +688,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen>
                       borderRadius: BorderRadius.circular(isDesktop ? 18 : 12),
                       boxShadow: [
                         BoxShadow(
-                          color: gradientStart.withOpacity(0.3),
+                          color: gradientStart.withValues(alpha: 0.3),
                           blurRadius: 12,
                           offset: const Offset(0, 2),
                         ),
@@ -1123,4 +1131,383 @@ class TroubleshootItem {
     required this.description,
     required this.color,
   });
+}
+
+class FeedbackDialog extends StatefulWidget {
+  final String initialType;
+  const FeedbackDialog({Key? key, this.initialType = 'Bug'}) : super(key: key);
+  @override
+  State<FeedbackDialog> createState() => _FeedbackDialogState();
+}
+
+class _FeedbackDialogState extends State<FeedbackDialog> {
+  final _formKey = GlobalKey<FormState>();
+  String _type = '';
+  String _title = '';
+  String _description = '';
+  String _email = '';
+  bool _loading = false;
+  String? _error;
+  String? _success;
+
+  @override
+  void initState() {
+    super.initState();
+    _type = widget.initialType;
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() {
+      _loading = true;
+      _error = null;
+      _success = null;
+    });
+    try {
+      final response = await SupabaseService.client.from('feedback').insert({
+        'type': _type,
+        'title': _title,
+        'description': _description,
+        'user_email': _email.isNotEmpty ? _email : null,
+        'created_at': DateTime.now().toIso8601String(),
+      });
+      setState(() {
+        _success = 'Thank you for your feedback!';
+      });
+      await Future.delayed(Duration(seconds: 1));
+      if (mounted) Navigator.of(context).pop();
+    } catch (e) {
+      setState(() {
+        _error = 'Failed to submit feedback. Please try again.';
+      });
+    } finally {
+      setState(() {
+        _loading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final isDesktop =
+        kIsWeb ||
+        (Theme.of(context).platform == TargetPlatform.windows ||
+            Theme.of(context).platform == TargetPlatform.linux ||
+            Theme.of(context).platform == TargetPlatform.macOS);
+
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      elevation: 16,
+      backgroundColor: isDark ? Colors.grey[900] : Colors.white,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: isDesktop ? 500 : double.infinity,
+          maxHeight: isDesktop ? 700 : MediaQuery.of(context).size.height * 0.8,
+        ),
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: isDesktop ? 32 : 28,
+              vertical: isDesktop ? 28 : 24,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header with icon and title
+                Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [AppTheme.primaryBlue, AppTheme.primaryLight],
+                    ),
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(18),
+                      topRight: Radius.circular(18),
+                    ),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 28,
+                    horizontal: 0,
+                  ),
+                  child: Column(
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.06),
+                              blurRadius: 8,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        padding: const EdgeInsets.all(12),
+                        child: Icon(
+                          _type == 'Bug'
+                              ? Icons.bug_report_rounded
+                              : Icons.lightbulb_rounded,
+                          color: AppTheme.primaryBlue,
+                          size: 32,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      Text(
+                        _type == 'Bug' ? 'Report a Bug' : 'Feature Request',
+                        style: GoogleFonts.poppins(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _type == 'Bug'
+                            ? 'Help us improve by reporting issues.'
+                            : 'Suggest a new feature or improvement.',
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          color: Colors.white.withValues(alpha: 0.92),
+                          fontWeight: FontWeight.w400,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+                // Form card
+                Container(
+                  margin: const EdgeInsets.only(top: 18),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.grey[900] : Colors.white,
+                    borderRadius: BorderRadius.circular(18),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 12,
+                        offset: Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      children: [
+                        DropdownButtonFormField<String>(
+                          value: _type,
+                          items: [
+                            DropdownMenuItem(
+                              value: 'Bug',
+                              child: Text('Bug Report'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'Feature',
+                              child: Text('Feature Request'),
+                            ),
+                          ],
+                          onChanged: (v) => setState(() => _type = v ?? 'Bug'),
+                          decoration: InputDecoration(
+                            labelText: 'Type',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            filled: true,
+                            fillColor:
+                                isDark ? Colors.grey[850] : Colors.grey[100],
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: isDesktop ? 12 : 16,
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: isDesktop ? 12 : 16),
+                        TextFormField(
+                          decoration: InputDecoration(
+                            labelText: 'Title',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            filled: true,
+                            fillColor:
+                                isDark ? Colors.grey[850] : Colors.grey[100],
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: isDesktop ? 12 : 16,
+                            ),
+                          ),
+                          onChanged: (v) => _title = v,
+                          validator:
+                              (v) =>
+                                  v == null || v.trim().isEmpty
+                                      ? 'Title required'
+                                      : null,
+                          style: GoogleFonts.poppins(),
+                        ),
+                        SizedBox(height: isDesktop ? 12 : 16),
+                        TextFormField(
+                          decoration: InputDecoration(
+                            labelText: 'Description',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            filled: true,
+                            fillColor:
+                                isDark ? Colors.grey[850] : Colors.grey[100],
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: isDesktop ? 12 : 16,
+                            ),
+                          ),
+                          onChanged: (v) => _description = v,
+                          minLines: isDesktop ? 2 : 3,
+                          maxLines: isDesktop ? 4 : 5,
+                          validator:
+                              (v) =>
+                                  v == null || v.trim().isEmpty
+                                      ? 'Description required'
+                                      : null,
+                          style: GoogleFonts.poppins(),
+                        ),
+                        SizedBox(height: isDesktop ? 12 : 16),
+                        TextFormField(
+                          decoration: InputDecoration(
+                            labelText: 'Your Email (optional)',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            filled: true,
+                            fillColor:
+                                isDark ? Colors.grey[850] : Colors.grey[100],
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: isDesktop ? 12 : 16,
+                            ),
+                          ),
+                          onChanged: (v) => _email = v,
+                          keyboardType: TextInputType.emailAddress,
+                          style: GoogleFonts.poppins(),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                if (_error != null) ...[
+                  const SizedBox(height: 14),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.error_outline, color: Colors.red[700]),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _error!,
+                            style: GoogleFonts.poppins(
+                              color: Colors.red[700],
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                if (_success != null) ...[
+                  const SizedBox(height: 14),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.check_circle_outline,
+                          color: Colors.green[700],
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _success!,
+                            style: GoogleFonts.poppins(
+                              color: Colors.green[700],
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed:
+                          _loading ? null : () => Navigator.of(context).pop(),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.grey[600],
+                        textStyle: GoogleFonts.poppins(
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      child: const Text('Cancel'),
+                    ),
+                    const SizedBox(width: 12),
+                    ElevatedButton(
+                      onPressed: _loading ? null : _submit,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryBlue,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 28,
+                          vertical: 14,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        textStyle: GoogleFonts.poppins(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                      child:
+                          _loading
+                              ? SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                              : const Text('Submit'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }

@@ -11,8 +11,10 @@ import '../../services/network_service.dart';
 import '../../widgets/app_text.dart';
 import '../../services/assigned_mcq_supabase_service.dart';
 import '../../services/error_message_service.dart';
-import '../../mixins/performance_mixin.dart';
+// import '../../mixins/performance_mixin.dart';
 import 'package:window_manager/window_manager.dart';
+import '../../services/android_proctoring_service.dart';
+import 'dart:io';
 
 class MCQTestScreen extends StatefulWidget {
   final Subject? subject;
@@ -71,7 +73,7 @@ Future<List<Map<String, dynamic>>> fetchQuestionsFromSupabase({
 }
 
 class _MCQTestScreenState extends State<MCQTestScreen>
-    with WidgetsBindingObserver, WindowListener, PerformanceMixin {
+    with WidgetsBindingObserver, WindowListener {
   List<Map<String, dynamic>> _questions = [];
   int _currentQuestionIndex = 0;
   Map<int, String> _userAnswers = {};
@@ -94,11 +96,19 @@ class _MCQTestScreenState extends State<MCQTestScreen>
   @override
   void initState() {
     super.initState();
-    startScreenMonitoring('mcq_test_screen');
+    // startScreenMonitoring('mcq_test_screen');
+
+    // Initialize Android proctoring if available
+    if (isProctored && Platform.isAndroid) {
+      _initializeAndroidProctoring();
+    }
+
     // Always start timer regardless of proctoring
     if (isProctored) {
       WidgetsBinding.instance.addObserver(this);
-      windowManager.addListener(this);
+      if (!Platform.isAndroid) {
+        windowManager.addListener(this);
+      }
     }
     _startTimer();
     _loadQuestions();
@@ -123,14 +133,98 @@ class _MCQTestScreenState extends State<MCQTestScreen>
   void dispose() {
     if (isProctored) {
       WidgetsBinding.instance.removeObserver(this);
-      windowManager.removeListener(this);
+      if (!Platform.isAndroid) {
+        windowManager.removeListener(this);
+      } else {
+        AndroidProctoringService.stopProctoring();
+      }
       _timer?.cancel();
     }
     _navigatorScrollController.dispose();
     // Dispose question scroll controller
     _questionScrollController.dispose();
-    stopScreenMonitoring();
+    // stopScreenMonitoring();
     super.dispose();
+  }
+
+  /// Initialize Android-specific proctoring
+  Future<void> _initializeAndroidProctoring() async {
+    try {
+      // Initialize the proctoring service
+      await AndroidProctoringService.initialize();
+
+      // Check if advanced proctoring is supported
+      final isSupported =
+          await AndroidProctoringService.isAdvancedProctoringSupported();
+
+      if (isSupported) {
+        // Start Android proctoring with violation handlers
+        final success = await AndroidProctoringService.startProctoring(
+          onViolationDetected: (violation) {
+            _handleAndroidViolation(violation);
+          },
+          onTestTerminated: () {
+            _handleAndroidTestTermination();
+          },
+        );
+
+        if (success) {
+          print('Android proctoring started successfully');
+        } else {
+          print('Failed to start Android proctoring');
+        }
+      } else {
+        print('Advanced Android proctoring not supported on this device');
+      }
+    } catch (e) {
+      print('Error initializing Android proctoring: $e');
+    }
+  }
+
+  /// Handle Android proctoring violations
+  void _handleAndroidViolation(String violation) {
+    print('Android proctoring violation: $violation');
+
+    // Auto-submit the test on violation
+    if (!_autoSubmitted) {
+      _autoSubmitted = true;
+      _submitTest(auto: true, violation: violation);
+    }
+  }
+
+  /// Handle Android test termination
+  void _handleAndroidTestTermination() {
+    print('Android proctoring terminated the test');
+
+    // Navigate back to test results
+    if (mounted) {
+      Navigator.of(context).pop();
+    }
+  }
+
+  /// Show Android proctoring status (for debugging)
+  Future<void> _showAndroidProctoringStatus() async {
+    if (!Platform.isAndroid) return;
+
+    try {
+      final status = await AndroidProctoringService.getProctoringStatus();
+      print('Android Proctoring Status: $status');
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Proctoring: ${status['supported'] ? 'Supported' : 'Not Supported'}\n'
+              'Advanced: ${status['advancedFeatures'] ? 'Yes' : 'No'}\n'
+              'Active: ${status['isActive'] ? 'Yes' : 'No'}',
+            ),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      print('Error getting proctoring status: $e');
+    }
   }
 
   @override
@@ -245,7 +339,7 @@ class _MCQTestScreenState extends State<MCQTestScreen>
   }
 
   Future<void> _loadQuestions() async {
-    await startOperationTrace('mcq_questions_loading');
+    // await startOperationTrace('mcq_questions_loading');
 
     setState(() {
       _isLoading = true;
@@ -270,7 +364,7 @@ class _MCQTestScreenState extends State<MCQTestScreen>
           _questions = questions;
           _isLoading = false;
         });
-        await stopOperationTrace('mcq_questions_loading');
+        // await stopOperationTrace('mcq_questions_loading');
       } else {
         final networkStatus = await _networkService.isConnected();
         if (!networkStatus) {
@@ -362,9 +456,16 @@ class _MCQTestScreenState extends State<MCQTestScreen>
     });
   }
 
-  Future<void> _submitTest({bool auto = false}) async {
+  Future<void> _submitTest({bool auto = false, String? violation}) async {
     if (_isTestCompleted) return;
     _timer?.cancel();
+
+    // Log violation if present
+    if (violation != null) {
+      print('PROCTORING_VIOLATION: $violation - Test auto-submitted');
+      // TODO: Send violation to backend for logging
+    }
+
     setState(() {
       _isTestCompleted = true;
     });
@@ -513,12 +614,12 @@ class _MCQTestScreenState extends State<MCQTestScreen>
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: AppTheme.primaryBlue.withOpacity(0.18),
+                      color: AppTheme.primaryBlue.withValues(alpha: 0.18),
                       width: 1.5,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: AppTheme.primaryBlue.withOpacity(0.08),
+                        color: AppTheme.primaryBlue.withValues(alpha: 0.08),
                         blurRadius: 16,
                         offset: const Offset(0, 4),
                       ),
@@ -588,6 +689,14 @@ class _MCQTestScreenState extends State<MCQTestScreen>
                       }
                     },
                   ),
+                  actions: [
+                    if (isProctored && Platform.isAndroid)
+                      IconButton(
+                        icon: const Icon(Icons.info_outline_rounded),
+                        onPressed: _showAndroidProctoringStatus,
+                        tooltip: 'Proctoring Status',
+                      ),
+                  ],
                 )
                 : null,
         body: Stack(
@@ -791,13 +900,13 @@ class _MCQTestScreenState extends State<MCQTestScreen>
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.07),
+                        color: Colors.black.withValues(alpha: 0.07),
                         blurRadius: 8,
                         offset: const Offset(0, 2),
                       ),
                     ],
                     border: Border.all(
-                      color: AppTheme.primaryBlue.withOpacity(0.13),
+                      color: AppTheme.primaryBlue.withValues(alpha: 0.13),
                     ),
                   ),
                   child: Row(
@@ -950,7 +1059,7 @@ class _MCQTestScreenState extends State<MCQTestScreen>
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.03),
+                  color: Colors.black.withValues(alpha: 0.03),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
@@ -1224,13 +1333,13 @@ class _MCQTestScreenState extends State<MCQTestScreen>
                     borderRadius: BorderRadius.circular(14),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.07),
+                        color: Colors.black.withValues(alpha: 0.07),
                         blurRadius: 6,
                         offset: const Offset(0, 2),
                       ),
                     ],
                     border: Border.all(
-                      color: AppTheme.primaryBlue.withOpacity(0.13),
+                      color: AppTheme.primaryBlue.withValues(alpha: 0.13),
                     ),
                   ),
                   child: Row(
@@ -1385,7 +1494,9 @@ class _MCQTestScreenState extends State<MCQTestScreen>
                 const SizedBox(height: 16),
                 _buildProctoringRule(
                   Icons.phone_android_rounded,
-                  'Do not switch to other apps',
+                  Platform.isAndroid
+                      ? 'Advanced monitoring prevents app switching'
+                      : 'Do not switch to other apps',
                 ),
                 const SizedBox(height: 8),
                 _buildProctoringRule(
@@ -1465,13 +1576,13 @@ class _MCQTestScreenState extends State<MCQTestScreen>
                   borderRadius: BorderRadius.circular(28),
                   boxShadow: [
                     BoxShadow(
-                      color: AppTheme.primaryBlue.withOpacity(0.10),
+                      color: AppTheme.primaryBlue.withValues(alpha: 0.10),
                       blurRadius: 32,
                       offset: const Offset(0, 8),
                     ),
                   ],
                   border: Border.all(
-                    color: AppTheme.primaryBlue.withOpacity(0.18),
+                    color: AppTheme.primaryBlue.withValues(alpha: 0.18),
                     width: 1.5,
                   ),
                 ),
@@ -1482,7 +1593,7 @@ class _MCQTestScreenState extends State<MCQTestScreen>
                     Container(
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: AppTheme.error.withOpacity(0.13),
+                        color: AppTheme.error.withValues(alpha: 0.13),
                       ),
                       padding: const EdgeInsets.all(16),
                       child: Icon(

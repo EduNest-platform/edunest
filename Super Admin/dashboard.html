@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>EduNest Super Admin Dashboard</title>
+  <link rel="stylesheet" href="style.css?v=1.2">
+  <link rel="stylesheet" href="mobile-nav.css?v=1.2">
+  <link rel="stylesheet" href="drilldown.css?v=1.2">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script src="supabaseClient.js?v=1.2"></script>
+</head>
+<body>
+  <div class="main-bg"></div>
+  
+  <!-- Hamburger Menu Button -->
+  <button class="hamburger-btn" onclick="toggleMobileMenu()">
+    <div class="hamburger-icon">
+      <div class="hamburger-line"></div>
+      <div class="hamburger-line"></div>
+      <div class="hamburger-line"></div>
+    </div>
+  </button>
+  
+  <!-- Mobile Navigation Container -->
+  <div class="mobile-nav-container" id="mobileNavContainer">
+    <div class="mobile-nav-backdrop" onclick="closeMobileMenu()"></div>
+    <div class="mobile-sidebar">
+      <div class="mobile-header">
+        <div class="mobile-logo">🎓<span>EduNest</span></div>
+        <button class="mobile-close-btn" onclick="closeMobileMenu()">✕</button>
+      </div>
+      
+      <nav class="mobile-nav-menu">
+        <a href="#" class="mobile-nav-item active" onclick="showOverview()">
+          <span class="mobile-nav-icon">📊</span>
+          Overview
+        </a>
+        <a href="colleges.html" class="mobile-nav-item">
+          <span class="mobile-nav-icon">🏗️</span>
+          Hierarchy
+        </a>
+        <a href="ai-config.html" class="mobile-nav-item">
+          <span class="mobile-nav-icon">🤖</span>
+          AI Config
+        </a>
+        <a href="question_entry.html" class="mobile-nav-item">
+          <span class="mobile-nav-icon">📝</span>
+          Manual Question Entry
+        </a>
+        <a href="assigned_tests.html" class="mobile-nav-item">
+          <span class="mobile-nav-icon">📊</span>
+          Assigned Tests
+        </a>
+        <a href="communities.html" class="mobile-nav-item">
+          <span class="mobile-nav-icon">🌐</span>
+          Manage Communities
+        </a>
+        <a href="user_change_password.html" class="mobile-nav-item">
+          <span class="mobile-nav-icon">🔒</span>
+          Change User Password
+        </a>
+      </nav>
+      
+      <div class="mobile-user-info">
+        <div class="mobile-user-avatar">👤</div>
+        <div class="mobile-user-name">Super Admin</div>
+        <div class="mobile-user-role">Super Administrator</div>
+        <button class="mobile-logout-btn" onclick="logout()">Logout</button>
+      </div>
+    </div>
+  </div>
+  
+  <div class="dashboard-layout">
+    <aside class="sidebar">
+      <div class="sidebar-logo">🎓<span>EduNest</span></div>
+      <nav class="sidebar-nav">
+        <button class="nav-btn active" onclick="showOverview()"><span class="nav-icon">📊</span> Overview</button>
+        <button class="nav-btn" onclick="window.location.href='colleges.html'"><span class="nav-icon">🏗️</span> Hierarchy</button>
+        <button class="nav-btn" onclick="window.location.href='ai-config.html'"><span class="nav-icon">🤖</span> AI Config</button>
+        <button class="nav-btn" onclick="window.location.href='question_entry.html'"><span class="nav-icon">📝</span> Manual Question Entry</button>
+        <button class="nav-btn" onclick="window.location.href='assigned_tests.html'"><span class="nav-icon">📊</span> Assigned Tests</button>
+        <button class="nav-btn" onclick="window.location.href='communities.html'"><span class="nav-icon">🌐</span> Manage Communities</button>
+        <button class="nav-btn" onclick="window.location.href='user_change_password.html'"><span class="nav-icon">🔒</span> Change User Password</button>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="user-info modern-user-card">
+          <div class="user-avatar">
+            <span class="avatar-circle">S</span>
+          </div>
+          <div class="user-details">
+            <div class="user-name">Super Admin</div>
+            <div class="user-role">Super Administrator</div>
+          </div>
+        </div>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+      </div>
+    </aside>
+    
+    <main class="main-content mobile-main-content">
+      <!-- Overview Section -->
+      <section id="overview-section" class="content-section">
+        <div class="welcome-section">
+          <h1>Welcome to EduNest Super Admin</h1>
+          <p>Full control over all colleges, communities, and educational hierarchy</p>
+        </div>
+        
+        <div class="quick-actions" style="margin-bottom: 2rem;">
+          <h3>Quick Actions</h3>
+          <div class="action-buttons">
+            <button class="action-btn primary" onclick="window.location.href='colleges.html'">
+              <span class="action-icon">🏗️</span>
+              Manage Hierarchy
+            </button>
+            <button class="action-btn secondary" onclick="window.location.href='colleges.html'">
+              <span class="action-icon">🏫</span>
+              Add New College
+            </button>
+            <button class="action-btn" onclick="window.location.href='communities.html'">
+              <span class="action-icon">🌐</span>
+              Manage Communities
+            </button>
+            <button class="action-btn" onclick="window.location.href='assigned_tests.html'">
+              <span class="action-icon">📊</span>
+              View Assigned Tests
+            </button>
+          </div>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card clickable" onclick="window.location.href='colleges.html'">
+            <div class="stat-icon">🏫</div>
+            <div class="stat-content">
+              <div class="stat-number" id="collegeCount">0</div>
+              <div class="stat-label">Colleges</div>
+              <div class="stat-desc">Click to manage</div>
+            </div>
+            <div class="stat-arrow">→</div>
+          </div>
+          <div class="stat-card clickable" onclick="window.location.href='colleges.html'">
+            <div class="stat-icon">🏢</div>
+            <div class="stat-content">
+              <div class="stat-number" id="branchCount">0</div>
+              <div class="stat-label">Branches</div>
+              <div class="stat-desc">Click to manage</div>
+            </div>
+            <div class="stat-arrow">→</div>
+          </div>
+          <div class="stat-card clickable" onclick="window.location.href='colleges.html'">
+            <div class="stat-icon">📚</div>
+            <div class="stat-content">
+              <div class="stat-number" id="semesterCount">0</div>
+              <div class="stat-label">Semesters</div>
+              <div class="stat-desc">Click to manage</div>
+            </div>
+            <div class="stat-arrow">→</div>
+          </div>
+          <div class="stat-card clickable" onclick="window.location.href='colleges.html'">
+            <div class="stat-icon">📖</div>
+            <div class="stat-content">
+              <div class="stat-number" id="subjectCount">0</div>
+              <div class="stat-label">Subjects</div>
+              <div class="stat-desc">Click to manage</div>
+            </div>
+            <div class="stat-arrow">→</div>
+          </div>
+        </div>
+      </section>
+
+
+
+      <!-- Hierarchy Section -->
+      <section id="hierarchy-section" class="content-section hidden">
+        <!-- Breadcrumb Navigation -->
+        <div class="breadcrumb-nav">
+          <button class="breadcrumb-item active" onclick="showColleges()">
+            <span class="breadcrumb-icon">🏫</span>
+            Colleges
+          </button>
+          <div class="breadcrumb-separator">/</div>
+          <button class="breadcrumb-item" id="branchBreadcrumb" onclick="showBranches()" style="display: none;">
+            <span class="breadcrumb-icon">🏢</span>
+            <span id="branchBreadcrumbText">Branches</span>
+          </button>
+          <div class="breadcrumb-separator" id="semesterBreadcrumbSeparator" style="display: none;">/</div>
+          <button class="breadcrumb-item" id="semesterBreadcrumb" onclick="showSemesters()" style="display: none;">
+            <span class="breadcrumb-icon">📚</span>
+            <span id="semesterBreadcrumbText">Semesters</span>
+          </button>
+          <div class="breadcrumb-separator" id="subjectBreadcrumbSeparator" style="display: none;">/</div>
+          <button class="breadcrumb-item" id="subjectBreadcrumb" onclick="showSubjects()" style="display: none;">
+            <span class="breadcrumb-icon">📖</span>
+            <span id="subjectBreadcrumbText">Subjects</span>
+          </button>
+        </div>
+
+        <!-- Add Form Section -->
+        <div id="addFormSection" class="add-form-section">
+          <div class="add-form-header">
+            <h2 id="addFormTitle">Add New College</h2>
+            <button class="close-form-btn" onclick="hideAddForm()">✕</button>
+          </div>
+          <form id="addForm" class="add-form" onsubmit="event.preventDefault(); handleAdd();">
+            <div id="addFormContent">
+              <!-- Form content will be dynamically loaded -->
+            </div>
+            <button type="submit" class="submit-btn">
+              <span class="btn-icon">➕</span>
+              <span id="submitBtnText">Add College</span>
+            </button>
+          </form>
+        </div>
+
+        <!-- Message Display -->
+        <div id="messageDisplay" class="message"></div>
+
+        <!-- Content Area -->
+        <div id="contentArea" class="content-area">
+          <!-- Colleges View -->
+          <div id="collegesView" class="hierarchy-view">
+            <div class="view-header">
+              <h2>🏫 Colleges</h2>
+              <button class="add-btn" onclick="showAddCollegeForm()">
+                <span class="btn-icon">➕</span>
+                Add College
+              </button>
+            </div>
+            <div id="collegesGrid" class="hierarchy-grid"></div>
+          </div>
+
+          <!-- Branches View -->
+          <div id="branchesView" class="hierarchy-view hidden">
+            <div class="view-header">
+              <h2>🏢 Branches</h2>
+              <button class="add-btn" onclick="showAddBranchForm()">
+                <span class="btn-icon">➕</span>
+                Add Branch
+              </button>
+            </div>
+            <div id="branchesGrid" class="hierarchy-grid"></div>
+          </div>
+
+          <!-- Semesters View -->
+          <div id="semestersView" class="hierarchy-view hidden">
+            <div class="view-header">
+              <h2>📚 Semesters</h2>
+              <button class="add-btn" onclick="showAddSemesterForm()">
+                <span class="btn-icon">➕</span>
+                Add Semester
+              </button>
+            </div>
+            <div id="semestersGrid" class="hierarchy-grid"></div>
+          </div>
+
+          <!-- Subjects View -->
+          <div id="subjectsView" class="hierarchy-view hidden">
+            <div class="view-header">
+              <h2>📖 Subjects</h2>
+              <button class="add-btn" onclick="showAddSubjectForm()">
+                <span class="btn-icon">➕</span>
+                Add Subject
+              </button>
+            </div>
+            <div id="subjectsGrid" class="hierarchy-grid"></div>
+          </div>
+        </div>
+      </section>
+
+      <footer class="footer">
+        <div class="footer-content">
+          <div class="footer-left">
+            <span class="footer-logo">🎓 EduNest</span>
+            <span class="footer-text">Super Admin Panel &copy; 2025</span>
+          </div>
+          <div class="footer-right">
+            <span class="footer-status" id="connectionStatus">🟢 Connected</span>
+          </div>
+        </div>
+      </footer>
+    </main>
+  </div>
+  
+  <!-- Loading Overlay -->
+  <div id="loadingOverlay" class="loading-overlay hidden">
+    <div class="loading-spinner"></div>
+    <p id="loadingText">Loading...</p>
+  </div>
+
+  <script src="login.js"></script>
+  <script src="app.js?v=1.1"></script>
+</body>
+</html> 
+ 

@@ -6,10 +6,11 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <title>College Management - EduNest Admin</title>
+  <title>My College - EduNest Admin</title>
   <link rel="stylesheet" href="colleges.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script src="supabaseClient.js"></script>
+  <script src="supabaseAdmin.js"></script>
 </head>
 <body>
   <div class="main-bg"></div>
@@ -24,7 +25,7 @@
       </div>
       <!-- Centered Title -->
       <div class="center-title" style="flex: 1; display: flex; align-items: center; justify-content: center; min-width: 0;">
-        <span class="page-title" style="font-size: 1.7em; font-weight: 800; color: #fff; letter-spacing: 0.5px; text-shadow: 0 2px 8px #6366f1aa; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">College Management</span>
+        <span class="page-title" style="font-size: 1.7em; font-weight: 800; color: #fff; letter-spacing: 0.5px; text-shadow: 0 2px 8px #6366f1aa; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">My College</span>
       </div>
       <!-- Back Button -->
       <div class="back-btn-wrap" style="display: flex; align-items: center; min-width: 80px; justify-content: flex-end;">
@@ -80,59 +81,26 @@
 
   <!-- Main Content -->
   <main class="main-content">
-    <!-- Add College Section -->
-    <section class="add-section">
-      <div class="section-header">
-        <h2>Add New College</h2>
-        <p>Create a new educational institution</p>
-      </div>
-      
-      <form class="add-form" onsubmit="event.preventDefault(); addCollege();">
-        <div class="form-group">
-          <label for="collegeName">College Name</label>
-          <input 
-            type="text" 
-            id="collegeName" 
-            placeholder="Enter college name..." 
-            required
-            maxlength="100"
-          />
+    <!-- Admin Info Header -->
+    <div style="background: #fff; border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border: 1px solid #e5e7eb; margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center;">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.2em; font-weight: bold;" id="adminAvatar">A</div>
+        <div>
+          <div style="color: #6b7280; font-size: 0.9em;" id="adminEmail">Loading...</div>
+          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.75em; font-weight: 600; display: inline-block;" id="adminRole">Loading...</div>
         </div>
-        
-        <button type="submit" class="submit-btn">
-          <span class="btn-icon">➕</span>
-          Add College
-        </button>
-      </form>
-      
-      <div id="collegeMsg" class="message"></div>
-    </section>
+      </div>
+    </div>
 
-    <!-- Colleges List Section -->
-    <section class="list-section">
+    <!-- College Display Section -->
+    <section class="college-section">
       <div class="section-header">
-        <h2>Colleges List</h2>
-        <div class="list-stats">
-          <span class="stat-item">
-            <span class="stat-number" id="collegeCount">0</span>
-            <span class="stat-label">Total Colleges</span>
-          </span>
-        </div>
-        <div class="search-bar" style="margin-top:18px;">
-          <input type="text" id="collegeSearchInput" placeholder="Search colleges..." style="width:100%;max-width:340px;padding:10px 14px;border-radius:8px;border:1.5px solid #d1d5db;font-size:1em;" />
-        </div>
+        <h2>🏫 My Assigned College</h2>
+        <p>College you are managing</p>
       </div>
       
-      <div class="list-container">
-        <div id="collegeList" class="colleges-grid">
-          <!-- Colleges will be loaded here -->
-        </div>
-        
-        <div id="emptyState" class="empty-state hidden">
-          <div class="empty-icon">🏫</div>
-          <h3>No Colleges Yet</h3>
-          <p>Add your first college to get started</p>
-        </div>
+      <div id="collegeDisplay" class="college-display">
+        <!-- College information will be loaded here -->
       </div>
     </section>
   </main>

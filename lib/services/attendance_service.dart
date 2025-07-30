@@ -91,37 +91,61 @@ class AttendanceService {
 
       if (existingRecord != null) {
         // Update existing record - ensures only one record per student per subject per day per class
+        // Prepare update data with proper validation
+        final updateData = <String, dynamic>{'status': status};
+
+        // Only include fields if they are not null and not empty
+        if (college != null && college.trim().isNotEmpty) {
+          updateData['college'] = college.trim();
+        }
+        if (branch != null && branch.trim().isNotEmpty) {
+          updateData['branch'] = branch.trim();
+        }
+        if (semesterInt != null && semesterInt > 0) {
+          updateData['semester'] = semesterInt;
+        }
+        if (classNumber != null && classNumber > 0) {
+          updateData['class_number'] = classNumber;
+        }
+
         final response =
             await supabase
                 .from('attendance')
-                .update({
-                  'status': status,
-                  'college': college,
-                  'branch': branch,
-                  'semester': semesterInt,
-                  'class_number': classNumber,
-                  'updated_at': DateTime.now().toIso8601String(),
-                })
+                .update(updateData)
                 .eq('id', existingRecord['id'])
                 .select()
                 .single();
         return response['id'] as String?;
       } else {
         // Create new record - only if no existing record found
+        // Prepare insert data with proper validation
+        // Note: created_at is automatically set by the database, updated_at doesn't exist
+        final insertData = <String, dynamic>{
+          'student_id': studentId,
+          'subject_id': subjectId,
+          'date': dateString,
+          'status': status,
+        };
+
+        // Only include fields if they are not null and not empty
+        if (college != null && college.trim().isNotEmpty) {
+          insertData['college'] = college.trim();
+        }
+        if (branch != null && branch.trim().isNotEmpty) {
+          insertData['branch'] = branch.trim();
+        }
+        if (semesterInt != null && semesterInt > 0) {
+          insertData['semester'] = semesterInt;
+        }
+        // class_number defaults to 1 in the database, so only set if explicitly provided
+        if (classNumber != null && classNumber > 0) {
+          insertData['class_number'] = classNumber;
+        }
+
         final response =
             await supabase
                 .from('attendance')
-                .insert({
-                  'student_id': studentId,
-                  'subject_id': subjectId,
-                  'date': dateString,
-                  'status': status,
-                  'college': college,
-                  'branch': branch,
-                  'semester': semesterInt,
-                  'class_number': classNumber,
-                  'created_at': DateTime.now().toIso8601String(),
-                })
+                .insert(insertData)
                 .select()
                 .single();
         return response['id'] as String?;
@@ -146,23 +170,51 @@ class AttendanceService {
         final existingRecord = await query.maybeSingle();
 
         if (existingRecord != null) {
+          // Prepare update data with proper validation
+          // Note: updated_at doesn't exist in the schema, only status and other fields can be updated
+          final updateData = <String, dynamic>{'status': status};
+
+          // Only include fields if they are not null and not empty
+          if (college != null && college.trim().isNotEmpty) {
+            updateData['college'] = college.trim();
+          }
+          if (branch != null && branch.trim().isNotEmpty) {
+            updateData['branch'] = branch.trim();
+          }
+          if (semesterInt != null && semesterInt > 0) {
+            updateData['semester'] = semesterInt;
+          }
+          // class_number defaults to 1 in the database, so only set if explicitly provided
+          if (classNumber != null && classNumber > 0) {
+            updateData['class_number'] = classNumber;
+          }
+
           final response =
               await supabase
                   .from('attendance')
-                  .update({
-                    'status': status,
-                    'college': college,
-                    'branch': branch,
-                    'semester': semesterInt,
-                    'class_number': classNumber,
-                    'updated_at': DateTime.now().toIso8601String(),
-                  })
+                  .update(updateData)
                   .eq('id', existingRecord['id'])
                   .select()
                   .single();
           return response['id'] as String?;
         }
       }
+
+      // Create a more specific error message for common issues
+      if (e.toString().contains('PGRST204') ||
+          e.toString().contains('column')) {
+        throw Exception('Database schema mismatch. Please contact support.');
+      } else if (e.toString().contains('400')) {
+        throw Exception(
+          'Data validation failed. Please check your profile information and ensure all fields are properly filled.',
+        );
+      } else if (e.toString().contains('foreign key') ||
+          e.toString().contains('constraint')) {
+        throw Exception(
+          'Invalid reference data. Please check your subject and profile information.',
+        );
+      }
+
       rethrow;
     }
   }

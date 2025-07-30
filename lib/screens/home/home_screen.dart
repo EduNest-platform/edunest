@@ -24,10 +24,16 @@ import 'Subject Screen/subject_view_screen.dart';
 import '../home/resources/code_screen.dart';
 import '../home/resources/lab_manuals_screen.dart';
 import '../../screens/practice_tests/chapter_selection_screen.dart';
-import '../../mixins/performance_mixin.dart';
+// import '../../mixins/performance_mixin.dart';
 import 'dart:io';
 import 'home_desktop.dart';
 import '../../../main.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:flutter/foundation.dart';
+import '../../widgets/whats_new_dialog.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -37,7 +43,8 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen>
-    with SingleTickerProviderStateMixin, PerformanceMixin {
+    with SingleTickerProviderStateMixin {
+  static bool _didCheckAndroidUpdateForSession = false;
   UserProfile? _userProfile;
   bool _isLoading = true;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
@@ -109,8 +116,15 @@ class _HomeScreenState extends State<HomeScreen>
       duration: const Duration(milliseconds: 300),
     );
     _initializeApp();
-    startScreenMonitoring('home_screen');
-
+    // Android in-app update check
+    if (!kIsWeb &&
+        Platform.isAndroid &&
+        !_HomeScreenState._didCheckAndroidUpdateForSession) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _HomeScreenState._didCheckAndroidUpdateForSession = true;
+        _checkForAndroidUpdate();
+      });
+    }
     // Ensure search field doesn't get focus automatically
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
@@ -131,13 +145,13 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Future<void> _initializeApp() async {
-    await startOperationTrace('home_data_loading');
+    // await startOperationTrace('home_data_loading');
     await _loadUserProfile();
     await _loadSubjectsForSearch();
     // Reduced delay for faster onboarding
     await Future.delayed(const Duration(milliseconds: 50));
     await _checkFirstTimeUser();
-    await stopOperationTrace('home_data_loading');
+    // await stopOperationTrace('home_data_loading');
   }
 
   Future<void> _checkFirstTimeUser() async {
@@ -207,9 +221,11 @@ class _HomeScreenState extends State<HomeScreen>
       return;
     }
 
-    setState(() {
-      _currentOnboardingStep = step;
-    });
+    if (mounted) {
+      setState(() {
+        _currentOnboardingStep = step;
+      });
+    }
 
     // Scroll to the target widget and show tooltip
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -223,16 +239,18 @@ class _HomeScreenState extends State<HomeScreen>
 
         // Reduced delay after scrolling for faster onboarding
         Future.delayed(const Duration(milliseconds: 500), () {
-          _showTooltip(step);
-          // Mark as seen only when first tooltip is successfully shown
-          if (step == 0) {
-            _markOnboardingAsSeen();
+          if (mounted) {
+            _showTooltip(step);
+            // Mark as seen only when first tooltip is successfully shown
+            if (step == 0) {
+              _markOnboardingAsSeen();
+            }
           }
         });
       } else {
         // If context is null, try again after a shorter delay
         Future.delayed(const Duration(milliseconds: 100), () {
-          if (_showOnboarding) {
+          if (_showOnboarding && mounted) {
             _showOnboardingStep(step);
           }
         });
@@ -2143,6 +2161,237 @@ class _HomeScreenState extends State<HomeScreen>
           ),
         ),
       ),
+    );
+  }
+
+  Future<void> _checkForAndroidUpdate() async {
+    try {
+      const latestJsonUrl =
+          'https://raw.githubusercontent.com/Ranojitdas/EduNest-desktop/main/latest.json';
+      final response = await http.get(Uri.parse(latestJsonUrl));
+      if (response.statusCode == 200) {
+        final latest = jsonDecode(response.body);
+        final latestVersion = latest['version'] ?? '';
+        final latestApkUrl =
+            latest['android']?['download_url'] ?? latest['download_url'];
+        if (latestVersion.isEmpty || latestApkUrl == null) return;
+        final packageInfo = await PackageInfo.fromPlatform();
+        final currentVersion = packageInfo.version;
+        if (_isNewerVersion(latestVersion, currentVersion)) {
+          if (!mounted) return;
+          _showAndroidUpdateDialog(
+            latestVersion,
+            latestApkUrl,
+            latest['release_notes'],
+          );
+        }
+      }
+    } catch (e) {
+      // Ignore update errors
+    }
+  }
+
+  bool _isNewerVersion(String latest, String current) {
+    List<int> latestParts =
+        latest.split('.').map((e) => int.tryParse(e) ?? 0).toList();
+    List<int> currentParts =
+        current.split('.').map((e) => int.tryParse(e) ?? 0).toList();
+    for (int i = 0; i < latestParts.length; i++) {
+      if (i >= currentParts.length) return true;
+      if (latestParts[i] > currentParts[i]) return true;
+      if (latestParts[i] < currentParts[i]) return false;
+    }
+    return false;
+  }
+
+  void _showAndroidUpdateDialog(
+    String latestVersion,
+    String apkUrl,
+    String? releaseNotes,
+  ) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder:
+          (context) => Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(24),
+            ),
+            elevation: 0,
+            backgroundColor: Colors.transparent,
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color(0xFF3A8DFF), // Bluish
+                    Color(0xFF6DD5FA), // Lighter blue
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF3A8DFF).withValues(alpha: 0.18),
+                    blurRadius: 20,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Header with icon
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: const Icon(
+                        Icons.system_update_rounded,
+                        color: Colors.white,
+                        size: 32,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    // Title
+                    Text(
+                      'Update Available',
+                      style: GoogleFonts.poppins(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 12),
+                    // Version info
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        'Version $latestVersion',
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    // Description
+                    Text(
+                      'A new version of EduNest is available with the latest features and improvements.',
+                      style: GoogleFonts.poppins(
+                        fontSize: 16,
+                        color: Colors.white.withValues(alpha: 0.9),
+                        height: 1.4,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 24),
+                    // Action buttons
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: TextButton(
+                              onPressed: () => Navigator.of(context).pop(),
+                              style: TextButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 16,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: Text(
+                                'Later',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  Colors.white,
+                                  Colors.white.withValues(alpha: 0.9),
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.1),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: ElevatedButton(
+                              onPressed: () async {
+                                Navigator.of(context).pop();
+                                await launchUrl(
+                                  Uri.parse(apkUrl),
+                                  mode: LaunchMode.externalApplication,
+                                );
+                                // DO NOT show WhatsNewDialog here. It should only show after the app is updated and restarted.
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.transparent,
+                                foregroundColor: const Color(0xFF3A8DFF),
+                                shadowColor: Colors.transparent,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 16,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(Icons.download_rounded, size: 20),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Update',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
     );
   }
 }

@@ -116,7 +116,7 @@ class DesktopSidebar extends StatelessWidget {
             onTap: () => onNavigate('/about'),
           ),
           const SizedBox(height: 24),
-          Divider(color: Colors.white.withOpacity(0.2)),
+          Divider(color: Colors.white.withValues(alpha: 0.2)),
           _SidebarButton(
             icon: Icons.logout_rounded,
             label: 'Logout',
@@ -144,7 +144,7 @@ class _SidebarSectionLabel extends StatelessWidget {
         style: GoogleFonts.poppins(
           fontSize: 12,
           fontWeight: FontWeight.w600,
-          color: Colors.white.withOpacity(0.7),
+          color: Colors.white.withValues(alpha: 0.7),
           letterSpacing: 0.5,
         ),
       ),
@@ -185,7 +185,7 @@ class _SidebarButton extends StatelessWidget {
       ),
       selected: selected,
       onTap: onTap,
-      selectedTileColor: Colors.white.withOpacity(0.08),
+      selectedTileColor: Colors.white.withValues(alpha: 0.08),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     );
   }

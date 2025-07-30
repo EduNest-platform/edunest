@@ -146,8 +146,8 @@ class _AcademicInfoScreenState extends State<AcademicInfoScreen>
                                                       boxShadow: [
                                                         BoxShadow(
                                                           color: Colors.black
-                                                              .withOpacity(
-                                                                0.06,
+                                                              .withValues(
+                                                                alpha: 0.06,
                                                               ),
                                                           blurRadius: 18,
                                                           offset: const Offset(
@@ -439,7 +439,7 @@ class _AcademicInfoScreenState extends State<AcademicInfoScreen>
                                               boxShadow: [
                                                 BoxShadow(
                                                   color: Colors.black
-                                                      .withOpacity(0.06),
+                                                      .withValues(alpha: 0.06),
                                                   blurRadius: 18,
                                                   offset: const Offset(0, 8),
                                                 ),

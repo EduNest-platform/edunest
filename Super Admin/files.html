@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Management - EduNest Admin</title>
+    <link rel="stylesheet" href="files.css">
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="supabaseClient.js"></script>
+    <script src="supabaseAdmin.js"></script>
+    <script src="google-drive-config.js"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+    <div class="main-bg"></div>
+    
+    <!-- Header -->
+    <header class="header" style="background: linear-gradient(120deg,#6366f1 0%,#60a5fa 50%,#a78bfa 100%); box-shadow: 0 4px 24px rgba(99,102,241,0.13); border-bottom-left-radius: 18px; border-bottom-right-radius: 18px; position: relative; z-index: 10;">
+        <div class="header-content">
+            <div class="appbar-top-row">
+                <div class="appbar-title-center">
+                    <span class="page-title">File Management</span>
+                </div>
+                <div class="appbar-right">
+                    <a href="subjects.html" class="back-btn">Back</a>
+                </div>
+            </div>
+            <div class="college-branch-card">
+                <span id="contextCollege" class="college-branch-line college-name">College</span>
+                <span class="context-separator">→</span>
+                <span id="contextBranch" class="college-branch-line branch-name">Branch</span>
+                <span class="context-separator">→</span>
+                <span id="contextSemester" class="college-branch-line semester-name">Semester</span>
+                <span class="context-separator">→</span>
+                <span id="contextSubject" class="college-branch-line subject-name">Subject</span>
+            </div>
+        </div>
+        <style>
+            .header-content {
+                display: flex;
+                flex-direction: column;
+                align-items: stretch;
+                justify-content: center;
+                padding: 4px 2vw 2px 2vw;
+                max-width: 1200px;
+                margin: 0 auto;
+                gap: 0;
+            }
+            .appbar-top-row {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                width: 100%;
+                min-height: 56px;
+                position: relative;
+            }
+            .appbar-title-center {
+                flex: 1;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                min-width: 0;
+            }
+            .appbar-right {
+                position: absolute;
+                right: 2vw;
+                top: 50%;
+                transform: translateY(-50%);
+                display: flex;
+                align-items: center;
+            }
+            .page-title {
+                font-size: 1.2em;
+                font-weight: 900;
+                color: #fff;
+                letter-spacing: 0.5px;
+                text-shadow: 0 2px 8px #6366f1aa;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                text-align: center;
+                max-width: 60vw;
+            }
+            .back-btn {
+                background: rgba(255,255,255,0.85);
+                color: #6366f1;
+                border-radius: 8px;
+                padding: 5px 12px;
+                font-weight: 600;
+                font-size: 0.98em;
+                box-shadow: 0 2px 8px rgba(99,102,241,0.10);
+                text-decoration: none;
+                transition: background 0.2s, color 0.2s;
+                border: none;
+                outline: none;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                min-width: 0;
+            }
+            .college-branch-card {
+                display: flex;
+                flex-direction: row;
+                align-items: center;
+                justify-content: center;
+                background: linear-gradient(120deg,rgba(255,255,255,0.92) 60%,rgba(236,241,255,0.85) 100%);
+                border-radius: 18px;
+                border: 1.5px solid #e0e7ff;
+                box-shadow: 0 6px 32px 0 #6366f133, 0 1.5px 8px #6366f122;
+                backdrop-filter: blur(2.5px);
+                padding: 8px 3vw 8px 3vw;
+                min-width: 120px;
+                max-width: 98vw;
+                transition: box-shadow 0.18s, border 0.18s, background 0.18s;
+                margin-top: 10px;
+                flex-wrap: wrap;
+                gap: 0;
+            }
+            .context-separator {
+                color: #94a3b8;
+                font-weight: 400;
+                font-size: 1.1em;
+                margin: 0 6px;
+                user-select: none;
+            }
+            .college-branch-line {
+                max-width: 22vw;
+                font-size: 1em;
+                margin-bottom: 0;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                text-align: center;
+            }
+            .college-name {
+                color: #6366f1;
+                font-weight: 700;
+                font-size: 1.18em;
+                letter-spacing: 0.3px;
+                margin-bottom: 7px;
+                text-shadow: 0 1px 8px #6366f122;
+            }
+            .branch-name {
+                color: #334155;
+                font-weight: 600;
+                font-size: 1.04em;
+                letter-spacing: 0.1px;
+                margin-top: 2px;
+                margin-bottom: 7px;
+                opacity: 0.92;
+            }
+            .semester-name {
+                color: #0ea5e9;
+                font-weight: 600;
+                font-size: 1.04em;
+                letter-spacing: 0.1px;
+                margin-top: 2px;
+                margin-bottom: 7px;
+                opacity: 0.92;
+            }
+            .subject-name {
+                color: #a21caf;
+                font-weight: 600;
+                font-size: 1.04em;
+                letter-spacing: 0.1px;
+                margin-top: 2px;
+                opacity: 0.92;
+            }
+            @media (max-width: 700px) {
+                .appbar-top-row {
+                    flex-direction: row;
+                    justify-content: center;
+                    min-height: 44px;
+                }
+                .appbar-title-center {
+                    flex: unset;
+                    justify-content: center;
+                }
+                .appbar-right {
+                    position: static;
+                    transform: none;
+                    right: unset;
+                    top: unset;
+                    margin-left: 12px;
+                }
+                .page-title {
+                    font-size: 1.05em;
+                    max-width: 60vw;
+                }
+                .college-branch-card {
+                    padding: 7px 2vw 7px 2vw;
+                    border-radius: 12px;
+                }
+                .college-branch-line {
+                    max-width: 38vw;
+                    font-size: 0.95em;
+                }
+                .context-separator {
+                    margin: 0 3px;
+                    font-size: 1em;
+                }
+            }
+            @media (min-width: 701px) {
+                .header-content {
+                    padding-bottom: 12px;
+                }
+                .appbar-top-row {
+                    margin-bottom: 10px;
+                }
+                .page-title {
+                    font-size: 1.45em;
+                    font-weight: 950;
+                    letter-spacing: 0.7px;
+                    text-shadow: 0 3px 12px #6366f1bb;
+                }
+                .appbar-right {
+                    right: 2vw;
+                    top: 50%;
+                    transform: translateY(-50%);
+                    padding-right: 2px;
+                }
+                .back-btn {
+                    box-shadow: 0 2px 12px rgba(99,102,241,0.13);
+                    border: 1.5px solid #c7d2fe;
+                    transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+                }
+                .back-btn:hover, .back-btn:focus {
+                    background: #6366f1;
+                    color: #fff;
+                    box-shadow: 0 4px 18px #6366f1aa;
+                }
+                .college-branch-card {
+                    margin-top: 0;
+                    margin-bottom: 2px;
+                    box-shadow: 0 8px 32px 0 #6366f155, 0 2px 12px #6366f133;
+                    border: 2px solid #c7d2fe;
+                    padding: 10px 3vw 10px 3vw;
+                }
+            }
+        </style>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Upload Section -->
+        <section class="upload-section">
+            <div class="section-header">
+                <h2>Upload Files</h2>
+                <p id="uploadDescription">Upload notes, PYQ, and other study materials for this subject</p>
+                <div class="storage-info">
+                    <span class="storage-badge">📁 Supabase Storage (Small files < 5MB)</span>
+                    <span class="storage-badge">☁️ Google Drive (Large files up to 10MB)</span>
+                    <div class="permission-note">
+                        <span class="info-icon">ℹ️</span>
+                        <span>Google Drive files are automatically shared with "Anyone with the link can view"</span>
+                    </div>
+                </div>
+            </div>
+            
+            <form class="upload-form" onsubmit="event.preventDefault(); uploadFile();">
+                <div class="form-group">
+                    <label for="fileName">File Name *</label>
+                    <input type="text" id="fileName" placeholder="e.g., Chapter 1 Notes, 2023 PYQ" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="fileDescription">Description (Optional)</label>
+                    <textarea id="fileDescription" placeholder="Brief description of the file content"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="fileType">File Type *</label>
+                    <select id="fileType" required>
+                        <option value="">Select File Type</option>
+                        <option value="notes">📝 Notes</option>
+                        <option value="pyq">📋 Previous Year Questions (PYQ)</option>
+                        <option value="assignment">📄 Assignment</option>
+                        <option value="lab_manuals">🧪 Lab Manuals</option>
+                        <option value="code">💻 Code Examples</option>
+                        <option value="other">📁 Other</option>
+                    </select>
+                </div>
+                <div class="form-group" id="tagSelectorGroup" style="display:none;">
+                  <label for="tagDropdown">Tags *</label>
+                  <div style="display: flex; gap: 8px; align-items: center;">
+                    <select id="tagDropdown"></select>
+                    <input type="text" id="customTagInput" placeholder="Custom tag" style="flex:1;"/>
+                    <button type="button" id="addTagBtn">Add Tag</button>
+                  </div>
+                  <div id="selectedTags" style="margin-top: 8px;"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="fileInput">Select File *</label>
+                    <div class="file-input-container" id="fileInputContainer">
+                        <input type="file" id="fileInput" accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.ppt,.pptx" required tabindex="-1" style="display:none;">
+                        <div class="file-input-info">
+                            <span class="file-icon">📎</span>
+                            <span class="file-text">Choose a file or drag it here</span>
+                        </div>
+                    </div>
+                    <div class="file-info" id="fileInfo" style="display: none;">
+                        <span class="file-name" id="selectedFileName"></span>
+                        <span class="file-size" id="selectedFileSize"></span>
+                        <span class="storage-indicator" id="storageIndicator"></span>
+                    </div>
+                </div>
+                
+                <button type="submit" class="submit-btn">
+                    <span class="btn-icon">📤</span>Upload File
+                </button>
+            </form>
+        </section>
+
+        <!-- Message Display -->
+        <div id="fileMsg" class="message"></div>
+
+        <!-- Files List Section -->
+        <section class="list-section">
+            <div class="section-header">
+                <h2 id="filesListTitle">All Files</h2>
+                <p id="filesListDescription">Manage uploaded files for this subject</p>
+                <div class="list-stats">
+                    <div class="stat-item">
+                        <span class="stat-number" id="fileCount">0</span>
+                        <span class="stat-label">Total Files</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number" id="notesCount">0</span>
+                        <span class="stat-label">Notes</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number" id="pyqCount">0</span>
+                        <span class="stat-label">PYQ</span>
+                    </div>
+                </div>
+                <!-- Search bar and filter tags tightly grouped below stats -->
+                <div class="search-filter-row">
+                    <div class="search-bar" style="margin-top:0;">
+                    <input type="text" id="fileSearchInput" placeholder="Search files..." style="width:100%;max-width:340px;padding:10px 14px;border-radius:8px;border:1.5px solid #d1d5db;font-size:1em;" />
+                </div>
+                <div class="filter-tabs">
+                    <button class="filter-tab active" data-filter="all">All Files</button>
+                    <button class="filter-tab" data-filter="notes">📝 Notes</button>
+                    <button class="filter-tab" data-filter="pyq">📋 PYQ</button>
+                    <button class="filter-tab" data-filter="assignment">📄 Assignment</button>
+                    <button class="filter-tab" data-filter="other">📁 Other</button>
+                    <button class="filter-tab" data-filter="lab_manuals">🧪 Lab Manuals</button>
+                    <button class="filter-tab" data-filter="code">💻 Code</button>
+                    
+                </div>
+                </div>
+            </div>
+            
+            <div class="list-container">
+                <div id="fileList" class="files-grid"></div>
+                <div id="emptyState" class="empty-state hidden">
+                    <div class="empty-icon">📁</div>
+                    <h3>No Files Found</h3>
+                    <p>Start by uploading your first file above.</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay hidden">
+        <div class="loading-spinner"></div>
+        <div id="uploadProgressBar" class="upload-progress-bar"></div>
+        <p id="loadingText">Uploading file...</p>
+    </div>
+
+    <!-- Upload Modal Overlay -->
+    <div id="uploadModal" class="upload-modal" style="display:none;">
+      <div class="upload-modal-content" id="uploadModalContent">
+        <!-- Connecting State -->
+        <div class="upload-connecting" id="uploadConnecting">
+          <div class="circular-spinner"></div>
+          <div class="upload-connecting-text">Connecting to Google Drive…</div>
+        </div>
+        <!-- Uploading State -->
+        <div class="upload-progress-state" id="uploadProgressState" style="display:none;">
+          <div class="upload-stats-row">
+            <span><b id="uploadedMB">0 MB</b> / <b id="totalMB">0 MB</b></span>
+            <span> | </span>
+            <span>Remaining: <b id="remainingMB">0 MB</b></span>
+            <span> | </span>
+            <span>ETA: <b id="eta">--</b></span>
+          </div>
+          <div class="upload-progress-bar-wrap">
+            <div class="upload-progress-bar">
+              <div class="upload-progress-bar-inner" id="uploadBarInner"></div>
+            </div>
+            <div class="upload-percent-badge" id="uploadPercentBadge">0%</div>
+          </div>
+          <div class="uploading-text">Uploading to Google Drive…</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Supabase Upload Modal -->
+    <div id="supabaseUploadModal" class="supabase-upload-modal" style="display:none;">
+      <div class="supabase-upload-modal-content">
+        <div class="supabase-spinner"></div>
+        <div class="supabase-uploading-text">Uploading to Supabase Storage…</div>
+      </div>
+    </div>
+
+    <script src="files.js"></script>
+</body>
+</html>

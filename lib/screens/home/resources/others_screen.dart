@@ -616,7 +616,7 @@ class _OthersScreenState extends State<OthersScreen> {
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.indigo.withOpacity(0.08),
+                        color: Colors.indigo.withValues(alpha: 0.08),
                         blurRadius: 16,
                         offset: const Offset(0, 4),
                       ),

@@ -7,20 +7,23 @@ document.addEventListener('DOMContentLoaded', function() {
     return;
   }
   
-  // Check if we have a selected college
-  const selectedCollege = sessionStorage.getItem('selectedCollege');
-  if (selectedCollege) {
-    try {
-      const collegeData = JSON.parse(selectedCollege);
-      document.getElementById('selectedCollegeName').textContent = collegeData.name;
-      document.getElementById('selectedCollegeDisplay').textContent = collegeData.name;
-      
-      // Update page content for filtered view
-      document.getElementById('addBranchDescription').textContent = `Create a new branch for ${collegeData.name}`;
-      document.getElementById('branchesListTitle').textContent = `${collegeData.name} Branches`;
-      document.getElementById('branchesListDescription').textContent = `Manage existing branches for ${collegeData.name}`;
-    } catch (error) {
-      console.error('Error parsing selected college:', error);
+  // Check for college parameter in URL
+  const urlParams = new URLSearchParams(window.location.search);
+  const collegeId = urlParams.get('college');
+  
+  if (collegeId) {
+    // Load college details and set in sessionStorage
+    loadCollegeDetails(collegeId);
+  } else {
+    // Check if we have a selected college in sessionStorage
+    const selectedCollege = sessionStorage.getItem('selectedCollege');
+    if (selectedCollege) {
+      try {
+        const collegeData = JSON.parse(selectedCollege);
+        updatePageForCollege(collegeData);
+      } catch (error) {
+        console.error('Error parsing selected college:', error);
+      }
     }
   }
   
@@ -37,6 +40,39 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 });
+
+// Load college details by ID and set in sessionStorage
+async function loadCollegeDetails(collegeId) {
+  try {
+    const { data: college, error } = await window.supabaseClient
+      .from('colleges')
+      .select('id, name')
+      .eq('id', collegeId)
+      .single();
+    
+    if (error) throw error;
+    
+    if (college) {
+      // Store in sessionStorage
+      sessionStorage.setItem('selectedCollege', JSON.stringify(college));
+      updatePageForCollege(college);
+    }
+  } catch (error) {
+    console.error('Error loading college details:', error);
+    showMessage('Error loading college details. Please go back and try again.', true);
+  }
+}
+
+// Update page content for a specific college
+function updatePageForCollege(collegeData) {
+  document.getElementById('selectedCollegeName').textContent = collegeData.name;
+  document.getElementById('selectedCollegeDisplay').textContent = collegeData.name;
+  
+  // Update page content for filtered view
+  document.getElementById('addBranchDescription').textContent = `Create a new branch for ${collegeData.name}`;
+  document.getElementById('branchesListTitle').textContent = `${collegeData.name} Branches`;
+  document.getElementById('branchesListDescription').textContent = `Manage existing branches for ${collegeData.name}`;
+}
 
 // Store all branches for search functionality
 let allBranches = [];

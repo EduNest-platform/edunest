@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manage Syllabus & Timetable - EduNest Admin</title>
+  <link rel="stylesheet" href="syllabus_timetable.css">
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <script src="supabaseClient.js"></script>
+</head>
+<body>
+  <div class="main-bg"></div>
+  <div class="topbar">
+    <div class="topbar-content">
+      <div class="topbar-left">
+        <span class="topbar-logo">📚 <b>EduNest</b></span>
+        <a href="subjects.html" class="back-btn">← Back</a>
+        <span class="topbar-title">Manage Syllabus & Timetable</span>
+        <span class="topbar-context">
+          <span id="contextCollege">College</span>
+          <span class="context-separator">→</span>
+          <span id="contextBranch">Branch</span>
+          <span class="context-separator">→</span>
+          <span id="contextSemester">Semester</span>
+        </span>
+      </div>
+      <div class="topbar-right">
+        <span class="user-name">Admin</span>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+      </div>
+    </div>
+  </div>
+  <main class="main-content">
+    <div class="container">
+      <section class="syllabus-timetable-section">
+        <div class="section-header">
+          <h2><span class="section-icon">📚</span> Upload Syllabus & Timetable</h2>
+          <p>Upload or replace the official syllabus and class timetable for the selected semester</p>
+        </div>
+        <div class="syllabus-timetable-forms force-row">
+          <!-- Syllabus Upload Form -->
+          <div id="syllabusUploadFormContainer" style="display: none;">
+            <form class="syllabus-upload-form" onsubmit="event.preventDefault(); uploadSyllabus();">
+              <h3><span class="form-icon">📄</span> Syllabus</h3>
+              <div class="form-group">
+                <label for="syllabusFileName">File Name *</label>
+                <input type="text" id="syllabusFileName" placeholder="e.g., 2024 Syllabus" required>
+              </div>
+              <div class="form-group">
+                <label for="syllabusDescription">Description (Optional)</label>
+                <textarea id="syllabusDescription" placeholder="Brief description of the syllabus"></textarea>
+              </div>
+              <div class="form-group">
+                <label for="syllabusFileInput">Select File *</label>
+                <input type="file" id="syllabusFileInput" accept=".pdf,.doc,.docx,.txt" required>
+              </div>
+              <button type="submit" class="submit-btn"><span class="btn-icon">📤</span>Upload Syllabus</button>
+            </form>
+          </div>
+          <div class="form-separator"></div>
+          <!-- Timetable Upload Form -->
+          <form class="timetable-upload-form" onsubmit="event.preventDefault(); uploadTimetable();">
+            <h3><span class="form-icon">🕒</span> Timetable</h3>
+            <div class="form-group">
+              <label for="timetableFileName">File Name *</label>
+              <input type="text" id="timetableFileName" placeholder="e.g., 2024 Timetable" required>
+            </div>
+            <div class="form-group">
+              <label for="timetableDescription">Description (Optional)</label>
+              <textarea id="timetableDescription" placeholder="Brief description of the timetable"></textarea>
+            </div>
+            <div class="form-group">
+              <label for="timetableFileInput">Select File *</label>
+              <input type="file" id="timetableFileInput" accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png" required>
+            </div>
+            <button type="submit" class="submit-btn"><span class="btn-icon">📤</span>Upload Timetable</button>
+          </form>
+        </div>
+        <div class="info-cards-row">
+          <div id="syllabusFileInfo" class="syllabus-file-info"></div>
+          <div id="timetableFileInfo" class="timetable-file-info"></div>
+        </div>
+      </section>
+      <div id="subjectMsg" class="message"></div>
+      <div id="loadingOverlay" class="loading-overlay hidden">
+        <div class="loading-spinner"></div>
+        <p>Loading...</p>
+      </div>
+    </div>
+  </main>
+  <script src="login.js"></script>
+  <script src="subjects.js"></script>
+  <script>
+    // On page load, set context info
+    document.addEventListener('DOMContentLoaded', function() {
+      const selectedSemester = sessionStorage.getItem('selectedSemester');
+      if (!selectedSemester) {
+        window.location.href = 'subjects.html';
+        return;
+      }
+      try {
+        const semesterData = JSON.parse(selectedSemester);
+        document.getElementById('contextCollege').textContent = semesterData.college_name;
+        document.getElementById('contextBranch').textContent = semesterData.branch_name;
+        document.getElementById('contextSemester').textContent = semesterData.name;
+      } catch (error) {
+        window.location.href = 'subjects.html';
+      }
+    });
+  </script>
+</body>

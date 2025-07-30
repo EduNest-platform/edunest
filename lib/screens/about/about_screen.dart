@@ -6,6 +6,7 @@ import '../../theme/app_theme.dart';
 import '../../services/error_message_service.dart';
 import 'package:flutter/foundation.dart';
 import '../../widgets/desktop_sidebar.dart';
+import '../../widgets/whats_new_dialog.dart';
 
 class AboutScreen extends StatelessWidget {
   const AboutScreen({super.key});
@@ -307,7 +308,7 @@ class AboutScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Version 1.0.0',
+                  'Version $currentVersion',
                   style: GoogleFonts.poppins(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -1222,13 +1223,13 @@ class _FeatureCardDesktopState extends State<_FeatureCardDesktop> {
           border: Border.all(
             color:
                 _hovered
-                    ? widget.color.withOpacity(0.25)
+                    ? widget.color.withValues(alpha: 0.25)
                     : Colors.grey.shade200,
             width: 1.2,
           ),
           boxShadow: [
             BoxShadow(
-              color: widget.color.withOpacity(_hovered ? 0.10 : 0.05),
+              color: widget.color.withValues(alpha: _hovered ? 0.10 : 0.05),
               blurRadius: _hovered ? 18 : 10,
               offset: const Offset(0, 4),
             ),
@@ -1250,7 +1251,7 @@ class _FeatureCardDesktopState extends State<_FeatureCardDesktop> {
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: widget.gradientStart.withOpacity(0.25),
+                    color: widget.gradientStart.withValues(alpha: 0.25),
                     blurRadius: 12,
                     offset: const Offset(0, 2),
                   ),

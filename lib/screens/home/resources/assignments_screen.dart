@@ -114,7 +114,7 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
         border: Border.all(color: Colors.orange.shade400, width: 1.3),
         boxShadow: [
           BoxShadow(
-            color: Colors.orange.withOpacity(0.13),
+            color: Colors.orange.withValues(alpha: 0.13),
             blurRadius: 16,
             offset: const Offset(0, 4),
           ),
@@ -617,7 +617,7 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.orange.withOpacity(0.08),
+                        color: Colors.orange.withValues(alpha: 0.08),
                         blurRadius: 16,
                         offset: const Offset(0, 4),
                       ),

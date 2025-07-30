@@ -460,7 +460,7 @@ li:hover {
   background: none;
 }
 .sidebar {
-  width: 220px;
+  width: 260px;
   background: #f1f5ff;
   border-right: 2px solid #e0e7ef;
   display: flex;
@@ -538,7 +538,7 @@ li:hover {
   flex: 1;
   max-width: 900px;
   margin: 0 auto;
-  padding: 48px 32px 32px 32px;
+  padding: 0px 32px 32px 32px;
   min-height: 100vh;
 }
 .tab-section {

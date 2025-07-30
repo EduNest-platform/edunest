@@ -8,7 +8,7 @@ import 'package:flutter/services.dart';
 import 'dart:async';
 import '../../../widgets/app_text.dart';
 import '../../common/pdf_viewer_screen.dart';
-import '../../../mixins/performance_mixin.dart';
+// import '../../../mixins/performance_mixin.dart';
 
 class NotesScreen extends StatefulWidget {
   final Subject subject;
@@ -25,7 +25,7 @@ class NotesScreen extends StatefulWidget {
 }
 
 class _NotesScreenState extends State<NotesScreen>
-    with TickerProviderStateMixin, PerformanceMixin {
+    with TickerProviderStateMixin {
   String _searchQuery = '';
   String _sortBy = 'Date';
   bool _isLoading = false;
@@ -41,7 +41,7 @@ class _NotesScreenState extends State<NotesScreen>
   @override
   void initState() {
     super.initState();
-    startScreenMonitoring('notes_screen');
+    // startScreenMonitoring('notes_screen');
     _initializeAnimations();
     _loadNotes();
   }
@@ -73,7 +73,7 @@ class _NotesScreenState extends State<NotesScreen>
   void dispose() {
     _fadeController.dispose();
     _slideController.dispose();
-    stopScreenMonitoring();
+    // stopScreenMonitoring();
     super.dispose();
   }
 
@@ -142,7 +142,7 @@ class _NotesScreenState extends State<NotesScreen>
   }
 
   Future<void> _loadNotes() async {
-    await startOperationTrace('notes_data_loading');
+    // await startOperationTrace('notes_data_loading');
 
     try {
       setState(() {
@@ -160,7 +160,7 @@ class _NotesScreenState extends State<NotesScreen>
       // Start animations after data is loaded
       _fadeController.forward();
       _slideController.forward();
-      await stopOperationTrace('notes_data_loading');
+      // await stopOperationTrace('notes_data_loading');
     } catch (e) {
       setState(() {
         _isLoading = false;
@@ -173,7 +173,7 @@ class _NotesScreenState extends State<NotesScreen>
           ),
         );
       }
-      await stopOperationTrace('notes_data_loading');
+      // await stopOperationTrace('notes_data_loading');
     }
   }
 
@@ -1060,7 +1060,7 @@ class _NotesScreenState extends State<NotesScreen>
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: AppTheme.primaryBlue.withOpacity(0.08),
+                        color: AppTheme.primaryBlue.withValues(alpha: 0.08),
                         blurRadius: 16,
                         offset: const Offset(0, 4),
                       ),

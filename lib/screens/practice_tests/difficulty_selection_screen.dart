@@ -134,13 +134,13 @@ class _DifficultySelectionScreenState extends State<DifficultySelectionScreen> {
                   borderRadius: BorderRadius.circular(28),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.08),
+                      color: Colors.black.withValues(alpha: 0.08),
                       blurRadius: 20,
                       offset: const Offset(0, 10),
                     ),
                   ],
                   border: Border.all(
-                    color: AppTheme.primaryBlue.withOpacity(0.10),
+                    color: AppTheme.primaryBlue.withValues(alpha: 0.10),
                     width: 1.2,
                   ),
                 ),
@@ -151,7 +151,7 @@ class _DifficultySelectionScreenState extends State<DifficultySelectionScreen> {
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: AppTheme.primaryBlue.withOpacity(0.10),
+                        color: AppTheme.primaryBlue.withValues(alpha: 0.10),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Icon(
@@ -381,7 +381,7 @@ class _DifficultySelectionScreenState extends State<DifficultySelectionScreen> {
                               borderRadius: BorderRadius.circular(20),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.grey.withOpacity(0.10),
+                                  color: Colors.grey.withValues(alpha: 0.10),
                                   blurRadius: 16,
                                   offset: const Offset(0, 6),
                                 ),
@@ -401,8 +401,8 @@ class _DifficultySelectionScreenState extends State<DifficultySelectionScreen> {
                                   decoration: BoxDecoration(
                                     color:
                                         isProctored
-                                            ? AppTheme.primaryBlue.withOpacity(
-                                              0.10,
+                                            ? AppTheme.primaryBlue.withValues(
+                                              alpha: 0.10,
                                             )
                                             : Colors.grey.shade200,
                                     borderRadius: BorderRadius.circular(12),
@@ -452,7 +452,7 @@ class _DifficultySelectionScreenState extends State<DifficultySelectionScreen> {
                                   },
                                   activeColor: AppTheme.primaryBlue,
                                   activeTrackColor: AppTheme.primaryBlue
-                                      .withOpacity(0.3),
+                                      .withValues(alpha: 0.3),
                                 ),
                               ],
                             ),

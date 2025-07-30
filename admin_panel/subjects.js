@@ -625,17 +625,45 @@ window.showSyllabusReplaceForm = function() {
   const formDiv = document.getElementById('syllabusUploadFormContainer');
   if (infoDiv) infoDiv.style.display = 'none';
   if (formDiv) formDiv.style.display = '';
+  
+  // Clear form inputs
+  const fileNameInput = document.getElementById('syllabusFileName');
+  const descriptionInput = document.getElementById('syllabusDescription');
   const fileInput = document.getElementById('syllabusFileInput');
-  const textInput = document.getElementById('syllabusTextInput');
+  
+  if (fileNameInput) fileNameInput.value = '';
+  if (descriptionInput) descriptionInput.value = '';
   if (fileInput) fileInput.value = '';
-  if (textInput) textInput.value = '';
+  
+  // Re-enable upload button
+  const uploadBtn = formDiv ? formDiv.querySelector('.submit-btn') : null;
+  if (uploadBtn) {
+    uploadBtn.disabled = false;
+    uploadBtn.innerHTML = '<span class="btn-icon">📤</span>Upload Syllabus';
+  }
 };
+
 window.showTimetableReplaceForm = function() {
   const infoDiv = document.getElementById('timetableFileInfo');
   const formDiv = document.getElementById('timetableUploadFormContainer');
   if (infoDiv) infoDiv.style.display = 'none';
   if (formDiv) formDiv.style.display = '';
-  document.getElementById('timetableFileInput').value = '';
+  
+  // Clear form inputs
+  const fileNameInput = document.getElementById('timetableFileName');
+  const descriptionInput = document.getElementById('timetableDescription');
+  const fileInput = document.getElementById('timetableFileInput');
+  
+  if (fileNameInput) fileNameInput.value = '';
+  if (descriptionInput) descriptionInput.value = '';
+  if (fileInput) fileInput.value = '';
+  
+  // Re-enable upload button
+  const uploadBtn = formDiv ? formDiv.querySelector('.submit-btn') : null;
+  if (uploadBtn) {
+    uploadBtn.disabled = false;
+    uploadBtn.innerHTML = '<span class="btn-icon">📤</span>Upload Timetable';
+  }
 };
 
 // After successful upload, reload info
@@ -652,7 +680,7 @@ async function uploadSyllabus() {
   const fileName = document.getElementById('syllabusFileName').value.trim();
   const description = document.getElementById('syllabusDescription').value.trim();
   const fileInput = document.getElementById('syllabusFileInput');
-  const syllabusText = document.getElementById('syllabusTextInput').value.trim();
+  
   if (!fileName || !fileInput.files[0]) {
     showMessage('Please provide a file name and select a syllabus file.', true);
     return;
@@ -722,11 +750,7 @@ async function uploadSyllabus() {
       storage_key: storageKey,
       uploaded_by: 'Admin'
     };
-    if (syllabusText) {
-      insertPayload.syllabus_text = syllabusText;
-    } else {
-  
-    }
+    
     const { data: dbData, error: dbError } = await window.supabaseClient
       .from('syllabus_timetable')
       .insert(insertPayload)
@@ -734,7 +758,7 @@ async function uploadSyllabus() {
       .single();
     if (dbError) throw dbError;
     currentSyllabus = dbData;
-    showMessage('Syllabus uploaded successfully!' + (syllabusText ? ' (Text saved for AI extraction)' : ' (No text for AI extraction)'), false);
+    showMessage('Syllabus uploaded successfully!');
     renderSyllabusInfo();
   } catch (error) {
     showMessage('Failed to upload syllabus: ' + (error.message || error), true);
@@ -861,33 +885,4 @@ async function uploadTimetable() {
 }
 
 window.uploadSyllabus = uploadSyllabus;
-window.uploadTimetable = uploadTimetable;
-
-// Add event listener for PDF-to-text extraction on file input
-const syllabusFileInput = document.getElementById('syllabusFileInput');
-if (syllabusFileInput) {
-  syllabusFileInput.addEventListener('change', async function(event) {
-    const file = event.target.files[0];
-    const syllabusTextInput = document.getElementById('syllabusTextInput');
-    if (!file || !syllabusTextInput) return;
-    if (file.type === 'application/pdf') {
-      try {
-        syllabusTextInput.value = 'Extracting text from PDF...';
-        const arrayBuffer = await file.arrayBuffer();
-        const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-        let text = '';
-        for (let i = 1; i <= pdf.numPages; i++) {
-          const page = await pdf.getPage(i);
-          const content = await page.getTextContent();
-          text += content.items.map(item => item.str).join(' ') + '\n';
-        }
-        syllabusTextInput.value = text.trim();
-      } catch (e) {
-        syllabusTextInput.value = '';
-        showMessage('Failed to extract text from PDF. You can paste it manually.', true);
-      }
-    } else {
-      syllabusTextInput.value = '';
-    }
-  });
-} 
+window.uploadTimetable = uploadTimetable; 

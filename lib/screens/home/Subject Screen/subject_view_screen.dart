@@ -915,8 +915,9 @@ class _SubjectViewScreenState extends State<SubjectViewScreen>
                                                                 BoxShadow(
                                                                   color: Colors
                                                                       .black
-                                                                      .withOpacity(
-                                                                        0.04,
+                                                                      .withValues(
+                                                                        alpha:
+                                                                            0.04,
                                                                       ),
                                                                   blurRadius:
                                                                       16,
@@ -1133,8 +1134,8 @@ class _SubjectViewScreenState extends State<SubjectViewScreen>
                                                       boxShadow: [
                                                         BoxShadow(
                                                           color: Colors.black
-                                                              .withOpacity(
-                                                                0.04,
+                                                              .withValues(
+                                                                alpha: 0.04,
                                                               ),
                                                           blurRadius: 16,
                                                           offset: const Offset(

@@ -30,6 +30,7 @@ android {
 
     kotlinOptions {
         jvmTarget = JavaVersion.VERSION_17.toString()
+        freeCompilerArgs += listOf("-Xlint:-options")
     }
 
     defaultConfig {
@@ -54,8 +55,8 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false  // Temporarily disable minification
-            isShrinkResources = false  // Temporarily disable resource shrinking
+            isMinifyEnabled = true  // Enable minification for production
+            isShrinkResources = true  // Enable resource shrinking for production
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             // Use release signing only if keystore is configured, otherwise use debug
             signingConfig = if (keystoreProperties.containsKey("keyAlias")) {
@@ -77,5 +78,7 @@ flutter {
 }
 
 dependencies {
-    // App Center SDK removed. Add new analytics or crash reporting dependencies here if needed.
+    implementation("com.google.firebase:firebase-crashlytics")
+    implementation("com.google.firebase:firebase-analytics")
+    implementation("com.google.firebase:firebase-perf")
 }

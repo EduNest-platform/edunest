@@ -1,21 +1,26 @@
 # EduNest Admin Panel
 
-A professional administrative dashboard for managing educational institutions, branches, semesters, subjects, topics, files, and AI-powered test assignment.
+A modern administrative dashboard for managing educational institutions, branches, semesters, subjects, topics, files, and AI-powered test assignment. This panel is designed for admins to manage their assigned college and its academic hierarchy.
 
 ## Features
 
 - **Secure Login System** - Supabase Auth-based admin access
-- **College Management** - Add, view, and delete colleges
-- **Branch Management** - Organize branches under colleges
-- **Semester Management** - Manage semesters under branches
-- **Subject Management** - Add, view, and manage subjects under semesters
-- **Topic Management** - Add, edit, and organize topics under subjects
+- **College Management** - Add, view, and manage your assigned college
+- **Branch, Semester, Subject Management** - Drill-down navigation for managing branches, semesters, and subjects within your college
+- **Role Management** - Admins have full control over their assigned college
 - **File Management** - Upload, view, and organize study resources (notes, assignments, lab manuals, etc.)
-- **AI-Powered Test Assignment** - Assign and manage practice tests using AI-generated questions
-- **Hierarchical View** - Visual representation of the complete academic structure
+- **Syllabus & Timetable Management** - Upload and replace syllabus/timetable files for each semester
+- **Manual Question Entry & Test Assignment** - Add questions and manage assigned tests
 - **Responsive Design** - Works on desktop, tablet, and mobile
 - **Real-time Updates** - All changes reflect immediately
 - **Session Management** - Secure session, automatic logout, protected routes
+
+## How It Works
+
+- **Each admin only sees and manages the college they belong to.**
+- **Drill-down navigation:**
+  - Colleges → Branches → Semesters → Subjects
+  - Context is passed via sessionStorage and URL parameters
 
 ## Setup
 
@@ -25,12 +30,10 @@ A professional administrative dashboard for managing educational institutions, b
      - `branches` (id, name, college_id)
      - `semesters` (id, name, branch_id)
      - `subjects` (id, name, code, description, semester_id)
-     - `topics` (id, name, content, subject_id)
-     - `files` (id, name, file_type, file_url, subject_id, uploaded_by, created_at)
-     - `assigned_tests` (id, name, subject_id, assigned_to, due_date, etc.)
+     - `files`, `syllabus_timetable`, `assigned_tests`, etc.
 
 2. **Configuration**
-   - Update your Supabase project URL and anon/public key in `supabaseClient.js`.
+   - Update your Supabase project URL and anon/public key in `supabaseClient.js` and `supabaseAdmin.js`.
    - No hardcoded admin credentials are required; authentication is handled by Supabase Auth.
 
 3. **Deployment**
@@ -43,10 +46,11 @@ A professional administrative dashboard for managing educational institutions, b
 1. **Access** - Navigate to `index.html` (login page)
 2. **Login** - Use your Supabase admin credentials
 3. **Manage** - Use the sidebar to navigate between modules:
-   - Colleges, Branches, Semesters, Subjects, Topics, Files, Assigned Tests, AI Config
-4. **Add/Edit Data** - Use forms and tables to add, edit, or delete records
-5. **View Structure** - Use the "Structure" or "Hierarchy" tab for a visual overview
-6. **Logout** - Click the logout button to securely exit
+   - My College, Branches, Semesters, Subjects, Files, Syllabus/Timetable, Assigned Tests, Manual Question Entry
+4. **Drill-down Navigation** - Click "Manage Branches" on your college card to view and manage branches, then drill down to semesters and subjects
+5. **Add/Edit Data** - Use forms and tables to add, edit, or delete records
+6. **Syllabus/Timetable** - Use the dedicated section to upload or replace files for each semester
+7. **Logout** - Click the logout button to securely exit
 
 ## Security
 
@@ -62,10 +66,21 @@ A professional administrative dashboard for managing educational institutions, b
 ```
 admin_panel/
 ├── index.html                # Login page
+├── signup.html, signup.js    # Signup page and logic
 ├── dashboard.html            # Main dashboard
 ├── app.js                    # Application logic
 ├── style.css                 # Styling
 ├── supabaseClient.js         # Supabase client config
+├── supabaseAdmin.js          # Supabase admin config
+├── colleges.html/js/css      # College management
+├── branches.html/js/css      # Branch management
+├── semesters.html/js/css     # Semester management
+├── subjects.html/js/css      # Subject management
+├── syllabus_timetable.html/css # Syllabus & timetable management
+├── files.html/js/css         # File management
+├── question_entry.html/js/css # Manual question entry
+├── assigned_tests.html/js/css # Test management
+├── ai-config.html/js/css     # AI configuration
 ├── [other modules: *.js, *.css, *.html] # All feature modules
 ├── README.md                 # This file
 ```
@@ -93,8 +108,4 @@ For technical support or questions, contact your system administrator or project
 **Note:**
 - This admin panel is designed for static hosting (GitHub Pages, Netlify, Vercel, etc.).
 - Do not expose Supabase service role or secret keys in the frontend.
-- For advanced features (AI, file uploads), ensure your Supabase backend and storage are properly configured. 
- 
- 
- 
- 
+- For advanced features (AI, file uploads), ensure your Supabase backend and storage are properly configured.

@@ -158,7 +158,7 @@ class _AttendanceScreenState extends State<AttendanceScreen>
     String code = '';
     showDialog(
       context: context,
-      barrierColor: Colors.black.withOpacity(0.18),
+      barrierColor: Colors.black.withValues(alpha: 0.18),
       builder:
           (context) => Center(
             child: ConstrainedBox(

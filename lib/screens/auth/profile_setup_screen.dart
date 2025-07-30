@@ -6,7 +6,7 @@ import '../../theme/app_theme.dart';
 import '../../controllers/profile_setup_controller.dart';
 import '../../services/user_profile_service.dart';
 import '../../services/error_message_service.dart';
-import '../../mixins/performance_mixin.dart';
+// import '../../mixins/performance_mixin.dart';
 import 'dart:io';
 
 class ProfileSetupScreen extends StatelessWidget {
@@ -30,7 +30,8 @@ class _ProfileSetupScreenBody extends StatefulWidget {
 }
 
 class _ProfileSetupScreenBodyState extends State<_ProfileSetupScreenBody>
-    with PerformanceMixin {
+// with PerformanceMixin {
+{
   final _formKey = GlobalKey<FormState>();
   ProfileSetupController? _controller;
 
@@ -43,7 +44,7 @@ class _ProfileSetupScreenBodyState extends State<_ProfileSetupScreenBody>
   @override
   void initState() {
     super.initState();
-    startScreenMonitoring('profile_setup_screen');
+    // startScreenMonitoring('profile_setup_screen');
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final controller = Provider.of<ProfileSetupController>(
         context,
@@ -57,7 +58,7 @@ class _ProfileSetupScreenBodyState extends State<_ProfileSetupScreenBody>
   @override
   void dispose() {
     _controller?.disposeControllers();
-    stopScreenMonitoring();
+    // stopScreenMonitoring();
     super.dispose();
   }
 
@@ -208,7 +209,7 @@ class _ProfileSetupScreenBodyState extends State<_ProfileSetupScreenBody>
                           children: [
                             Container(
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.2),
+                                color: Colors.white.withValues(alpha: 0.2),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: IconButton(
@@ -276,7 +277,7 @@ class _ProfileSetupScreenBodyState extends State<_ProfileSetupScreenBody>
                               child: Container(
                                 height: 4,
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.3),
+                                  color: Colors.white.withValues(alpha: 0.3),
                                   borderRadius: BorderRadius.circular(2),
                                 ),
                                 child: FractionallySizedBox(

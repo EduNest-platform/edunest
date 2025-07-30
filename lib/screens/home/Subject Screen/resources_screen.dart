@@ -226,7 +226,7 @@ class _ResourcesScreenState extends State<ResourcesScreen>
                       color: isSelected ? Colors.white : Colors.black87,
                     ),
                   ),
-                  if (fileCount > 0) ...[
+                  if (fileCount > 0 && !isDesktop) ...[
                     SizedBox(width: isDesktop ? 14 : 10),
                     Container(
                       padding: EdgeInsets.symmetric(
@@ -382,7 +382,7 @@ class _ResourcesScreenState extends State<ResourcesScreen>
             top: 120,
             child: _AnimatedBlob(
               size: 220,
-              color: Colors.blue.withOpacity(0.18),
+              color: Colors.blue.withValues(alpha: 0.18),
               blurSigma: 60,
               dx: 0,
               dy: 40,
@@ -394,7 +394,7 @@ class _ResourcesScreenState extends State<ResourcesScreen>
             top: 260,
             child: _AnimatedBlob(
               size: 170,
-              color: Colors.purple.withOpacity(0.13),
+              color: Colors.purple.withValues(alpha: 0.13),
               blurSigma: 50,
               dx: 0,
               dy: -30,
@@ -406,7 +406,7 @@ class _ResourcesScreenState extends State<ResourcesScreen>
             bottom: 60,
             child: _AnimatedBlob(
               size: 120,
-              color: Colors.teal.withOpacity(0.12),
+              color: Colors.teal.withValues(alpha: 0.12),
               blurSigma: 40,
               dx: 0,
               dy: 30,

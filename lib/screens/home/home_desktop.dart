@@ -65,26 +65,28 @@ class HomeDesktop extends StatefulWidget {
 class _HomeDesktopState extends State<HomeDesktop>
     with SingleTickerProviderStateMixin {
   double _opacity = 0.0;
-  bool _didCheckUpdate = false;
+  static bool _didCheckUpdateForSession = false;
 
   @override
   void initState() {
     super.initState();
     Future.delayed(const Duration(milliseconds: 80), () {
-      setState(() {
-        _opacity = 1.0;
-      });
+      if (mounted) {
+        setState(() {
+          _opacity = 1.0;
+        });
+      }
     });
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (!_didCheckUpdate &&
+    if (!_didCheckUpdateForSession &&
         (Theme.of(context).platform == TargetPlatform.windows ||
             Theme.of(context).platform == TargetPlatform.linux ||
             Theme.of(context).platform == TargetPlatform.macOS)) {
-      _didCheckUpdate = true;
+      _didCheckUpdateForSession = true;
       _checkForUpdateAndWhatsNew();
     }
   }
@@ -259,7 +261,7 @@ class _HomeDesktopState extends State<HomeDesktop>
                   },
                 ),
                 const SizedBox(height: 24),
-                Divider(color: Colors.white.withOpacity(0.2)),
+                Divider(color: Colors.white.withValues(alpha: 0.2)),
                 _SidebarButton(
                   icon: Icons.logout_rounded,
                   label: 'Logout',
@@ -276,7 +278,7 @@ class _HomeDesktopState extends State<HomeDesktop>
                               children: [
                                 Container(
                                   decoration: BoxDecoration(
-                                    color: Colors.red.withOpacity(0.12),
+                                    color: Colors.red.withValues(alpha: 0.12),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   padding: const EdgeInsets.all(8),
@@ -369,13 +371,13 @@ class _HomeDesktopState extends State<HomeDesktop>
                                         borderRadius: BorderRadius.circular(20),
                                         border: Border.all(
                                           color: AppTheme.primaryBlue
-                                              .withOpacity(0.18),
+                                              .withValues(alpha: 0.18),
                                           width: 1.4,
                                         ),
                                         boxShadow: [
                                           BoxShadow(
-                                            color: Colors.black.withOpacity(
-                                              0.04,
+                                            color: Colors.black.withValues(
+                                              alpha: 0.04,
                                             ),
                                             blurRadius: 12,
                                             offset: const Offset(0, 4),
@@ -586,7 +588,7 @@ class _HomeDesktopState extends State<HomeDesktop>
                                                                   context,
                                                                 ) => AttendanceTrackingScreen(
                                                                   subject: {
-                                                                    'id':
+                                                                    'code':
                                                                         subject
                                                                             .id,
                                                                     'name':
@@ -788,8 +790,8 @@ class _HomeDesktopState extends State<HomeDesktop>
                                               },
                                               child: Container(
                                                 decoration: BoxDecoration(
-                                                  color: color.withOpacity(
-                                                    0.08,
+                                                  color: color.withValues(
+                                                    alpha: 0.08,
                                                   ),
                                                   borderRadius:
                                                       BorderRadius.circular(12),
@@ -923,13 +925,6 @@ class _HomeDesktopState extends State<HomeDesktop>
     }
   }
 
-  void _showTestUpdateDialog() {
-    _showUpdateDialog(
-      '1.2.0',
-      'https://github.com/Ranojitdas/EduNest-desktop/releases/download/v1.2.0/EduNestUpdate.exe',
-    );
-  }
-
   void _showUpdateDialog(String latestVersion, String downloadUrl) {
     showDialog(
       context: context,
@@ -956,7 +951,7 @@ class _HomeDesktopState extends State<HomeDesktop>
                   borderRadius: BorderRadius.circular(24),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF1E3A8A).withOpacity(0.25),
+                      color: const Color(0xFF1E3A8A).withValues(alpha: 0.25),
                       blurRadius: 20,
                       offset: const Offset(0, 10),
                     ),
@@ -971,7 +966,7 @@ class _HomeDesktopState extends State<HomeDesktop>
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
+                          color: Colors.white.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(16),
                         ),
                         child: const Icon(
@@ -999,7 +994,7 @@ class _HomeDesktopState extends State<HomeDesktop>
                           vertical: 8,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
+                          color: Colors.white.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
@@ -1017,7 +1012,7 @@ class _HomeDesktopState extends State<HomeDesktop>
                         'A new version of EduNest is available with the latest features and improvements.',
                         style: GoogleFonts.poppins(
                           fontSize: 16,
-                          color: Colors.white.withOpacity(0.9),
+                          color: Colors.white.withValues(alpha: 0.9),
                           height: 1.4,
                         ),
                         textAlign: TextAlign.center,
@@ -1029,7 +1024,7 @@ class _HomeDesktopState extends State<HomeDesktop>
                           Expanded(
                             child: Container(
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.2),
+                                color: Colors.white.withValues(alpha: 0.2),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: TextButton(
@@ -1060,13 +1055,13 @@ class _HomeDesktopState extends State<HomeDesktop>
                                 gradient: LinearGradient(
                                   colors: [
                                     Colors.white,
-                                    Colors.white.withOpacity(0.9),
+                                    Colors.white.withValues(alpha: 0.9),
                                   ],
                                 ),
                                 borderRadius: BorderRadius.circular(12),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.black.withOpacity(0.1),
+                                    color: Colors.black.withValues(alpha: 0.1),
                                     blurRadius: 8,
                                     offset: const Offset(0, 4),
                                   ),
@@ -1173,7 +1168,7 @@ class _HomeDesktopState extends State<HomeDesktop>
                     borderRadius: BorderRadius.circular(24),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF1E3A8A).withOpacity(0.25),
+                        color: const Color(0xFF1E3A8A).withValues(alpha: 0.25),
                         blurRadius: 20,
                         offset: const Offset(0, 10),
                       ),
@@ -1188,7 +1183,7 @@ class _HomeDesktopState extends State<HomeDesktop>
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
+                            color: Colors.white.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(16),
                           ),
                           child: const Icon(
@@ -1214,7 +1209,7 @@ class _HomeDesktopState extends State<HomeDesktop>
                           'This will open your browser to download the latest version.',
                           style: GoogleFonts.poppins(
                             fontSize: 16,
-                            color: Colors.white.withOpacity(0.9),
+                            color: Colors.white.withValues(alpha: 0.9),
                             height: 1.4,
                           ),
                           textAlign: TextAlign.center,
@@ -1226,7 +1221,7 @@ class _HomeDesktopState extends State<HomeDesktop>
                             Expanded(
                               child: Container(
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.2),
+                                  color: Colors.white.withValues(alpha: 0.2),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: TextButton(
@@ -1257,13 +1252,15 @@ class _HomeDesktopState extends State<HomeDesktop>
                                   gradient: LinearGradient(
                                     colors: [
                                       Colors.white,
-                                      Colors.white.withOpacity(0.9),
+                                      Colors.white.withValues(alpha: 0.9),
                                     ],
                                   ),
                                   borderRadius: BorderRadius.circular(12),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black.withOpacity(0.1),
+                                      color: Colors.black.withValues(
+                                        alpha: 0.1,
+                                      ),
                                       blurRadius: 8,
                                       offset: const Offset(0, 4),
                                     ),
@@ -1350,7 +1347,7 @@ class _SidebarSectionLabel extends StatelessWidget {
         style: GoogleFonts.poppins(
           fontSize: 12,
           fontWeight: FontWeight.w600,
-          color: Colors.white.withOpacity(0.7),
+          color: Colors.white.withValues(alpha: 0.7),
           letterSpacing: 0.5,
         ),
       ),
@@ -1391,7 +1388,7 @@ class _SidebarButton extends StatelessWidget {
       ),
       selected: selected,
       onTap: onTap,
-      selectedTileColor: Colors.white.withOpacity(0.08),
+      selectedTileColor: Colors.white.withValues(alpha: 0.08),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     );
   }
@@ -1416,12 +1413,12 @@ class _SubjectCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(18),
           boxShadow: [
             BoxShadow(
-              color: color.withOpacity(0.10),
+              color: color.withValues(alpha: 0.10),
               blurRadius: 16,
               offset: const Offset(0, 6),
             ),
           ],
-          border: Border.all(color: color.withOpacity(0.13), width: 1),
+          border: Border.all(color: color.withValues(alpha: 0.13), width: 1),
         ),
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
         constraints: const BoxConstraints(minHeight: 340),
@@ -1433,7 +1430,7 @@ class _SubjectCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.16),
+                    color: color.withValues(alpha: 0.16),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(Icons.book_rounded, color: color, size: 26),
@@ -1520,7 +1517,7 @@ class _SubjectActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: color.withOpacity(0.13),
+        color: color.withValues(alpha: 0.13),
         borderRadius: BorderRadius.circular(8),
       ),
       child: TextButton.icon(

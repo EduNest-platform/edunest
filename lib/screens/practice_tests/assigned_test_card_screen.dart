@@ -453,7 +453,7 @@ class _AssignedTestCardScreenState extends State<AssignedTestCardScreen> {
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.04),
+                            color: Colors.black.withValues(alpha: 0.04),
                             blurRadius: 16,
                             offset: const Offset(0, 4),
                           ),
@@ -483,7 +483,7 @@ class _AssignedTestCardScreenState extends State<AssignedTestCardScreen> {
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.04),
+                            color: Colors.black.withValues(alpha: 0.04),
                             blurRadius: 16,
                             offset: const Offset(0, 4),
                           ),
@@ -514,7 +514,9 @@ class _AssignedTestCardScreenState extends State<AssignedTestCardScreen> {
                               horizontal: 18,
                             ),
                             decoration: BoxDecoration(
-                              color: AppTheme.primaryBlue.withOpacity(0.07),
+                              color: AppTheme.primaryBlue.withValues(
+                                alpha: 0.07,
+                              ),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
@@ -543,7 +545,7 @@ class _AssignedTestCardScreenState extends State<AssignedTestCardScreen> {
                               horizontal: 18,
                             ),
                             decoration: BoxDecoration(
-                              color: Colors.grey.withOpacity(0.07),
+                              color: Colors.grey.withValues(alpha: 0.07),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(

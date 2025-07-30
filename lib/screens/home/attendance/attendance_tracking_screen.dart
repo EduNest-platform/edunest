@@ -10,7 +10,7 @@ import '../../../services/user_profile_service.dart';
 import '../../../models/user_profile.dart';
 import '../../../services/network_service.dart';
 import '../../../services/error_message_service.dart';
-import '../../../mixins/performance_mixin.dart';
+// import '../../../mixins/performance_mixin.dart';
 import '../../../widgets/custom_app_bar.dart'; // Added import for CustomAppBar
 import '../../../widgets/desktop_sidebar.dart';
 import 'package:flutter/foundation.dart';
@@ -68,7 +68,7 @@ class AttendanceTrackingScreen extends StatefulWidget {
 }
 
 class _AttendanceTrackingScreenState extends State<AttendanceTrackingScreen>
-    with TickerProviderStateMixin, PerformanceMixin {
+    with TickerProviderStateMixin {
   final AttendanceService _attendanceService = AttendanceService();
   final NetworkService _networkService = NetworkService();
   List<AttendanceRecord> _attendanceRecords = [];
@@ -94,7 +94,7 @@ class _AttendanceTrackingScreenState extends State<AttendanceTrackingScreen>
   @override
   void initState() {
     super.initState();
-    startScreenMonitoring('attendance_tracking_screen');
+    // startScreenMonitoring('attendance_tracking_screen');
     _fadeController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 600),
@@ -110,7 +110,7 @@ class _AttendanceTrackingScreenState extends State<AttendanceTrackingScreen>
   @override
   void dispose() {
     _fadeController.dispose();
-    stopScreenMonitoring();
+    // stopScreenMonitoring();
     super.dispose();
   }
 
@@ -206,6 +206,23 @@ class _AttendanceTrackingScreenState extends State<AttendanceTrackingScreen>
     }
   }
 
+  // Validate user profile data
+  bool _validateUserProfile() {
+    if (_userProfile == null) return false;
+
+    // Check if essential profile fields are filled
+    final hasCollege =
+        _userProfile!.college != null &&
+        _userProfile!.college!.trim().isNotEmpty;
+    final hasBranch =
+        _userProfile!.branch != null && _userProfile!.branch!.trim().isNotEmpty;
+    final hasSemester =
+        _userProfile!.semester != null &&
+        _userProfile!.semester!.toString().trim().isNotEmpty;
+
+    return hasCollege && hasBranch && hasSemester;
+  }
+
   // Sync current attendance status with loaded records
   void _syncCurrentAttendanceStatus() {
     final todayString = DateFormat('yyyy-MM-dd').format(_selectedDate);
@@ -261,6 +278,44 @@ class _AttendanceTrackingScreenState extends State<AttendanceTrackingScreen>
       return;
     }
 
+    // Validate user profile data before marking attendance
+    if (!_validateUserProfile()) {
+      final shouldContinue = await showDialog<bool>(
+        context: context,
+        builder:
+            (context) => AlertDialog(
+              title: Text(
+                'Incomplete Profile',
+                style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+              ),
+              content: Text(
+                'Your profile information (college, branch, semester) is incomplete. This may cause attendance marking to fail. Do you want to continue anyway?',
+                style: GoogleFonts.poppins(),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: Text('Cancel', style: GoogleFonts.poppins()),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  child: Text(
+                    'Continue',
+                    style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.primaryBlue,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+      );
+
+      if (shouldContinue != true) {
+        return;
+      }
+    }
+
     // Set loading states
     setState(() {
       _isMarkingAttendance = true;
@@ -268,8 +323,6 @@ class _AttendanceTrackingScreenState extends State<AttendanceTrackingScreen>
     });
 
     try {
-      // Log the parameters being sent
-
       final recordId = await _attendanceService.markAttendance(
         studentId: user.id,
         subjectId: widget.subject['code']!,
@@ -308,7 +361,22 @@ class _AttendanceTrackingScreenState extends State<AttendanceTrackingScreen>
       // Refresh attendance records in background
       _loadAttendanceRecords();
     } catch (e) {
-      final message = ErrorMessageService.getFriendlyMessage(e);
+      // Enhanced error handling for attendance marking
+      String message;
+      if (e.toString().contains('400')) {
+        message =
+            'Invalid data format. Please check your profile information and try again.';
+      } else if (e.toString().contains('duplicate key') ||
+          e.toString().contains('unique constraint')) {
+        message = 'Attendance record already exists for this class.';
+      } else if (e.toString().contains('network') ||
+          e.toString().contains('connection')) {
+        message =
+            'Network error. Please check your internet connection and try again.';
+      } else {
+        message = ErrorMessageService.getFriendlyMessage(e);
+      }
+
       setState(() {
         _buttonLoadingStates[classIdx] = false;
         _isMarkingAttendance = false;
@@ -316,7 +384,16 @@ class _AttendanceTrackingScreenState extends State<AttendanceTrackingScreen>
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text(message),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+            action: SnackBarAction(
+              label: 'Retry',
+              textColor: Colors.white,
+              onPressed: () => _markSingleAttendance(classIdx, status),
+            ),
+          ),
         );
       }
     }

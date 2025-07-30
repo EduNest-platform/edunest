@@ -700,7 +700,7 @@ class _PYQScreenState extends State<PYQScreen> {
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.purple.withOpacity(0.08),
+                        color: Colors.purple.withValues(alpha: 0.08),
                         blurRadius: 16,
                         offset: const Offset(0, 4),
                       ),

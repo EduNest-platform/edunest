@@ -242,6 +242,7 @@ async function loadHierarchy() {
   const { data: branches } = await window.supabaseClient.from('branches').select();
   const { data: semesters } = await window.supabaseClient.from('semesters').select();
   const view = document.getElementById('hierarchyView');
+  if (!view) return;
   view.innerHTML = '';
   if (!colleges || colleges.length === 0) {
     view.innerHTML = '<div style="color:#64748b;">No colleges found.</div>';
@@ -381,6 +382,84 @@ function loadAll() {
   loadHierarchy();
 }
 
+// Load admin profile information
+async function loadAdminProfile() {
+  try {
+    if (!window.supabaseAdmin) {
+      console.error('Supabase Admin client not initialized');
+      return;
+    }
+    
+    const { data: { user }, error } = await window.supabaseAdmin.auth.getUser();
+    if (error || !user) {
+      console.error('Error getting user:', error);
+      return;
+    }
+    
+    // Fetch admin role from community_admins table
+    let adminRole = 'Administrator'; // Default fallback
+    try {
+      const { data: adminData, error: roleError } = await window.supabaseAdmin
+        .from('community_admins')
+        .select('role')
+        .eq('user_id', user.id)
+        .limit(1);
+      
+      if (!roleError && adminData && adminData.length > 0) {
+        // Capitalize first letter of role
+        const role = adminData[0].role;
+        adminRole = role.charAt(0).toUpperCase() + role.slice(1);
+      }
+    } catch (roleError) {
+      console.error('Error fetching admin role:', roleError);
+    }
+    
+    // Update desktop sidebar
+    const userName = document.getElementById('userName');
+    const userRole = document.getElementById('userRole');
+    const userEmail = document.getElementById('userEmail');
+    const userAvatar = document.getElementById('userAvatar');
+    
+    if (userName) userName.textContent = user.email ? user.email.split('@')[0] : 'Admin';
+    if (userRole) userRole.textContent = adminRole;
+    if (userEmail) userEmail.textContent = user.email || 'No email';
+    if (userAvatar) userAvatar.textContent = user.email ? user.email.charAt(0).toUpperCase() : 'A';
+    
+    // Update mobile sidebar
+    const mobileUserName = document.getElementById('mobileUserName');
+    const mobileUserRole = document.getElementById('mobileUserRole');
+    const mobileUserEmail = document.getElementById('mobileUserEmail');
+    const mobileUserAvatar = document.getElementById('mobileUserAvatar');
+    if (mobileUserName) mobileUserName.textContent = user.email ? user.email.split('@')[0] : 'Admin';
+    if (mobileUserRole) mobileUserRole.textContent = adminRole;
+    if (mobileUserEmail) mobileUserEmail.textContent = user.email || 'No email';
+    if (mobileUserAvatar) mobileUserAvatar.textContent = user.email ? user.email.charAt(0).toUpperCase() : 'A';
+
+    // Hide Manual Question Entry and Assigned Tests for non-Professor roles
+    const isProfessor = adminRole.toLowerCase() === 'professor';
+    // Desktop sidebar
+    const manualQBtn = document.querySelector('.sidebar-nav .nav-btn[onclick*="question_entry.html"]');
+    const assignedTestsBtn = document.querySelector('.sidebar-nav .nav-btn[onclick*="assigned_tests.html"]');
+    if (manualQBtn) manualQBtn.style.display = isProfessor ? '' : 'none';
+    if (assignedTestsBtn) assignedTestsBtn.style.display = isProfessor ? '' : 'none';
+    // Mobile nav
+    const manualQMobile = document.querySelector('.mobile-nav-menu a[href="question_entry.html"]');
+    const assignedTestsMobile = document.querySelector('.mobile-nav-menu a[href="assigned_tests.html"]');
+    if (manualQMobile) manualQMobile.style.display = isProfessor ? '' : 'none';
+    if (assignedTestsMobile) assignedTestsMobile.style.display = isProfessor ? '' : 'none';
+    // Quick actions
+    const quickBtns = document.querySelectorAll('.quick-actions .action-btn');
+    quickBtns.forEach(btn => {
+      if (btn.textContent.includes('Manual Question Entry') || btn.textContent.includes('Assigned Tests') || btn.textContent.includes('View Assigned Tests')) {
+        btn.style.display = isProfessor ? '' : 'none';
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error loading admin profile:', error);
+  }
+}
+
 // Initialize dashboard when page loads
 function initDashboard() {
   // Simple auth check - redirect to login if accessed directly
@@ -391,6 +470,7 @@ function initDashboard() {
   
   loadAll();
   updateStatistics();
+  loadAdminProfile();
   
   // Add event listeners for select elements
   const branchCollegeSelect = document.getElementById('branchCollegeSelect');
@@ -640,6 +720,7 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   loadStats();
   showOverview();
+  loadAdminProfile();
 });
 
 // Navigation Functions
@@ -761,17 +842,24 @@ function updateBreadcrumbs() {
 // Stats Loading
 async function loadStats() {
   try {
+    const collegeCountElem = document.getElementById('collegeCount');
+    const branchCountElem = document.getElementById('branchCount');
+    const semesterCountElem = document.getElementById('semesterCount');
+    const subjectCountElem = document.getElementById('subjectCount');
+    if (!collegeCountElem && !branchCountElem && !semesterCountElem && !subjectCountElem) {
+      // No stat elements present, skip loading stats
+      return;
+    }
     const [colleges, branches, semesters, subjects] = await Promise.all([
       window.supabaseClient.from('colleges').select('id', { count: 'exact' }),
       window.supabaseClient.from('branches').select('id', { count: 'exact' }),
       window.supabaseClient.from('semesters').select('id', { count: 'exact' }),
       window.supabaseClient.from('subjects').select('id', { count: 'exact' })
     ]);
-    
-    document.getElementById('collegeCount').textContent = colleges.count || 0;
-    document.getElementById('branchCount').textContent = branches.count || 0;
-    document.getElementById('semesterCount').textContent = semesters.count || 0;
-    document.getElementById('subjectCount').textContent = subjects.count || 0;
+    if (collegeCountElem) collegeCountElem.textContent = colleges.count || 0;
+    if (branchCountElem) branchCountElem.textContent = branches.count || 0;
+    if (semesterCountElem) semesterCountElem.textContent = semesters.count || 0;
+    if (subjectCountElem) subjectCountElem.textContent = subjects.count || 0;
   } catch (error) {
     console.error('Error loading stats:', error);
   }

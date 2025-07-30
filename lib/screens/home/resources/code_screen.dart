@@ -576,7 +576,7 @@ class _CodeScreenState extends State<CodeScreen> {
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: AppTheme.codeIcon.withOpacity(0.08),
+                        color: AppTheme.codeIcon.withValues(alpha: 0.08),
                         blurRadius: 16,
                         offset: const Offset(0, 4),
                       ),

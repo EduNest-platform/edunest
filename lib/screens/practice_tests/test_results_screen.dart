@@ -102,18 +102,18 @@ class _TestResultsScreenState extends State<TestResultsScreen> {
                   : const EdgeInsets.all(24),
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [_getScoreColor().withOpacity(0.13), Colors.white],
+              colors: [_getScoreColor().withValues(alpha: 0.13), Colors.white],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(28),
             border: Border.all(
-              color: _getScoreColor().withOpacity(0.18),
+              color: _getScoreColor().withValues(alpha: 0.18),
               width: 2,
             ),
             boxShadow: [
               BoxShadow(
-                color: _getScoreColor().withOpacity(0.08),
+                color: _getScoreColor().withValues(alpha: 0.08),
                 blurRadius: 24,
                 offset: const Offset(0, 8),
               ),
@@ -138,8 +138,8 @@ class _TestResultsScreenState extends State<TestResultsScreen> {
                               child: CircularProgressIndicator(
                                 value: animatedValue / 100,
                                 strokeWidth: 10,
-                                backgroundColor: _getScoreColor().withOpacity(
-                                  0.08,
+                                backgroundColor: _getScoreColor().withValues(
+                                  alpha: 0.08,
                                 ),
                                 valueColor: AlwaysStoppedAnimation<Color>(
                                   _getScoreColor(),
@@ -198,8 +198,8 @@ class _TestResultsScreenState extends State<TestResultsScreen> {
                               child: CircularProgressIndicator(
                                 value: animatedValue / 100,
                                 strokeWidth: 10,
-                                backgroundColor: _getScoreColor().withOpacity(
-                                  0.08,
+                                backgroundColor: _getScoreColor().withValues(
+                                  alpha: 0.08,
                                 ),
                                 valueColor: AlwaysStoppedAnimation<Color>(
                                   _getScoreColor(),

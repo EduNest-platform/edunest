@@ -93,6 +93,16 @@ async function populateSubjectDropdown() {
   }
 }
 
+async function getCurrentUser() {
+  if (!window.supabaseAdmin) {
+    console.error('Supabase Admin client not initialized');
+    return null;
+  }
+  const { data, error } = await window.supabaseAdmin.auth.getUser();
+  if (error || !data || !data.user) return null;
+  return data.user;
+}
+
 document.addEventListener('DOMContentLoaded', async function() {
   const form = document.getElementById('questionForm');
   const msg = document.getElementById('questionMsg');
@@ -107,11 +117,31 @@ document.addEventListener('DOMContentLoaded', async function() {
   document.body.classList.add('modal-open');
   form.style.display = 'none';
 
-  // Populate colleges (id, name)
+  // Populate colleges (id, name) - FILTERED by user communities
   try {
+    const user = await getCurrentUser();
+    if (!user) throw new Error('Not logged in');
+    // Fetch assigned communities for this user (from supabaseAdmin)
+    const { data: adminRows, error: adminError } = await window.supabaseAdmin
+      .from('community_admins')
+      .select('community_id')
+      .eq('user_id', user.id);
+    if (adminError || !adminRows || adminRows.length === 0) throw new Error('No assigned communities');
+    // Fetch the community names (from supabaseAdmin)
+    const communityIds = adminRows.map(row => row.community_id);
+    const { data: communities, error: commError } = await window.supabaseAdmin
+      .from('communities')
+      .select('name')
+      .in('id', communityIds);
+    if (commError || !communities || communities.length === 0) throw new Error('No community details');
+    const allowedNames = communities.map(c => c.name);
+    // Fetch all colleges (from supabaseMain)
     const { data: colleges, error: collegeError } = await supabaseMain.from('colleges').select('id, name');
-    if (collegeError) throw collegeError;
-    colleges?.forEach(college => {
+    if (collegeError || !colleges || colleges.length === 0) throw new Error('No colleges found');
+    // Filter colleges by allowed community/college names
+    const filteredColleges = colleges.filter(college => allowedNames.includes(college.name));
+    if (filteredColleges.length === 0) throw new Error('No colleges assigned');
+    filteredColleges.forEach(college => {
       const opt = document.createElement('option');
       opt.value = college.id;
       opt.textContent = college.name;
@@ -119,7 +149,7 @@ document.addEventListener('DOMContentLoaded', async function() {
       collegeSelect.appendChild(opt);
     });
   } catch (e) {
-    showMessage('Failed to load colleges', 'error');
+    showMessage('Failed to load assigned colleges: ' + (e.message || e), 'error');
   }
 
   // Dependent dropdowns logic
