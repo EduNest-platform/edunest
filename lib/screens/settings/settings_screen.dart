@@ -16,7 +16,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _darkModeEnabled = false;
   bool _autoDownloadEnabled = false;
   String _selectedLanguage = 'English';
-  String _selectedTheme = 'System Default';
+  final String _selectedTheme = 'System Default';
 
   final List<String> _languages = [
     'English',

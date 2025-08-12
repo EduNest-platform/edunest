@@ -1,11 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../../theme/app_theme.dart';
 import '../../../models/subject.dart';
 import '../../../services/files_service.dart';
-import 'dart:io';
-import 'package:path_provider/path_provider.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../widgets/app_text.dart';
 import '../../common/pdf_viewer_screen.dart';
@@ -632,7 +628,7 @@ class _PYQScreenState extends State<PYQScreen> {
         _buildFilterChips(),
         const SizedBox(height: 8),
         _filteredPYQs.isEmpty
-            ? Container(
+            ? SizedBox(
               height: 300,
               child: Center(
                 child: Column(

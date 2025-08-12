@@ -10,9 +10,7 @@ import '../../services/subjects_service.dart';
 import '../../models/subject.dart';
 import '../../services/files_service.dart';
 import 'Subject Screen/resources_screen.dart';
-import '../../screens/search/search_screen.dart';
 import 'dart:async';
-import 'dart:math';
 import 'academic_info_screen.dart';
 import 'attendance/attendance_screen.dart';
 import '../../widgets/app_text.dart';
@@ -27,13 +25,11 @@ import '../../screens/practice_tests/chapter_selection_screen.dart';
 // import '../../mixins/performance_mixin.dart';
 import 'dart:io';
 import 'home_desktop.dart';
-import '../../../main.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
-import '../../widgets/whats_new_dialog.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -73,7 +69,7 @@ class _HomeScreenState extends State<HomeScreen>
   Timer? _searchDebounce;
   List<Subject> _allSubjects = [];
   bool _subjectsLoadedForSearch = false;
-  FocusNode _searchFocusNode = FocusNode();
+  final FocusNode _searchFocusNode = FocusNode();
   OverlayEntry? _searchOverlayEntry;
 
   // Color palette for subject cards
@@ -1838,10 +1834,12 @@ class _HomeScreenState extends State<HomeScreen>
     final diff = now.difference(date);
     if (diff.inSeconds < 60) return 'just now';
     if (diff.inMinutes < 60) return '${diff.inMinutes} min ago';
-    if (diff.inHours < 24)
+    if (diff.inHours < 24) {
       return '${diff.inHours} hour${diff.inHours > 1 ? 's' : ''} ago';
-    if (diff.inDays < 7)
+    }
+    if (diff.inDays < 7) {
       return '${diff.inDays} day${diff.inDays > 1 ? 's' : ''} ago';
+    }
     return '${date.day}/${date.month}/${date.year}';
   }
 

@@ -2,13 +2,10 @@ import 'package:flutter/material.dart';
 import '../../../services/attendance_service.dart';
 import '../../../models/attendance_record.dart';
 import '../../../services/subjects_service.dart';
-import '../../../models/subject.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../services/user_profile_service.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'dart:math';
 import '../../../theme/app_theme.dart';
-import 'dart:ui';
 import 'attendance_tracking_screen.dart';
 import '../../../widgets/custom_app_bar.dart';
 import '../../../services/network_service.dart';
@@ -17,7 +14,7 @@ import 'package:flutter/foundation.dart';
 import '../../../widgets/desktop_sidebar.dart';
 
 class AttendanceScreen extends StatefulWidget {
-  const AttendanceScreen({Key? key}) : super(key: key);
+  const AttendanceScreen({super.key});
 
   @override
   State<AttendanceScreen> createState() => _AttendanceScreenState();
@@ -99,14 +96,17 @@ class _AttendanceScreenState extends State<AttendanceScreen>
       if (profile.college != null ||
           profile.branch != null ||
           profile.semester != null) {
+        // Use roll number as the key for fetching attendance
         records = await _attendanceService.getStudentAttendanceByContext(
-          user.id,
+          profile.studentId ?? user.id,
           college: profile.college,
           branch: profile.branch,
           semester: profile.semester,
         );
       } else {
-        records = await _attendanceService.getStudentAttendance(user.id);
+        records = await _attendanceService.getStudentAttendance(
+          profile.studentId ?? user.id,
+        );
       }
 
       setState(() {
@@ -227,13 +227,13 @@ class _AttendanceScreenState extends State<AttendanceScreen>
                                 children: [
                                   TextButton(
                                     onPressed: () => Navigator.pop(context),
-                                    child: const Text('Cancel'),
                                     style: TextButton.styleFrom(
                                       foregroundColor: AppTheme.textSecondary,
                                       textStyle: GoogleFonts.poppins(
                                         fontWeight: FontWeight.w500,
                                       ),
                                     ),
+                                    child: const Text('Cancel'),
                                   ),
                                   const SizedBox(width: 10),
                                   ElevatedButton(
@@ -483,7 +483,7 @@ class _AttendanceScreenState extends State<AttendanceScreen>
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      '$percent',
+                      percent,
                       style: GoogleFonts.poppins(
                         fontWeight: FontWeight.bold,
                         color: AppTheme.primaryBlue,
@@ -516,7 +516,7 @@ class _AttendanceScreenState extends State<AttendanceScreen>
                   Icon(Icons.calculate, color: AppTheme.primaryBlue, size: 16),
                   const SizedBox(width: 4),
                   Text(
-                    '$percent',
+                    percent,
                     style: GoogleFonts.poppins(
                       fontWeight: FontWeight.bold,
                       color: AppTheme.primaryBlue,
@@ -617,10 +617,7 @@ class _AttendanceScreenState extends State<AttendanceScreen>
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            'Code: ' +
-                                ((subject['code'] ?? '').length > 8
-                                    ? (subject['code']!.substring(0, 8) + '...')
-                                    : (subject['code'] ?? '')),
+                            'Code: ${(subject['code'] ?? '').length > 8 ? ('${subject['code']!.substring(0, 8)}...') : (subject['code'] ?? '')}',
                             style: GoogleFonts.poppins(
                               color: AppTheme.textSecondary,
                               fontSize: 12,
@@ -875,8 +872,8 @@ class _AttendanceScreenState extends State<AttendanceScreen>
                     onPressed: _addSubjectDialog,
                     backgroundColor: Colors.transparent,
                     elevation: 0,
-                    child: const Icon(Icons.add, size: 32, color: Colors.white),
                     tooltip: 'Add Subject',
+                    child: const Icon(Icons.add, size: 32, color: Colors.white),
                   ),
                 ),
       );
@@ -949,8 +946,8 @@ class _AttendanceScreenState extends State<AttendanceScreen>
                   onPressed: _addSubjectDialog,
                   backgroundColor: Colors.transparent,
                   elevation: 0,
-                  child: const Icon(Icons.add, size: 32, color: Colors.white),
                   tooltip: 'Add Subject',
+                  child: const Icon(Icons.add, size: 32, color: Colors.white),
                 ),
               ),
     );

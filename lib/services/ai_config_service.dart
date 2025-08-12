@@ -14,7 +14,7 @@ class AIConfigService {
               .select('huggingface_token')
               .single();
 
-      if (response != null && response['huggingface_token'] != null) {
+      if (response['huggingface_token'] != null) {
         final token = response['huggingface_token'] as String;
         return token.isNotEmpty && token.startsWith('hf_');
       }
@@ -33,7 +33,7 @@ class AIConfigService {
               .select('huggingface_token')
               .single();
 
-      if (response != null && response['huggingface_token'] != null) {
+      if (response['huggingface_token'] != null) {
         final token = response['huggingface_token'] as String;
         if (token.isNotEmpty && token.startsWith('hf_')) {
           return token;

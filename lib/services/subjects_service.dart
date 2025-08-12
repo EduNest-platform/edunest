@@ -29,11 +29,9 @@ class SubjectsService {
             ''')
             .order('name');
 
-        if (response != null) {
-          realSubjects =
-              (response as List).map((data) => Subject.fromJson(data)).toList();
-        }
-      } catch (e) {
+        realSubjects =
+            (response as List).map((data) => Subject.fromJson(data)).toList();
+            } catch (e) {
         // Continue with sample data if real data fails
       }
 

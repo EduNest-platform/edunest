@@ -11,8 +11,7 @@ import 'dart:async';
 class SearchWidget extends StatefulWidget {
   final void Function(dynamic file, dynamic subject)? onViewFile;
   final bool showClose;
-  const SearchWidget({Key? key, this.onViewFile, this.showClose = false})
-    : super(key: key);
+  const SearchWidget({super.key, this.onViewFile, this.showClose = false});
 
   @override
   State<SearchWidget> createState() => _SearchWidgetState();
@@ -40,7 +39,7 @@ class _SearchWidgetState extends State<SearchWidget> {
     if (profile?.college != null && profile?.semester != null) {
       await _loadSubjectsForContext(
         profile!.college!,
-        profile!.semester!.toString(),
+        profile.semester!.toString(),
       );
     } else {
       final subjects = await SubjectsService.getAllSubjects();

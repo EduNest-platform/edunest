@@ -21,10 +21,8 @@ class HybridAIService {
           .eq('chapter', chapter)
           .eq('difficulty', difficulty)
           .limit(limit);
-      if (response != null && response is List) {
-        return List<Map<String, dynamic>>.from(response);
-      }
-      return [];
+      return List<Map<String, dynamic>>.from(response);
+          return [];
     } catch (e) {
       return [];
     }
@@ -39,7 +37,7 @@ class HybridAIService {
   ) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final cacheKey = 'questions_${subject}_${chapter}_${difficulty}';
+      final cacheKey = 'questions_${subject}_${chapter}_$difficulty';
       final cachedData = prefs.getString(cacheKey);
       if (cachedData != null) {
         final cache = jsonDecode(cachedData) as Map<String, dynamic>;
@@ -63,7 +61,7 @@ class HybridAIService {
   ) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final cacheKey = 'questions_${subject}_${chapter}_${difficulty}';
+      final cacheKey = 'questions_${subject}_${chapter}_$difficulty';
       final cache = {
         'timestamp': DateTime.now().toIso8601String(),
         'questions': questions,

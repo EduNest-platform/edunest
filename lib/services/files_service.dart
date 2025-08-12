@@ -1,8 +1,5 @@
-import 'dart:convert';
 import 'dart:io';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/error_message_service.dart';
 

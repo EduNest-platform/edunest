@@ -3,11 +3,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../services/error_message_service.dart';
 import '../../widgets/desktop_sidebar.dart';
 import '../../widgets/custom_app_bar.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter/foundation.dart';
 
 class ChangePasswordScreen extends StatefulWidget {
-  const ChangePasswordScreen({Key? key}) : super(key: key);
+  const ChangePasswordScreen({super.key});
 
   @override
   State<ChangePasswordScreen> createState() => _ChangePasswordScreenState();

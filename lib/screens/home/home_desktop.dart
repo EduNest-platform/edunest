@@ -13,12 +13,10 @@ import 'resources/code_screen.dart';
 import 'resources/lab_manuals_screen.dart';
 import 'Subject Screen/resources_screen.dart';
 import '../practice_tests/chapter_selection_screen.dart';
-import '../../../main.dart'; // For navigatorKey
-import 'package:flutter/services.dart';
+// For navigatorKey
 import 'academic_info_screen.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import '../../widgets/whats_new_dialog.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -41,7 +39,7 @@ class HomeDesktop extends StatefulWidget {
   final void Function(BuildContext, Map<String, dynamic>)?
   onDesktopSearchNavigate;
   const HomeDesktop({
-    Key? key,
+    super.key,
     required this.userProfile,
     required this.isLoading,
     required this.currentSubjects,
@@ -57,7 +55,7 @@ class HomeDesktop extends StatefulWidget {
     required this.onSearchChanged,
     required this.onSearchUnfocus,
     this.onDesktopSearchNavigate,
-  }) : super(key: key);
+  });
   @override
   State<HomeDesktop> createState() => _HomeDesktopState();
 }
@@ -91,10 +89,6 @@ class _HomeDesktopState extends State<HomeDesktop>
     }
   }
 
-  @override
-  void dispose() {
-    super.dispose();
-  }
 
   @override
   void didUpdateWidget(covariant HomeDesktop oldWidget) {
@@ -679,7 +673,7 @@ class _HomeDesktopState extends State<HomeDesktop>
                                               onTap: () {
                                                 final fileType =
                                                     file.fileType
-                                                        ?.toLowerCase() ??
+                                                        .toLowerCase() ??
                                                     '';
                                                 final subject = widget
                                                     .currentSubjects
@@ -699,7 +693,6 @@ class _HomeDesktopState extends State<HomeDesktop>
                                                                     'No subjects available',
                                                                   )),
                                                     );
-                                                if (subject == null) return;
                                                 switch (fileType) {
                                                   case 'notes':
                                                     Navigator.push(
@@ -1327,10 +1320,12 @@ class _HomeDesktopState extends State<HomeDesktop>
     final diff = now.difference(date);
     if (diff.inSeconds < 60) return 'just now';
     if (diff.inMinutes < 60) return '${diff.inMinutes} min ago';
-    if (diff.inHours < 24)
+    if (diff.inHours < 24) {
       return '${diff.inHours} hour${diff.inHours > 1 ? 's' : ''} ago';
-    if (diff.inDays < 7)
+    }
+    if (diff.inDays < 7) {
       return '${diff.inDays} day${diff.inDays > 1 ? 's' : ''} ago';
+    }
     return '${date.day}/${date.month}/${date.year}';
   }
 }

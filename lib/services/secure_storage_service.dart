@@ -9,7 +9,7 @@ class SecureStorageService {
   static String _encrypt(String data) {
     final bytes = utf8.encode(data + _salt);
     final digest = sha256.convert(bytes);
-    return base64.encode(utf8.encode(data)) + "." + digest.toString();
+    return "${base64.encode(utf8.encode(data))}.$digest";
   }
 
   // Decrypt data

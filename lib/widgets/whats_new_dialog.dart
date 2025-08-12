@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:ui'; // Added for BackdropFilter
-import 'dart:math';
 
 // Centralized update info
 const String currentVersion = '1.0.0'; // Update for each release
@@ -23,8 +22,7 @@ class _AnimatedCircle extends StatefulWidget {
     required this.end,
     required this.duration,
     required this.delay,
-    Key? key,
-  }) : super(key: key);
+  });
 
   @override
   State<_AnimatedCircle> createState() => _AnimatedCircleState();

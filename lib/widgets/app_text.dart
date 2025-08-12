@@ -12,7 +12,7 @@ class AppText extends StatelessWidget {
 
   const AppText(
     this.text, {
-    Key? key,
+    super.key,
     this.style,
     this.maxLines,
     this.overflow,
@@ -20,7 +20,7 @@ class AppText extends StatelessWidget {
     this.textDirection,
     this.softWrap,
     this.textScaleFactor,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

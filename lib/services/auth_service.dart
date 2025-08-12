@@ -3,9 +3,6 @@ import 'user_profile_service.dart';
 import 'rate_limiter_service.dart';
 import 'session_tracking_service.dart';
 import 'dart:developer' as developer;
-import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show kDebugMode;
-import 'package:flutter/services.dart' show PlatformException;
 import 'supabase_service.dart';
 
 class AuthService {

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../../theme/app_theme.dart';
 import '../../../models/subject.dart';
 import '../../../services/files_service.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -685,7 +684,7 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
                               _buildTagFilter(),
                               const SizedBox(height: 18),
                               _filteredAssignments.isEmpty
-                                  ? Container(
+                                  ? SizedBox(
                                     height: 340,
                                     child: Center(
                                       child: Column(
@@ -762,7 +761,7 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
                         _buildSearchBar(),
                         _buildTagFilter(),
                         _filteredAssignments.isEmpty
-                            ? Container(
+                            ? SizedBox(
                               height: 260,
                               child: Center(
                                 child: Column(

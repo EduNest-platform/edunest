@@ -8,7 +8,6 @@ import '../../services/test_results_service.dart';
 import 'test_results_screen.dart';
 import '../../services/supabase_service.dart';
 import '../../services/network_service.dart';
-import '../../widgets/app_text.dart';
 import '../../services/assigned_mcq_supabase_service.dart';
 import '../../services/error_message_service.dart';
 // import '../../mixins/performance_mixin.dart';
@@ -54,20 +53,16 @@ Future<List<Map<String, dynamic>>> fetchQuestionsFromSupabase({
         .eq('difficulty', difficulty)
         .limit(15); // Always fetch from the 15-question pool
 
-    if (response is List) {
-      final allQuestions = response.cast<Map<String, dynamic>>();
+    final allQuestions = response.cast<Map<String, dynamic>>();
 
-      // If we don't have enough questions, return what we have
-      if (allQuestions.length < questionCount) {
-        return allQuestions;
-      }
-
-      // Take only the requested number of questions
-      return allQuestions.take(questionCount).toList();
-    } else {
-      return [];
+    // If we don't have enough questions, return what we have
+    if (allQuestions.length < questionCount) {
+      return allQuestions;
     }
-  } catch (e) {
+
+    // Take only the requested number of questions
+    return allQuestions.take(questionCount).toList();
+    } catch (e) {
     throw Exception('Error fetching questions: $e');
   }
 }
@@ -76,7 +71,7 @@ class _MCQTestScreenState extends State<MCQTestScreen>
     with WidgetsBindingObserver, WindowListener {
   List<Map<String, dynamic>> _questions = [];
   int _currentQuestionIndex = 0;
-  Map<int, String> _userAnswers = {};
+  final Map<int, String> _userAnswers = {};
   bool _isLoading = true;
   bool _initialLoading = true;
   String? _error;

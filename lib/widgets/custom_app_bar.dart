@@ -11,14 +11,14 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final EdgeInsetsGeometry? padding;
 
   const CustomAppBar({
-    Key? key,
+    super.key,
     required this.title,
     this.subtitle,
     this.leading,
     this.actions,
     this.borderRadius = 10,
     this.padding,
-  }) : super(key: key);
+  });
 
   @override
   Size get preferredSize => const Size.fromHeight(80);

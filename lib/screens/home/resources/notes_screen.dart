@@ -184,7 +184,7 @@ class _NotesScreenState extends State<NotesScreen>
             return note.name.toLowerCase().contains(
                   _searchQuery.toLowerCase(),
                 ) ||
-                (note.description?.toLowerCase().contains(
+                (note.description.toLowerCase().contains(
                       _searchQuery.toLowerCase(),
                     ) ??
                     false);

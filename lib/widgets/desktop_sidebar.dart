@@ -7,11 +7,11 @@ class DesktopSidebar extends StatelessWidget {
   final void Function(String route) onNavigate;
   final VoidCallback? onLogout;
   const DesktopSidebar({
-    Key? key,
+    super.key,
     required this.selected,
     required this.onNavigate,
     this.onLogout,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

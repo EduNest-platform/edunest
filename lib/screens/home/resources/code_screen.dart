@@ -628,7 +628,7 @@ class _CodeScreenState extends State<CodeScreen> {
               _buildFilters(),
               const SizedBox(height: 8),
               _filteredCode.isEmpty
-                  ? Container(
+                  ? SizedBox(
                     height: 300,
                     child: Center(
                       child: Column(

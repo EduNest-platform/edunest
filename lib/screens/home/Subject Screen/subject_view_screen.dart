@@ -542,7 +542,7 @@ class _SubjectViewScreenState extends State<SubjectViewScreen>
                     ),
                   ),
                   child: Text(
-                    subject.semesterName?.split(' ').first ?? '',
+                    subject.semesterName.split(' ').first ?? '',
                     style: GoogleFonts.poppins(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,

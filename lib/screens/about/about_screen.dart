@@ -1199,8 +1199,7 @@ class _FeatureCardDesktop extends StatefulWidget {
     required this.color,
     required this.gradientStart,
     required this.gradientEnd,
-    Key? key,
-  }) : super(key: key);
+  });
 
   @override
   State<_FeatureCardDesktop> createState() => _FeatureCardDesktopState();

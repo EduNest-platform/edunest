@@ -78,7 +78,7 @@ class TestResultsService {
           .eq('test_title', testTitle)
           .limit(1);
 
-      return response != null && response is List && response.isNotEmpty;
+      return response.isNotEmpty;
     } catch (e) {
       return false;
     }
@@ -97,14 +97,12 @@ class TestResultsService {
           .not('test_title', 'is', null)
           .neq('test_title', '');
 
-      if (response != null && response is List) {
-        return response
-            .map((result) => result['test_title'] as String)
-            .where((title) => title.isNotEmpty)
-            .toSet() // Remove duplicates
-            .toList();
-      }
-      return [];
+      return response
+          .map((result) => result['test_title'] as String)
+          .where((title) => title.isNotEmpty)
+          .toSet() // Remove duplicates
+          .toList();
+          return [];
     } catch (e) {
       return [];
     }
@@ -174,10 +172,8 @@ class TestResultsService {
           .order('created_at', ascending: false)
           .limit(10);
 
-      if (recentResponse != null) {
-        recentTests = (recentResponse as List).cast<Map<String, dynamic>>();
-      }
-
+      recentTests = (recentResponse as List).cast<Map<String, dynamic>>();
+    
       return {
         'totalTests': totalTests,
         'averageScore': averageScore.round(),

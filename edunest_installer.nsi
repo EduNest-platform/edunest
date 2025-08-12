@@ -1,9 +1,5 @@
 ; NSIS Script for EduNest
-; Last Updated: July 28, 2025
-
-;--------------------------------
-; 1. Defines and General Info
-;--------------------------------
+; Last Updated: August 1, 2025
 
 !define APP_NAME "EduNest"
 !define APP_VERSION "1.0.0"
@@ -37,7 +33,6 @@ ManifestDPIAware true ; Ensures sharp text and UI on high-resolution screens
 !define MUI_UNICON "assets\images\edunest-desktop.ico"
 
 ; --- Wizard Image (Welcome and Finished pages) ---
-; NOTE: The recommended size for this bitmap is 164x314 pixels.
 !define MUI_WELCOMEFINISHPAGE_BITMAP "assets\images\edunest_anime.bmp"
 
 ; --- Pages ---
@@ -92,11 +87,6 @@ Section "Desktop Shortcut" SectionDesktop
   CreateShortCut "$DESKTOP\${APP_NAME}.lnk" "$INSTDIR\${APP_EXE}"
 SectionEnd
 
-Section "Run at Startup" SectionStartup
-  CreateShortCut "$STARTUP\${APP_NAME}.lnk" "$INSTDIR\${APP_EXE}"
-SectionEnd
-
-
 ;--------------------------------
 ; 5. Descriptions for Components Page
 ;--------------------------------
@@ -105,7 +95,6 @@ SectionEnd
   !insertmacro MUI_DESCRIPTION_TEXT ${SectionApp} "Installs the main application files."
   !insertmacro MUI_DESCRIPTION_TEXT ${SectionStartMenu} "Adds shortcuts to the Start Menu."
   !insertmacro MUI_DESCRIPTION_TEXT ${SectionDesktop} "Adds a shortcut to the Desktop."
-  !insertmacro MUI_DESCRIPTION_TEXT ${SectionStartup} "Runs the application automatically when Windows starts."
 !insertmacro MUI_FUNCTION_DESCRIPTION_END
 
 ;--------------------------------
@@ -122,9 +111,6 @@ Section "Uninstall"
 
   ; Remove Desktop shortcut
   Delete "$DESKTOP\${APP_NAME}.lnk"
-
-  ; Remove Startup shortcut
-  Delete "$STARTUP\${APP_NAME}.lnk"
 
   ; Remove installation directory
   RmDir /r "$INSTDIR"

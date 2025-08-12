@@ -13,14 +13,12 @@ import '../../../services/error_message_service.dart';
 // import '../../../mixins/performance_mixin.dart';
 import '../../../widgets/custom_app_bar.dart'; // Added import for CustomAppBar
 import '../../../widgets/desktop_sidebar.dart';
-import 'package:flutter/foundation.dart';
 
 // HeaderCard widget for section containers
 class HeaderCard extends StatelessWidget {
   final String title;
   final Widget child;
-  const HeaderCard({required this.title, required this.child, Key? key})
-    : super(key: key);
+  const HeaderCard({required this.title, required this.child, super.key});
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -59,8 +57,7 @@ class HeaderCard extends StatelessWidget {
 class AttendanceTrackingScreen extends StatefulWidget {
   final Map<String, String> subject;
 
-  const AttendanceTrackingScreen({Key? key, required this.subject})
-    : super(key: key);
+  const AttendanceTrackingScreen({super.key, required this.subject});
 
   @override
   State<AttendanceTrackingScreen> createState() =>
@@ -88,7 +85,7 @@ class _AttendanceTrackingScreenState extends State<AttendanceTrackingScreen>
   bool _hasNetworkError = false;
 
   // Add loading states for individual buttons
-  Map<int, bool> _buttonLoadingStates = {};
+  final Map<int, bool> _buttonLoadingStates = {};
   bool _isMarkingAttendance = false; // Global marking state
 
   @override
@@ -173,15 +170,18 @@ class _AttendanceTrackingScreenState extends State<AttendanceTrackingScreen>
       if (_userProfile?.college != null ||
           _userProfile?.branch != null ||
           _userProfile?.semester != null) {
+        // Use roll number as key; fallback to user.id if missing
         records = await _attendanceService.getStudentAttendanceByContext(
-          user.id,
+          _userProfile?.studentId ?? user.id,
           college: _userProfile?.college,
           branch: _userProfile?.branch,
           semester: _userProfile?.semester,
         );
       } else {
         // Fallback to all records if no context info
-        records = await _attendanceService.getStudentAttendance(user.id);
+        records = await _attendanceService.getStudentAttendance(
+          _userProfile?.studentId ?? user.id,
+        );
       }
 
       final subjectRecords =
@@ -692,7 +692,7 @@ class _AttendanceTrackingScreenState extends State<AttendanceTrackingScreen>
       percent = (percentValue * 100).toStringAsFixed(1);
     }
     final code = widget.subject['code'] ?? '';
-    final shortCode = code.length > 6 ? code.substring(0, 6) + '...' : code;
+    final shortCode = code.length > 6 ? '${code.substring(0, 6)}...' : code;
     Color progressColor;
     if (percentValue < 0.3) {
       progressColor = AppTheme.error; // Red for below 30%
@@ -1411,7 +1411,7 @@ class _AttendanceTrackingScreenState extends State<AttendanceTrackingScreen>
     final isMarked = isPresent || isAbsent;
     final isLoading = _buttonLoadingStates[idx] == true;
 
-    Future<void> _handleSelectedButtonTap() async {
+    Future<void> handleSelectedButtonTap() async {
       if (isLoading) return; // Prevent multiple taps
 
       final result = await showDialog<bool>(
@@ -1471,7 +1471,7 @@ class _AttendanceTrackingScreenState extends State<AttendanceTrackingScreen>
                   isLoading
                       ? null // Disable button when loading
                       : isMarked
-                      ? (isPresent ? _handleSelectedButtonTap : null)
+                      ? (isPresent ? handleSelectedButtonTap : null)
                       : () => _markSingleAttendance(idx, 'present'),
               icon: Icon(
                 Icons.check_circle,
@@ -1522,7 +1522,7 @@ class _AttendanceTrackingScreenState extends State<AttendanceTrackingScreen>
                   isLoading
                       ? null // Disable button when loading
                       : isMarked
-                      ? (isAbsent ? _handleSelectedButtonTap : null)
+                      ? (isAbsent ? handleSelectedButtonTap : null)
                       : () => _markSingleAttendance(idx, 'absent'),
               icon: Icon(
                 Icons.cancel,
@@ -1617,7 +1617,7 @@ class _AttendanceTrackingScreenState extends State<AttendanceTrackingScreen>
             ),
           ),
         ),
-        ...records.map((record) => _buildHistoryRow(record)).toList(),
+        ...records.map((record) => _buildHistoryRow(record)),
         Divider(color: AppTheme.dividerLight, height: 1),
       ],
     );
@@ -1697,8 +1697,9 @@ class _AttendanceTrackingScreenState extends State<AttendanceTrackingScreen>
 
     // Handle edge cases
     if (classesNeeded <= 0) return '';
-    if (classesNeeded > 20)
+    if (classesNeeded > 20) {
       return 'Attend consistently to improve'; // Too many classes needed
+    }
 
     return 'Need $classesNeeded more class${classesNeeded > 1 ? 'es' : ''} for 75%';
   }

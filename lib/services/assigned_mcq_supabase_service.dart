@@ -20,12 +20,8 @@ class AssignedMCQSupabaseService {
         .select()
         .eq('test_name', testName)
         .order('created_at');
-    if (response is List) {
-      return List<Map<String, dynamic>>.from(response);
-    } else {
-      return [];
+    return List<Map<String, dynamic>>.from(response);
     }
-  }
 
   /// Fetches a list of assigned tests (unique test_name values) from the questions table
   static Future<List<Map<String, dynamic>>> fetchAssignedTests() async {
@@ -34,8 +30,6 @@ class AssignedMCQSupabaseService {
         .from('questions')
         .select('test_name')
         .not('test_name', 'is', null);
-
-    if (response is! List) return [];
 
     final testNames =
         response
@@ -53,7 +47,7 @@ class AssignedMCQSupabaseService {
           .select('test_name, created_at, subject, duration_minutes')
           .eq('test_name', testName);
 
-      if (questionsResponse is List && questionsResponse.isNotEmpty) {
+      if (questionsResponse.isNotEmpty) {
         final testRow = questionsResponse.first;
         final questionCount = questionsResponse.length;
 

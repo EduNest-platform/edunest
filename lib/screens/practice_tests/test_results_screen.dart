@@ -4,8 +4,6 @@ import '../../theme/app_theme.dart';
 import '../../models/subject.dart';
 import '../../widgets/custom_app_bar.dart';
 import 'test_results_list_screen.dart';
-import '../../services/test_results_service.dart';
-import '../../widgets/app_text.dart';
 
 class TestResultsScreen extends StatefulWidget {
   /// Optional: Subject object (for subject-based tests)
@@ -186,7 +184,7 @@ class _TestResultsScreenState extends State<TestResultsScreen> {
                   : Column(
                     children: [
                       // Animated Score Circle
-                      Container(
+                      SizedBox(
                         width: 120,
                         height: 120,
                         child: Stack(
@@ -704,7 +702,7 @@ class _TestResultsScreenState extends State<TestResultsScreen> {
                 ],
               ),
             );
-          }).toList(),
+          }),
         ],
       ),
     );

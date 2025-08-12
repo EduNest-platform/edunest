@@ -12,7 +12,6 @@ import '../resources/code_screen.dart';
 import '../resources/others_screen.dart';
 import '../../../widgets/custom_app_bar.dart';
 import 'package:flutter/foundation.dart'; // for kIsWeb
-import 'dart:math';
 import 'dart:ui';
 
 class ResourcesScreen extends StatefulWidget {

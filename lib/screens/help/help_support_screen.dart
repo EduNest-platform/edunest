@@ -1135,7 +1135,7 @@ class TroubleshootItem {
 
 class FeedbackDialog extends StatefulWidget {
   final String initialType;
-  const FeedbackDialog({Key? key, this.initialType = 'Bug'}) : super(key: key);
+  const FeedbackDialog({super.key, this.initialType = 'Bug'});
   @override
   State<FeedbackDialog> createState() => _FeedbackDialogState();
 }

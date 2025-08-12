@@ -3,12 +3,9 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../theme/app_theme.dart';
 import '../../services/user_profile_service.dart';
 import '../../models/user_profile.dart';
-import '../../widgets/app_text.dart';
-import 'package:flutter/services.dart';
 import '../../services/error_message_service.dart';
 import '../../widgets/desktop_sidebar.dart';
 import '../../widgets/custom_app_bar.dart';
-import 'package:flutter/foundation.dart';
 
 class PersonalInfoScreen extends StatefulWidget {
   const PersonalInfoScreen({super.key});

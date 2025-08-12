@@ -154,9 +154,19 @@ class _PracticeTestsScreenState extends State<PracticeTestsScreen>
       return _subjectColorSchemes[customIndex % _subjectColorSchemes.length];
     }
 
-    // Default: Use name hash for initial color
+    // Ensure better color distribution for first few subjects
+    // Use index-based assignment for first 3 subjects to avoid grey colors
+    if (index < 3) {
+      // Assign vibrant colors to first 3 subjects
+      final vibrantColors = [0, 1, 2, 3, 6, 7, 8, 9, 10, 11]; // Exclude grey colors (index 4, 5)
+      final colorIndex = vibrantColors[index % vibrantColors.length];
+      return _subjectColorSchemes[colorIndex];
+    }
+
+    // Default: Use name hash for initial color, but avoid grey colors
     final nameHash = subject.name.hashCode;
-    final colorIndex = (nameHash.abs() % _subjectColorSchemes.length);
+    final vibrantColors = [0, 1, 2, 3, 6, 7, 8, 9, 10, 11]; // Exclude grey colors
+    final colorIndex = vibrantColors[nameHash.abs() % vibrantColors.length];
     return _subjectColorSchemes[colorIndex];
   }
 

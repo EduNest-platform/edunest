@@ -553,8 +553,9 @@ class _SecurityScreenState extends State<SecurityScreen> {
                                               setState(
                                                 () => _twoFactorEnabled = value,
                                               );
-                                              if (value)
+                                              if (value) {
                                                 _showTwoFactorSetupDialog();
+                                              }
                                             },
                                           ),
                                           _divider(),

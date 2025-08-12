@@ -5,10 +5,10 @@ import '../../../models/subject.dart';
 import '../../../services/files_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../widgets/app_text.dart';
-import 'package:flutter/services.dart'; // Added for canLaunchUrl
-import 'package:flutter/material.dart'; // Added for ScaffoldMessenger
-import 'package:flutter/material.dart'; // Added for MaterialPageRoute
-import 'package:flutter/material.dart'; // Added for PdfViewerScreen
+// Added for canLaunchUrl
+// Added for ScaffoldMessenger
+// Added for MaterialPageRoute
+// Added for PdfViewerScreen
 import '../../common/pdf_viewer_screen.dart';
 
 class LabManualsScreen extends StatefulWidget {
@@ -654,7 +654,7 @@ class _LabManualsScreenState extends State<LabManualsScreen> {
               _buildExperimentFilter(),
               const SizedBox(height: 8),
               _filteredLabManuals.isEmpty
-                  ? Container(
+                  ? SizedBox(
                     height: 300,
                     child: Center(
                       child: Column(

@@ -22,6 +22,7 @@ class _AcademicInfoScreenState extends State<AcademicInfoScreen>
     with NetworkAwareMixin {
   Future<Subject?>? _subjectFuture;
   bool _hasNetworkError = false;
+  bool _isLoading = true;
   final NetworkService _networkService = NetworkService();
 
   @override
@@ -31,6 +32,11 @@ class _AcademicInfoScreenState extends State<AcademicInfoScreen>
   }
 
   Future<void> _loadSubjectData() async {
+    setState(() {
+      _isLoading = true;
+      _hasNetworkError = false;
+    });
+
     // Check network connectivity first
     final networkStatus = await _networkService.isConnected();
 
@@ -38,6 +44,7 @@ class _AcademicInfoScreenState extends State<AcademicInfoScreen>
       setState(() {
         _hasNetworkError = true;
         _subjectFuture = null;
+        _isLoading = false;
       });
       return;
     }
@@ -46,6 +53,22 @@ class _AcademicInfoScreenState extends State<AcademicInfoScreen>
       _hasNetworkError = false;
       _subjectFuture = SubjectsService.getSubjectById(widget.subjectId);
     });
+
+    // Wait for the future to complete and update loading state
+    try {
+      final subject = await _subjectFuture!;
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   Future<void> _retryWithNetworkCheck() async {
@@ -101,21 +124,56 @@ class _AcademicInfoScreenState extends State<AcademicInfoScreen>
                               ),
                               onPressed: () => Navigator.of(context).maybePop(),
                             ),
+                            actions: [
+                              IconButton(
+                                icon: const Icon(Icons.refresh_rounded),
+                                onPressed: _loadSubjectData,
+                              ),
+                            ],
                           ),
                           Expanded(
                             child:
-                                _subjectFuture == null
+                                _isLoading || _subjectFuture == null
                                     ? const Center(
                                       child: CircularProgressIndicator(),
                                     )
                                     : FutureBuilder<Subject?>(
                                       future: _subjectFuture!,
                                       builder: (context, snapshot) {
-                                        final isLoading =
-                                            snapshot.connectionState ==
-                                            ConnectionState.waiting;
-                                        final subject = snapshot.data;
-                                        final semesterId = subject?.semesterId;
+                                        if (snapshot.connectionState ==
+                                            ConnectionState.waiting) {
+                                          return const Center(
+                                            child: CircularProgressIndicator(),
+                                          );
+                                        }
+
+                                        if (snapshot.hasError) {
+                                          return Center(
+                                            child: buildNetworkErrorWidget(
+                                              title: '📚 Error Loading Subject',
+                                              message:
+                                                  'Failed to load subject information. Please try again.',
+                                              customEmoji: '⚠️',
+                                              onRetry: _loadSubjectData,
+                                            ),
+                                          );
+                                        }
+
+                                        if (!snapshot.hasData ||
+                                            snapshot.data == null) {
+                                          return Center(
+                                            child: buildNetworkErrorWidget(
+                                              title: '📚 Subject Not Found',
+                                              message:
+                                                  'The requested subject could not be found. Please check your connection and try again.',
+                                              customEmoji: '🔍',
+                                              onRetry: _loadSubjectData,
+                                            ),
+                                          );
+                                        }
+
+                                        final subject = snapshot.data!;
+                                        final semesterId = subject.semesterId;
                                         return Center(
                                           child: ConstrainedBox(
                                             constraints: const BoxConstraints(
@@ -188,7 +246,7 @@ class _AcademicInfoScreenState extends State<AcademicInfoScreen>
                                                                                         context,
                                                                                       ) => SyllabusViewerScreen(
                                                                                         semesterId:
-                                                                                            semesterId!,
+                                                                                            semesterId,
                                                                                       ),
                                                                                 ),
                                                                               );
@@ -235,7 +293,7 @@ class _AcademicInfoScreenState extends State<AcademicInfoScreen>
                                                                                         context,
                                                                                       ) => TimetableViewerScreen(
                                                                                         semesterId:
-                                                                                            semesterId!,
+                                                                                            semesterId,
                                                                                       ),
                                                                                 ),
                                                                               );
@@ -282,7 +340,7 @@ class _AcademicInfoScreenState extends State<AcademicInfoScreen>
                                                                                       context,
                                                                                     ) => SyllabusViewerScreen(
                                                                                       semesterId:
-                                                                                          semesterId!,
+                                                                                          semesterId,
                                                                                     ),
                                                                               ),
                                                                             );
@@ -327,7 +385,7 @@ class _AcademicInfoScreenState extends State<AcademicInfoScreen>
                                                                                       context,
                                                                                     ) => TimetableViewerScreen(
                                                                                       semesterId:
-                                                                                          semesterId!,
+                                                                                          semesterId,
                                                                                     ),
                                                                               ),
                                                                             );
@@ -387,10 +445,16 @@ class _AcademicInfoScreenState extends State<AcademicInfoScreen>
                       ),
                       onPressed: () => Navigator.of(context).maybePop(),
                     ),
+                    actions: [
+                      IconButton(
+                        icon: const Icon(Icons.refresh_rounded),
+                        onPressed: _loadSubjectData,
+                      ),
+                    ],
                   ),
                   Expanded(
                     child:
-                        _subjectFuture == null
+                        _isLoading || _subjectFuture == null
                             ? const Center(child: CircularProgressIndicator())
                             : FutureBuilder<Subject?>(
                               future: _subjectFuture!,
@@ -401,6 +465,19 @@ class _AcademicInfoScreenState extends State<AcademicInfoScreen>
                                     child: CircularProgressIndicator(),
                                   );
                                 }
+
+                                if (snapshot.hasError) {
+                                  return Center(
+                                    child: buildNetworkErrorWidget(
+                                      title: '📚 Error Loading Subject',
+                                      message:
+                                          'Failed to load subject information. Please try again.',
+                                      customEmoji: '⚠️',
+                                      onRetry: _loadSubjectData,
+                                    ),
+                                  );
+                                }
+
                                 if (!snapshot.hasData ||
                                     snapshot.data == null) {
                                   return Center(
@@ -409,10 +486,11 @@ class _AcademicInfoScreenState extends State<AcademicInfoScreen>
                                       message:
                                           'The requested subject could not be found. Please check your connection and try again.',
                                       customEmoji: '🔍',
-                                      onRetry: _retryWithNetworkCheck,
+                                      onRetry: _loadSubjectData,
                                     ),
                                   );
                                 }
+
                                 final subject = snapshot.data!;
                                 final semesterId = subject.semesterId;
                                 return Center(
@@ -653,20 +731,18 @@ class _AcademicInfoCard extends StatelessWidget {
   final String subtitle;
   final Color color;
   final VoidCallback? onTap;
-  final bool enabled;
   const _AcademicInfoCard({
     required this.icon,
     required this.title,
     required this.subtitle,
     required this.color,
     this.onTap,
-    this.enabled = true,
   });
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: enabled ? onTap : null,
+      onTap: onTap,
       borderRadius: BorderRadius.circular(18),
       child: Container(
         padding: const EdgeInsets.all(22),

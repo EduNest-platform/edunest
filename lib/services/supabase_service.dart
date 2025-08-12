@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'config_service.dart';
 import 'secure_storage_service.dart';
@@ -37,7 +36,7 @@ class SupabaseService {
   static Future<void> saveSessionTokens() async {
     final session = client.auth.currentSession;
     if (session != null) {
-      await SecureStorageService.storeAccessToken(session.accessToken!);
+      await SecureStorageService.storeAccessToken(session.accessToken);
       await SecureStorageService.storeRefreshToken(session.refreshToken!);
     }
   }

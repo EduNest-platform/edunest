@@ -673,7 +673,7 @@ class _OthersScreenState extends State<OthersScreen> {
                       _buildFilters(),
                       const SizedBox(height: 8),
                       _filteredOthers.isEmpty
-                          ? Container(
+                          ? SizedBox(
                             height: 300,
                             child: Center(
                               child: Column(

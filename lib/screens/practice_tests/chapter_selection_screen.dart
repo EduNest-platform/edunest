@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'dart:io';
 import 'package:google_fonts/google_fonts.dart';
 import '../../theme/app_theme.dart';
 import '../../models/subject.dart';
@@ -9,7 +11,6 @@ import '../../services/network_service.dart';
 import '../../widgets/app_text.dart';
 import '../../services/error_message_service.dart';
 import '../../widgets/desktop_sidebar.dart';
-import 'package:flutter/foundation.dart';
 
 Future<List<Map<String, dynamic>>> fetchTopicsFromSupabase(
   String subjectId,
@@ -21,12 +22,8 @@ Future<List<Map<String, dynamic>>> fetchTopicsFromSupabase(
         .select()
         .eq('subject_id', subjectId)
         .order('created_at', ascending: true);
-    if (response is List) {
-      return response.cast<Map<String, dynamic>>();
-    } else {
-      return [];
-    }
-  } catch (e) {
+    return response.cast<Map<String, dynamic>>();
+    } catch (e) {
     throw Exception('Error fetching topics: $e');
   }
 }
@@ -180,7 +177,7 @@ class _ChapterSelectionScreenState extends State<ChapterSelectionScreen> {
                         topic['name'] ?? 'Topic',
                         style: GoogleFonts.poppins(
                           fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: Platform.isAndroid ? FontWeight.w600 : FontWeight.bold,
                           color: Colors.black87,
                         ),
                         maxLines: 2,

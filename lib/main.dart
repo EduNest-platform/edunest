@@ -20,20 +20,19 @@ import 'screens/home/academic_info_screen.dart';
 
 import 'services/supabase_service.dart';
 import 'services/network_service.dart';
-import 'services/session_tracking_service.dart';
-import 'package:firebase_core/firebase_core.dart';
-// import 'package:firebase_crashlytics/firebase_crashlytics.dart';
-// import 'package:firebase_performance/firebase_performance.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'firebase_options.dart';
-import 'package:flutter/foundation.dart'
-    show defaultTargetPlatform, TargetPlatform, kIsWeb;
+
+// Import for kReleaseMode and platform checks
+import 'package:flutter/foundation.dart' show kReleaseMode, defaultTargetPlatform, TargetPlatform, kIsWeb;
 import 'dart:io' show Platform;
+
 import 'package:window_manager/window_manager.dart';
-// import 'package:firebase_performance/firebase_performance.dart';
-import 'package:flutter/services.dart' show PlatformDispatcher;
 import 'dart:async';
+
+// Import Device Preview
+import 'package:device_preview/device_preview.dart';
+
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -46,7 +45,7 @@ Future<void> clearAllAppData() async {
 
 void main() {
   runZonedGuarded(
-    () async {
+        () async {
       WidgetsFlutterBinding.ensureInitialized();
 
       // Only initialize window_manager on desktop platforms
@@ -57,16 +56,12 @@ void main() {
       }
 
       // Initialize Firebase first!
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
-      );
-
       // Enable Crashlytics and set up error handling only on supported platforms
       final isCrashlyticsSupported =
           kIsWeb || (Platform.isAndroid || Platform.isIOS);
       print(
         'Crashlytics supported: '
-        ' [33m$isCrashlyticsSupported [0m (kIsWeb: $kIsWeb, Platform: ${Platform.operatingSystem})',
+            ' [33m$isCrashlyticsSupported [0m (kIsWeb: $kIsWeb, Platform: ${Platform.operatingSystem})',
       );
       // if (isCrashlyticsSupported) {
       //   await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(
@@ -83,9 +78,15 @@ void main() {
       await SupabaseService.init();
       NetworkService().initialize();
 
-      runApp(const MyApp());
+      // Wrap your app with DevicePreview
+      runApp(
+        DevicePreview(
+          enabled: !kReleaseMode, // Disable in release builds
+          builder: (context) => const MyApp(), // Wrap your app
+        ),
+      );
     },
-    (error, stack) {
+        (error, stack) {
       final isCrashlyticsSupported =
           kIsWeb || (Platform.isAndroid || Platform.isIOS);
       // if (isCrashlyticsSupported) {
@@ -104,6 +105,12 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      // --- Add these 3 lines for Device Preview ---
+      useInheritedMediaQuery: true,
+      locale: DevicePreview.locale(context),
+      builder: DevicePreview.appBuilder,
+      // --------------------------------------------
+
       navigatorKey: navigatorKey,
       title: 'EduNest',
       debugShowCheckedModeBanner: false,
