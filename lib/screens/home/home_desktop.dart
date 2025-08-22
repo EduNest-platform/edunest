@@ -184,18 +184,9 @@ class _HomeDesktopState extends State<HomeDesktop>
                   label: 'Academic Info',
                   selected: false,
                   onTap: () {
-                    if (widget.currentSubjects.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('No subjects available.')),
-                      );
-                      return;
-                    }
-                    final subject = widget.currentSubjects.first;
                     Navigator.of(context, rootNavigator: true).push(
                       MaterialPageRoute(
-                        builder:
-                            (context) =>
-                                AcademicInfoScreen(subjectId: subject.id),
+                        builder: (context) => const AcademicInfoScreen(),
                       ),
                     );
                   },

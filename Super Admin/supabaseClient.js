@@ -12,15 +12,26 @@ function initializeSupabase() {
       window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
         auth: { storageKey: 'supabase.storage' }
       });
+      console.log('Supabase client initialized successfully');
+      
+      // Test connection after initialization
+      if (window.supabaseClient) {
+        testConnection();
+      }
     } else {
       initializationAttempts++;
+      console.log(`Waiting for Supabase library... Attempt ${initializationAttempts}/${maxAttempts}`);
       
       if (initializationAttempts < maxAttempts) {
         // Retry after a short delay
         setTimeout(initializeSupabase, 200);
+      } else {
+        console.error('Failed to load Supabase library after maximum attempts');
+        showConnectionError();
       }
     }
   } catch (error) {
+    console.error('Error initializing Supabase:', error);
     showConnectionError();
   }
 }
@@ -68,15 +79,23 @@ function updateConnectionStatus(connected) {
   }
 }
 
-// Initialize when DOM is ready
+// Initialize when DOM is ready and when window loads
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initializeSupabase);
 } else {
   initializeSupabase();
 }
 
+// Also initialize on window load to ensure all scripts are loaded
+window.addEventListener('load', function() {
+  if (!window.supabaseClient) {
+    console.log('Attempting to initialize Supabase on window load...');
+    initializeSupabase();
+  }
+});
+
 // Also try to initialize immediately
-initializeSupabase();
+setTimeout(initializeSupabase, 100);
 
 // For compatibility with app.js
 const supabase = window.supabaseClient; 

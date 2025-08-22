@@ -278,24 +278,28 @@
           <div class="option-group">
             <label style="font-weight: 600; color: #374151; margin-right: 8px;">Questions:</label>
             <select id="questionCountSelect" style="padding: 6px 12px; border-radius: 6px; border: 1.5px solid #d1d5db; font-size: 0.95em;">
-              <option value="5">5 Questions</option>
-              <option value="10" selected>10 Questions</option>
-              <option value="15">15 Questions</option>
+              <option value="10">10 Questions</option>
+              <option value="15" selected>15 Questions</option>
+              <option value="20">20 Questions</option>
             </select>
           </div>
           <div class="option-group">
-            <label style="font-weight: 600; color: #374151; margin-right: 8px;">Difficulty:</label>
-            <select id="difficultySelect" style="padding: 6px 12px; border-radius: 6px; border: 1.5px solid #d1d5db; font-size: 0.95em;">
-              <option value="beginner" selected>Beginner</option>
-              <option value="intermediate">Intermediate</option>
-              <option value="advanced">Advanced</option>
+            <label style="font-weight: 600; color: #374151; margin-right: 8px;">Practice Mode:</label>
+            <select id="practiceModeSelect" style="padding: 6px 12px; border-radius: 6px; border: 1.5px solid #d1d5db; font-size: 0.95em;">
+              <option value="academic" selected>📚 Academic Mode</option>
+              <option value="competitive">🎯 Competitive Exam Mode</option>
+              <option value="career">💼 Career Prep Mode</option>
             </select>
           </div>
         </div>
         <button id="generateQuestionsBtn" class="submit-btn">Generate Questions with AI</button>
+        <button id="generateAllModesBtn" class="submit-btn" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); margin-top: 12px;">
+          <span id="generateAllModesText">Generate 20 Questions for All Modes</span>
+          <span id="generateAllModesSubtext" style="font-size: 0.85em; opacity: 0.9; display: block; margin-top: 2px;">Creates 60 questions total (20 per mode)</span>
+        </button>
       </div>
       
-      <!-- Questions by Difficulty Cards -->
+      <!-- Questions by Practice Mode Cards -->
       <div id="questionsCardsContainer" class="questions-cards-container">
         <!-- Cards will be dynamically generated here -->
       </div>

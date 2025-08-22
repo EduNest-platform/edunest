@@ -492,7 +492,7 @@ li:hover {
   flex-direction: column;
   width: 100%;
   gap: 6px;
-  margin-bottom: 30px;
+  margin-bottom: 24px;
 }
 .nav-btn {
   background: none;
@@ -518,8 +518,15 @@ li:hover {
   font-size: 1.2em;
   margin-right: 6px;
 }
+
+.sidebar-footer {
+  padding: 0 16px 32px 16px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
 .logout-btn {
-  margin: 32px 0 0 32px;
+  margin: 24px 0 0 0;
   background: #6366f1;
   color: #fff;
   font-size: 1em;
@@ -530,6 +537,7 @@ li:hover {
   border: none;
   cursor: pointer;
   transition: background 0.18s;
+  width: 100%;
 }
 .logout-btn:hover {
   background: #4f46e5;
@@ -579,7 +587,7 @@ li:hover {
   .sidebar-nav {
     flex-direction: row;
     gap: 2px;
-    margin-bottom: 0;
+    margin-bottom: 12px;
   }
   .nav-btn {
     border-radius: 8px;
@@ -587,8 +595,11 @@ li:hover {
     font-size: 1em;
     width: unset;
   }
+  .sidebar-footer {
+    padding: 0 18px 18px 18px;
+  }
   .logout-btn {
-    margin: 0 18px 0 0;
+    margin: 12px 0 0 0;
     padding: 8px 16px;
   }
   .main-content {
@@ -599,12 +610,28 @@ li:hover {
 /* Enhanced Dashboard Styles */
 .welcome-section {
   text-align: center;
-  margin-bottom: 32px;
+  margin-bottom: 20px;
+  margin-top: 0px;
   padding: 24px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   border-radius: 16px;
   color: white;
   box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
+}
+
+/* Desktop-specific: Remove any gap above welcome section */
+@media (min-width: 901px) {
+  .welcome-section {
+    margin-top: -8px;
+  }
+  
+  .main-content {
+    padding-top: 8px;
+  }
+  
+  .sidebar-footer {
+    padding: 0 12px 32px 12px;
+  }
 }
 
 .welcome-section h1 {
@@ -741,23 +768,23 @@ li:hover {
 }
 .action-buttons {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 32px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 24px;
   margin-top: 32px;
 }
 .action-btn {
   background: linear-gradient(135deg, #fff 0%, #f1f5f9 100%);
-  border: 1.5px solid #cbd5e1;
+  border: 2px solid #e2e8f0;
   border-radius: 20px;
   padding: 36px 32px;
   color: #3730a3;
   font-weight: 700;
   font-size: 1.25em;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(.4,0,.2,1);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   align-items: center;
-  gap: 24px;
+  gap: 20px;
   justify-content: flex-start;
   position: relative;
   overflow: hidden;
@@ -766,47 +793,231 @@ li:hover {
   outline: none;
   min-width: 0;
 }
+
+.action-btn > span:not(.action-icon) {
+  position: relative;
+  z-index: 2;
+}
 .action-btn:focus {
   box-shadow: 0 0 0 4px #a5b4fc;
 }
 .action-btn::before {
   content: '';
   position: absolute;
-  top: 0; left: -100%;
-  width: 100%; height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(99,102,241,0.08), transparent);
-  transition: left 0.6s;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+  transition: left 0.6s ease;
+  z-index: 1;
 }
 .action-btn:hover::before, .action-btn:focus::before {
   left: 100%;
 }
 .action-btn:hover, .action-btn:focus {
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-  color: #fff;
-  transform: translateY(-4px) scale(1.03);
-  box-shadow: 0 12px 32px rgba(99,102,241,0.18);
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px rgba(99,102,241,0.15);
+  border-color: #6366f1;
+  background: linear-gradient(135deg, #fefefe 0%, #f8fafc 100%);
 }
 .action-btn:active {
-  transform: translateY(-2px) scale(1.01);
+  transform: translateY(-3px);
 }
 .action-icon {
-  font-size: 2.2em;
-  min-width: 52px;
-  height: 52px;
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  color: #fff;
+  font-size: 1.6em;
+  min-width: 56px;
+  height: 56px;
+  border-radius: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #6366f1 0%, #a5b4fc 100%);
-  color: #fff;
-  border-radius: 14px;
-  box-shadow: 0 2px 8px rgba(99,102,241,0.10);
-  transition: all 0.3s;
+  transition: all 0.4s ease;
+  box-shadow: 0 8px 16px rgba(99,102,241,0.25);
+  position: relative;
+  z-index: 2;
   flex-shrink: 0;
 }
 .action-btn:hover .action-icon, .action-btn:focus .action-icon {
-  background: linear-gradient(135deg, #fff 0%, #6366f1 100%);
-  color: #6366f1;
   transform: scale(1.12);
+  box-shadow: 0 8px 32px rgba(99,102,241,0.40);
+}
+
+/* Attendance Action Button Specific Styling */
+.action-btn.attendance {
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border-color: #0891b2;
+  color: #0c4a6e;
+}
+
+.action-btn.attendance .action-icon {
+  background: linear-gradient(135deg, #0891b2 0%, #0ea5e9 100%);
+  color: #fff;
+}
+
+.action-btn.attendance:hover, .action-btn.attendance:focus {
+  background: linear-gradient(135deg, #0891b2 0%, #0ea5e9 100%);
+  color: #fff;
+  border-color: #0ea5e9;
+}
+
+.action-btn.attendance:hover .action-icon, .action-btn.attendance:focus .action-icon {
+  background: linear-gradient(135deg, #fff 0%, #0891b2 100%);
+  color: #0891b2;
+  transform: scale(1.12);
+}
+
+/* Attendance Shortcuts Section */
+.attendance-shortcuts-section {
+  margin-top: 24px;
+}
+
+.attendance-shortcuts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.loading-classes {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 40px 20px;
+  color: #64748b;
+  font-size: 0.95em;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border: 2px dashed #cbd5e1;
+  border-radius: 16px;
+}
+
+.loading-spinner-small {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #e2e8f0;
+  border-top: 2px solid #6366f1;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.attendance-class-btn {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 24px 28px;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border: 2px solid #e2e8f0;
+  border-radius: 20px;
+  color: #334155;
+  text-decoration: none;
+  font-weight: 500;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+}
+
+.attendance-class-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(99,102,241,0.1), transparent);
+  transition: left 0.6s ease;
+}
+
+.attendance-class-btn:hover::before {
+  left: 100%;
+}
+
+.attendance-class-btn:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px rgba(99,102,241,0.15);
+  border-color: #6366f1;
+  background: linear-gradient(135deg, #fefefe 0%, #f8fafc 100%);
+}
+
+.attendance-class-icon {
+  flex-shrink: 0;
+  width: 56px;
+  height: 56px;
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6em;
+  color: white;
+  transition: all 0.4s ease;
+  box-shadow: 0 8px 16px rgba(99,102,241,0.25);
+}
+
+.attendance-class-btn:hover .attendance-class-icon {
+  transform: scale(1.12);
+  box-shadow: 0 8px 32px rgba(99,102,241,0.40);
+}
+
+.attendance-class-details {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  z-index: 2;
+}
+
+.attendance-class-name {
+  font-weight: 700;
+  font-size: 1.25em;
+  color: #3730a3;
+  margin: 0 0 8px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+.attendance-class-info {
+  font-size: 0.9em;
+  color: #64748b;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 500;
+}
+
+.attendance-class-btn:hover .attendance-class-name {
+  color: #6366f1;
+}
+
+.attendance-class-btn:hover .attendance-class-info {
+  color: #475569;
+}
+
+.no-classes-message {
+  text-align: center;
+  padding: 48px 20px;
+  color: #64748b;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border: 2px dashed #cbd5e1;
+  border-radius: 20px;
+}
+
+.no-classes-message h4 {
+  color: #475569;
+  margin: 0 0 12px 0;
+  font-size: 1.3em;
+  font-weight: 700;
+}
+
+.no-classes-message p {
+  margin: 0;
+  font-size: 1em;
+  line-height: 1.6;
+  font-weight: 500;
 }
 @media (max-width: 900px) {
   .quick-actions {
@@ -828,6 +1039,28 @@ li:hover {
     min-width: 38px;
     height: 38px;
     border-radius: 8px;
+  }
+  
+  .attendance-shortcuts-section {
+    margin-top: 20px;
+  }
+  
+  .attendance-shortcuts-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .attendance-class-btn {
+    padding: 20px 24px;
+    gap: 16px;
+    border-radius: 18px;
+  }
+  
+  .attendance-class-icon {
+    width: 52px;
+    height: 52px;
+    font-size: 1.5em;
+    border-radius: 14px;
   }
 }
 @media (max-width: 600px) {
@@ -853,6 +1086,45 @@ li:hover {
     min-width: 26px;
     height: 26px;
     border-radius: 6px;
+  }
+  
+  .attendance-shortcuts-section {
+    margin-top: 16px;
+  }
+  
+  .attendance-shortcuts-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+  
+  .attendance-class-btn {
+    padding: 18px 20px;
+    gap: 14px;
+    border-radius: 16px;
+  }
+  
+  .attendance-class-icon {
+    width: 48px;
+    height: 48px;
+    font-size: 1.4em;
+    border-radius: 12px;
+  }
+  
+  .attendance-class-name {
+    font-size: 1.15em;
+  }
+  
+  .attendance-class-info {
+    font-size: 0.9em;
+  }
+  
+  .no-classes-message {
+    padding: 36px 16px;
+    border-radius: 16px;
+  }
+  
+  .no-classes-message h4 {
+    font-size: 1.2em;
   }
 }
 
@@ -1074,9 +1346,11 @@ li:hover {
   background: linear-gradient(135deg, #f8fafc 60%, #e0e7ff 100%);
   border-radius: 16px;
   box-shadow: 0 2px 12px rgba(99,102,241,0.06);
-  padding: 18px 18px 18px 14px;
-  margin-bottom: 18px;
+  padding: 18px;
+  margin-bottom: 0;
   border: 1.5px solid #e0e7ef;
+  width: 100%;
+  box-sizing: border-box;
 }
 .user-avatar {
   display: flex;
@@ -1106,24 +1380,33 @@ li:hover {
   display: flex;
   flex-direction: column;
   justify-content: center;
+  flex: 1;
+  min-width: 0;
 }
 .user-name {
   font-weight: 700;
   color: #3730a3;
   font-size: 1.1em;
   margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .user-role {
   font-size: 0.98em;
   color: #6366f1;
   font-weight: 500;
   letter-spacing: 0.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 @media (max-width: 900px) {
   .modern-user-card {
-    padding: 12px 8px 12px 8px;
+    padding: 12px;
     border-radius: 12px;
     gap: 10px;
+    margin-bottom: 0;
   }
   .user-avatar {
     width: 38px;

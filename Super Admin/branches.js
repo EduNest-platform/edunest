@@ -212,6 +212,13 @@ async function editBranch(id) {
 
 async function loadBranches() {
   showLoading();
+  
+  // Clear the display immediately to prevent showing wrong data
+  const branchList = document.getElementById('branchList');
+  if (branchList) {
+    branchList.innerHTML = '';
+  }
+  
   try {
     // Check if we have a selected college
     const selectedCollege = sessionStorage.getItem('selectedCollege');

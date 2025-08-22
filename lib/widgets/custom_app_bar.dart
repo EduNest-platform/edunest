@@ -143,6 +143,8 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
                             isDesktop ? desktopTitleSize : mobileTitleSize,
                         letterSpacing: 0.3,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     if (subtitle != null) ...[
                       const SizedBox(height: 1),

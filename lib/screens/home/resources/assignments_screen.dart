@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../models/subject.dart';
 import '../../../services/files_service.dart';
+import '../../../services/cached_file_resource_service.dart';
+import '../../../widgets/cached_file_list_widget.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../widgets/app_text.dart';
 import '../../common/pdf_viewer_screen.dart';
@@ -683,61 +685,55 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
                               const SizedBox(height: 18),
                               _buildTagFilter(),
                               const SizedBox(height: 18),
-                              _filteredAssignments.isEmpty
-                                  ? SizedBox(
-                                    height: 340,
-                                    child: Center(
-                                      child: Column(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        children: [
-                                          Icon(
-                                            Icons.assignment_outlined,
-                                            size: 80,
-                                            color: Colors.grey.shade400,
-                                          ),
-                                          SizedBox(height: 22),
-                                          AppText(
-                                            'No assignments found',
-                                            style: GoogleFonts.poppins(
-                                              fontSize: 22,
-                                              fontWeight: FontWeight.w600,
-                                              color: Colors.grey.shade600,
-                                            ),
-                                          ),
-                                          SizedBox(height: 12),
-                                          AppText(
-                                            'Try adjusting your filters',
-                                            style: GoogleFonts.poppins(
-                                              fontSize: 16,
-                                              color: Colors.grey.shade500,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  )
-                                  : Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 0,
-                                    ),
+                              SizedBox(
+                                height: 500,
+                                child: CachedFileListWidget(
+                                  subjectId: widget.subject.id,
+                                  fileType: FileResourceType.assignments,
+                                  itemBuilder: (file) => _buildAssignmentCard(file),
+                                  onFileTap: _openFile,
+                                  onError: (error) {
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: AppText('Error: $error'),
+                                          backgroundColor: Colors.red,
+                                        ),
+                                      );
+                                    }
+                                  },
+                                  emptyWidget: Center(
                                     child: Column(
-                                      children:
-                                          _filteredAssignments
-                                              .map(
-                                                (assignment) => Padding(
-                                                  padding:
-                                                      const EdgeInsets.only(
-                                                        bottom: 14,
-                                                      ),
-                                                  child: _buildAssignmentCard(
-                                                    assignment,
-                                                  ),
-                                                ),
-                                              )
-                                              .toList(),
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.assignment_outlined,
+                                          size: 80,
+                                          color: Colors.grey.shade400,
+                                        ),
+                                        SizedBox(height: 22),
+                                        AppText(
+                                          'No assignments found',
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 22,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.grey.shade600,
+                                          ),
+                                        ),
+                                        SizedBox(height: 12),
+                                        AppText(
+                                          'Pull to refresh or check back later',
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 16,
+                                            color: Colors.grey.shade500,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
+                                  padding: EdgeInsets.zero,
+                                ),
+                              ),
                               const SizedBox(height: 28),
                             ],
                           ),
@@ -760,59 +756,55 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
                         _buildHeader(),
                         _buildSearchBar(),
                         _buildTagFilter(),
-                        _filteredAssignments.isEmpty
-                            ? SizedBox(
-                              height: 260,
-                              child: Center(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.assignment_outlined,
-                                      size: 64,
-                                      color: Colors.grey.shade400,
-                                    ),
-                                    SizedBox(height: 16),
-                                    AppText(
-                                      'No assignments found',
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.grey.shade600,
-                                      ),
-                                    ),
-                                    SizedBox(height: 8),
-                                    AppText(
-                                      'Try adjusting your filters',
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 14,
-                                        color: Colors.grey.shade500,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            )
-                            : Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 0,
-                              ),
+                        SizedBox(
+                          height: 400,
+                          child: CachedFileListWidget(
+                            subjectId: widget.subject.id,
+                            fileType: FileResourceType.assignments,
+                            itemBuilder: (file) => _buildAssignmentCard(file),
+                            onFileTap: _openFile,
+                            onError: (error) {
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: AppText('Error: $error'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              }
+                            },
+                            emptyWidget: Center(
                               child: Column(
-                                children:
-                                    _filteredAssignments
-                                        .map(
-                                          (assignment) => Padding(
-                                            padding: const EdgeInsets.only(
-                                              bottom: 8,
-                                            ),
-                                            child: _buildAssignmentCard(
-                                              assignment,
-                                            ),
-                                          ),
-                                        )
-                                        .toList(),
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.assignment_outlined,
+                                    size: 64,
+                                    color: Colors.grey.shade400,
+                                  ),
+                                  SizedBox(height: 16),
+                                  AppText(
+                                    'No assignments found',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.grey.shade600,
+                                    ),
+                                  ),
+                                  SizedBox(height: 8),
+                                  AppText(
+                                    'Pull to refresh or check back later',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 14,
+                                      color: Colors.grey.shade500,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
+                            padding: EdgeInsets.zero,
+                          ),
+                        ),
                       ],
                     ),
                   ),

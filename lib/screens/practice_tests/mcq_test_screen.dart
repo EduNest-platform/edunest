@@ -18,7 +18,8 @@ import 'dart:io';
 class MCQTestScreen extends StatefulWidget {
   final Subject? subject;
   final Map<String, dynamic>? chapter;
-  final String? difficulty;
+  final String? difficulty; // Keep for backward compatibility
+  final String? practiceMode; // New practice mode parameter
   final int? questionCount;
   final Map<String, dynamic>? assignedTest;
   final bool? isProctored;
@@ -28,6 +29,7 @@ class MCQTestScreen extends StatefulWidget {
     this.subject,
     this.chapter,
     this.difficulty,
+    this.practiceMode,
     this.questionCount,
     this.assignedTest,
     this.isProctored,
@@ -37,31 +39,163 @@ class MCQTestScreen extends StatefulWidget {
   State<MCQTestScreen> createState() => _MCQTestScreenState();
 }
 
+// Cache management for MCQ questions
+class _MCQQuestionCache {
+  static final Map<String, _CachedQuestions> _practiceCache = {};
+  static final Map<String, _CachedQuestions> _assignedCache = {};
+  static final Map<String, _CachedTestCompletion> _completionCache = {};
+  
+  // Cache practice test questions
+  static void cachePracticeQuestions(
+    String topicId,
+    String practiceMode,
+    int questionCount,
+    List<Map<String, dynamic>> questions,
+  ) {
+    final key = '${topicId}_${practiceMode}_$questionCount';
+    _practiceCache[key] = _CachedQuestions(
+      questions: questions,
+      timestamp: DateTime.now(),
+      validityMinutes: 30, // 30 minutes validity for practice questions
+    );
+  }
+  
+  static List<Map<String, dynamic>>? getPracticeQuestions(
+    String topicId,
+    String practiceMode,
+    int questionCount,
+  ) {
+    final key = '${topicId}_${practiceMode}_$questionCount';
+    final cached = _practiceCache[key];
+    if (cached != null && cached.isValid) {
+      return cached.questions;
+    }
+    return null;
+  }
+  
+  // Cache assigned test questions
+  static void cacheAssignedQuestions(
+    String testTitle,
+    List<Map<String, dynamic>> questions,
+  ) {
+    _assignedCache[testTitle] = _CachedQuestions(
+      questions: questions,
+      timestamp: DateTime.now(),
+      validityMinutes: 5, // 5 minutes validity for assigned test questions
+    );
+  }
+  
+  static List<Map<String, dynamic>>? getAssignedQuestions(String testTitle) {
+    final cached = _assignedCache[testTitle];
+    if (cached != null && cached.isValid) {
+      return cached.questions;
+    }
+    return null;
+  }
+  
+  // Cache test completion status
+  static void cacheTestCompletion(String testTitle, bool isCompleted) {
+    _completionCache[testTitle] = _CachedTestCompletion(
+      isCompleted: isCompleted,
+      timestamp: DateTime.now(),
+      validityMinutes: 10, // 10 minutes validity for completion status
+    );
+  }
+  
+  static bool? getTestCompletion(String testTitle) {
+    final cached = _completionCache[testTitle];
+    if (cached != null && cached.isValid) {
+      return cached.isCompleted;
+    }
+    return null;
+  }
+  
+  // Clear expired cache entries periodically
+  static void clearExpiredCache() {
+    _practiceCache.removeWhere((key, value) => !value.isValid);
+    _assignedCache.removeWhere((key, value) => !value.isValid);
+    _completionCache.removeWhere((key, value) => !value.isValid);
+  }
+}
+
+class _CachedQuestions {
+  final List<Map<String, dynamic>> questions;
+  final DateTime timestamp;
+  final int validityMinutes;
+  
+  _CachedQuestions({
+    required this.questions,
+    required this.timestamp,
+    required this.validityMinutes,
+  });
+  
+  bool get isValid {
+    return DateTime.now().difference(timestamp).inMinutes < validityMinutes;
+  }
+}
+
+class _CachedTestCompletion {
+  final bool isCompleted;
+  final DateTime timestamp;
+  final int validityMinutes;
+  
+  _CachedTestCompletion({
+    required this.isCompleted,
+    required this.timestamp,
+    required this.validityMinutes,
+  });
+  
+  bool get isValid {
+    return DateTime.now().difference(timestamp).inMinutes < validityMinutes;
+  }
+}
+
 Future<List<Map<String, dynamic>>> fetchQuestionsFromSupabase({
   required String topicId,
-  required String difficulty,
+  required String practiceMode,
   required int questionCount,
 }) async {
+  // Check cache first
+  final cachedQuestions = _MCQQuestionCache.getPracticeQuestions(
+    topicId,
+    practiceMode,
+    questionCount,
+  );
+  if (cachedQuestions != null) {
+    return cachedQuestions;
+  }
+  
   final client = SupabaseService.client;
   try {
-    // Always fetch 15 questions from the database (the maximum pool size)
+    // Always fetch 20 questions from the database (the maximum pool size)
     // Then limit to user's requested count to ensure we never have blank questions
     final response = await client
         .from('questions')
         .select()
         .eq('topic_id', topicId)
-        .eq('difficulty', difficulty)
-        .limit(15); // Always fetch from the 15-question pool
+        .eq('practice_mode', practiceMode)
+        .limit(20); // Always fetch from the 20-question pool
 
     final allQuestions = response.cast<Map<String, dynamic>>();
 
+    List<Map<String, dynamic>> result;
     // If we don't have enough questions, return what we have
     if (allQuestions.length < questionCount) {
-      return allQuestions;
+      result = allQuestions;
+    } else {
+      // Take only the requested number of questions
+      result = allQuestions.take(questionCount).toList();
     }
-
-    // Take only the requested number of questions
-    return allQuestions.take(questionCount).toList();
+    
+    // Cache the result
+    _MCQQuestionCache.cachePracticeQuestions(
+      topicId,
+      practiceMode,
+      questionCount,
+      result,
+    );
+    
+    return result;
     } catch (e) {
     throw Exception('Error fetching questions: $e');
   }
@@ -69,6 +203,48 @@ Future<List<Map<String, dynamic>>> fetchQuestionsFromSupabase({
 
 class _MCQTestScreenState extends State<MCQTestScreen>
     with WidgetsBindingObserver, WindowListener {
+  
+  // Helper function to map old difficulty to new practice mode
+  String _mapDifficultyToPracticeMode(String difficulty) {
+    switch (difficulty) {
+      case 'beginner':
+        return 'academic';
+      case 'intermediate':
+        return 'competitive';
+      case 'advanced':
+        return 'career';
+      default:
+        return 'academic';
+    }
+  }
+  
+  // Helper function to get practice mode display name
+  String _getPracticeModeDisplayName(String practiceMode) {
+    switch (practiceMode) {
+      case 'academic':
+        return 'Academic Mode';
+      case 'competitive':
+        // Dynamically determine based on questions content
+        if (_questions.isNotEmpty && _areQuestionsGateRelated(_questions)) {
+          return 'GATE Prep Mode';
+        } else {
+          return 'Competitive Exam Mode';
+        }
+      case 'career':
+        return 'Career Prep Mode';
+      default:
+        return practiceMode;
+    }
+  }
+
+  // Helper function to detect if questions are GATE-related
+  bool _areQuestionsGateRelated(List<Map<String, dynamic>> questions) {
+    if (questions.isEmpty) return false;
+    
+    // Check if any question contains GATE references
+    return questions.any((q) => 
+      q['question'].toString().toLowerCase().contains('gate'));
+  }
   List<Map<String, dynamic>> _questions = [];
   int _currentQuestionIndex = 0;
   final Map<int, String> _userAnswers = {};
@@ -138,6 +314,8 @@ class _MCQTestScreenState extends State<MCQTestScreen>
     _navigatorScrollController.dispose();
     // Dispose question scroll controller
     _questionScrollController.dispose();
+    // Clean up expired cache entries periodically
+    _MCQQuestionCache.clearExpiredCache();
     // stopScreenMonitoring();
     super.dispose();
   }
@@ -164,22 +342,16 @@ class _MCQTestScreenState extends State<MCQTestScreen>
         );
 
         if (success) {
-          print('Android proctoring started successfully');
         } else {
-          print('Failed to start Android proctoring');
         }
       } else {
-        print('Advanced Android proctoring not supported on this device');
       }
     } catch (e) {
-      print('Error initializing Android proctoring: $e');
     }
   }
 
   /// Handle Android proctoring violations
   void _handleAndroidViolation(String violation) {
-    print('Android proctoring violation: $violation');
-
     // Auto-submit the test on violation
     if (!_autoSubmitted) {
       _autoSubmitted = true;
@@ -189,8 +361,6 @@ class _MCQTestScreenState extends State<MCQTestScreen>
 
   /// Handle Android test termination
   void _handleAndroidTestTermination() {
-    print('Android proctoring terminated the test');
-
     // Navigate back to test results
     if (mounted) {
       Navigator.of(context).pop();
@@ -203,7 +373,6 @@ class _MCQTestScreenState extends State<MCQTestScreen>
 
     try {
       final status = await AndroidProctoringService.getProctoringStatus();
-      print('Android Proctoring Status: $status');
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -218,7 +387,6 @@ class _MCQTestScreenState extends State<MCQTestScreen>
         );
       }
     } catch (e) {
-      print('Error getting proctoring status: $e');
     }
   }
 
@@ -313,9 +481,20 @@ class _MCQTestScreenState extends State<MCQTestScreen>
           widget.assignedTest!['title'] ??
           '';
       if (testTitle.isNotEmpty) {
-        final isCompleted = await TestResultsService.hasUserCompletedTest(
-          testTitle,
-        );
+        // Check cache first
+        bool? cachedCompletion = _MCQQuestionCache.getTestCompletion(testTitle);
+        bool isCompleted;
+        
+        if (cachedCompletion != null) {
+          isCompleted = cachedCompletion;
+        } else {
+          isCompleted = await TestResultsService.hasUserCompletedTest(
+            testTitle,
+          );
+          // Cache the result
+          _MCQQuestionCache.cacheTestCompletion(testTitle, isCompleted);
+        }
+        
         if (isCompleted && mounted) {
           // Show completion message and go back
           ScaffoldMessenger.of(context).showSnackBar(
@@ -349,12 +528,23 @@ class _MCQTestScreenState extends State<MCQTestScreen>
     });
     try {
       if (isAssignedTest) {
-        final questions =
-            await AssignedMCQSupabaseService.fetchQuestionsForTest(
-              widget.assignedTest!['test_name'] ??
+        final testTitle = widget.assignedTest!['test_name'] ??
                   widget.assignedTest!['title'] ??
-                  '',
-            );
+                  '';
+        
+        // Check cache first
+        List<Map<String, dynamic>>? cachedQuestions = 
+            _MCQQuestionCache.getAssignedQuestions(testTitle);
+            
+        List<Map<String, dynamic>> questions;
+        if (cachedQuestions != null) {
+          questions = cachedQuestions;
+        } else {
+          questions = await AssignedMCQSupabaseService.fetchQuestionsForTest(testTitle);
+          // Cache the result
+          _MCQQuestionCache.cacheAssignedQuestions(testTitle, questions);
+        }
+        
         setState(() {
           _questions = questions;
           _isLoading = false;
@@ -370,9 +560,12 @@ class _MCQTestScreenState extends State<MCQTestScreen>
           });
           return;
         }
+        // Use practice mode if available, fallback to difficulty for backward compatibility
+        final mode = widget.practiceMode ?? _mapDifficultyToPracticeMode(widget.difficulty ?? 'academic');
+        
         final questions = await fetchQuestionsFromSupabase(
           topicId: widget.chapter!['id'],
-          difficulty: widget.difficulty!,
+          practiceMode: mode,
           questionCount: widget.questionCount!,
         );
         setState(() {
@@ -457,7 +650,6 @@ class _MCQTestScreenState extends State<MCQTestScreen>
 
     // Log violation if present
     if (violation != null) {
-      print('PROCTORING_VIOLATION: $violation - Test auto-submitted');
       // TODO: Send violation to backend for logging
     }
 
@@ -530,12 +722,15 @@ class _MCQTestScreenState extends State<MCQTestScreen>
           });
         }
       } else {
+        // Use practice mode if available, fallback to difficulty for backward compatibility
+        final mode = widget.practiceMode ?? _mapDifficultyToPracticeMode(widget.difficulty ?? 'academic');
+        
         await TestResultsService.saveTestResult(
           subjectId: widget.subject!.id,
           subjectName: widget.subject!.name,
           chapterId: widget.chapter!['id'],
           chapterName: widget.chapter!['name'],
-          difficulty: widget.difficulty!,
+          difficulty: mode, // Save practice mode as difficulty for now
           score: score,
           correctAnswers: correctAnswers,
           totalQuestions: totalQuestions,
@@ -549,7 +744,7 @@ class _MCQTestScreenState extends State<MCQTestScreen>
                   (context) => TestResultsScreen(
                     subject: widget.subject!,
                     chapter: widget.chapter!,
-                    difficulty: widget.difficulty!,
+                    difficulty: widget.practiceMode ?? _mapDifficultyToPracticeMode(widget.difficulty ?? 'academic'),
                     score: score,
                     percentage: percentage,
                     correctAnswers: correctAnswers,
@@ -942,7 +1137,7 @@ class _MCQTestScreenState extends State<MCQTestScreen>
             Text(
               isAssignedTest
                   ? 'No questions available for this assigned test.'
-                  : 'No questions available for this topic and difficulty.',
+                  : 'No questions available for this topic and practice mode.',
               style: GoogleFonts.poppins(
                 fontSize: 18,
                 color: Colors.grey.shade600,
@@ -954,7 +1149,7 @@ class _MCQTestScreenState extends State<MCQTestScreen>
               const SizedBox(height: 12),
               Text(
                 'Topic ID: '
-                '${widget.chapter?['id'] ?? ''}\nDifficulty: ${widget.difficulty ?? ''}',
+                '${widget.chapter?['id'] ?? ''}\nPractice Mode: ${_getPracticeModeDisplayName(widget.practiceMode ?? _mapDifficultyToPracticeMode(widget.difficulty ?? 'academic'))}',
                 style: GoogleFonts.poppins(
                   fontSize: 14,
                   color: Colors.grey.shade400,
@@ -1206,7 +1401,7 @@ class _MCQTestScreenState extends State<MCQTestScreen>
                                       ? FontWeight.w700
                                       : FontWeight.w500,
                             ),
-                            maxLines: 2,
+                            maxLines: 5,
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),

@@ -1,19 +1,36 @@
 // Branch Management JavaScript
 
 // Check authentication on page load
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
   if (!sessionStorage.getItem('adminLoggedIn')) {
     window.location.href = 'index.html';
     return;
   }
   
+  // Initialize the page asynchronously
+  await initializePage();
+  
+  // Add scroll detection for mobile/tablet navbar
+  addScrollDetection();
+  
+  // Add search functionality
+  const searchInput = document.getElementById('branchSearchInput');
+  if (searchInput) {
+    searchInput.addEventListener('input', function() {
+      filterBranches(this.value);
+    });
+  }
+});
+
+// Initialize page with proper async handling
+async function initializePage() {
   // Check for college parameter in URL
   const urlParams = new URLSearchParams(window.location.search);
   const collegeId = urlParams.get('college');
   
   if (collegeId) {
-    // Load college details and set in sessionStorage
-    loadCollegeDetails(collegeId);
+    // Load college details and wait for completion
+    await loadCollegeDetails(collegeId);
   } else {
     // Check if we have a selected college in sessionStorage
     const selectedCollege = sessionStorage.getItem('selectedCollege');
@@ -27,19 +44,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
   
-  loadBranches();
-  
-  // Add scroll detection for mobile/tablet navbar
-  addScrollDetection();
-  
-  // Add search functionality
-  const searchInput = document.getElementById('branchSearchInput');
-  if (searchInput) {
-    searchInput.addEventListener('input', function() {
-      filterBranches(this.value);
-    });
-  }
-});
+  // Now load branches after college details are set
+  await loadBranches();
+}
 
 // Load college details by ID and set in sessionStorage
 async function loadCollegeDetails(collegeId) {

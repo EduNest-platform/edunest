@@ -1,0 +1,184 @@
+EduNest - New User Quick Start Guide
+=========================================
+
+Welcome to Your Smart Learning Journey!
+
+This simple guide will help you get started withCONGRATULATIONS!
+================
+
+You're now ready to use EduNest! 
+
+Remember:
+- Use the app regularly to track your progress
+- Try all three practice test modes for comprehensive preparation
+- Keep your attendance updated daily
+
+Happy Learning! 🎓📱
+
+---
+EduNest Team - Making Education Smart and Simpled explore all the amazing features.
+
+STEP 1: DOWNLOAD & INSTALL EDUNEST APK
+=======================================
+
+System Requirements:
+- Android Version: 6.0 or higher
+- Storage Space: At least 50MB free space
+- Internet: Required for setup and syncing
+
+Installation Steps:
+
+1. Download the APK:
+   **Option A - From WhatsApp/Direct Share:**
+   - Receive the EduNest.apk file via WhatsApp or direct share
+   - Tap to download and save to your device
+   
+   **Option B - From Download Page:**
+   - Visit: edunest.me/EduNest-download
+   - Tap "Download APK" button for Android
+   - Save the EduNest.apk file to your device
+
+2. Open with Package Installer:
+   - Once download is complete, tap the downloaded file
+   - Select "Package installer" when prompted with "Open with" dialog
+   
+   📱 Screens you will see:
+   • "Open with Package Installer" popup
+   • EduNest.apk installation progress screen
+   
+   ⏳ Important: Wait 4–5 minutes for installation to complete. 
+   Do not close the screen during installation.
+
+3. Grant Permissions:
+   - Follow the on-screen installation prompts
+   - Allow necessary permissions when asked
+   - Tap "Install" to complete the process
+
+STEP 2: CREATE YOUR ACCOUNT
+============================
+
+Simple Registration:
+
+1. Launch EduNest:
+   - Tap the EduNest icon
+   - Wait for the app to load
+
+2. Sign Up:
+   - Tap "Sign Up" or "Create New Account"
+   - Fill in these details:
+     • Your Full Name
+     • Email Address
+     • Password (minimum 6 characters)
+     • Confirm Password
+
+3. Email Verification:
+   - Check your email inbox (and spam folder)
+   - Click the verification link
+   - Return to app and login with your credentials
+
+STEP 3: COMPLETE YOUR ACADEMIC PROFILE
+=======================================
+
+After login, you'll set up your academic information:
+
+1. College Selection:
+   - Choose your college from the dropdown
+   - Search if you don't see it listed
+
+2. Branch & Semester:
+   - Select your branch/department
+   - Choose current semester
+
+3. Roll Number:
+   - Enter your roll number (important for attendance)
+   - This helps professors track your attendance
+
+4. Save Profile:
+   - Tap "Continue" to save your profile
+   - You'll be taken to the home screen
+
+DESKTOP APP INSTALLATION (WINDOWS USERS)
+=========================================
+
+For Windows/Desktop Users:
+
+Download Process:
+1. Visit: https://edunest.me/EduNest-download-page/
+2. Click "Download EduNest for Windows"
+3. Save the installer file to your computer
+
+Installation Steps:
+1. **Run the Installer**:
+   - Double-click the downloaded EduNest installer
+   - You may see a Windows Defender warning
+
+2. **Handle Windows Defender Warning**:
+   📱 You will see: "Windows protected your PC" message
+   - This is normal for new applications
+   - Click "More info" link
+   - Then click "Run anyway" button
+   - This allows the EduNest installer to proceed
+
+3. **Complete Installation**:
+   - Follow the installation wizard
+   - Choose installation location (or use default)
+   - Wait for installation to complete
+   - Launch EduNest from desktop shortcut
+
+Note: The Windows Defender warning appears because EduNest is a new application. It's completely safe to proceed with "Run anyway".
+
+STEP 4: EXPLORE THE MAIN FEATURES
+==================================
+
+Home Screen Overview:
+Once logged in, you'll see the main dashboard with quick access to all features.
+
+📚 Study Resources:
+- **Notes**: Subject-wise study materials and lecture notes
+- **Assignments**: Homework, projects, and submission tracking
+- **Previous Year Questions**: Past exam papers for practice
+- **Lab Manuals**: Step-by-step practical guides
+- **Code Examples**: Programming references and sample codes
+
+🧠 Practice Tests (3 Modes):
+- **Academic Mode**: Prepare for university exams
+- **Competitive Mode**: GATE, JEE, NEET preparation  
+- **Career Mode**: Interview and job preparation
+- **AI Questions**: Smart question generation based on your subjects
+- **Instant Results**: Get immediate feedback and explanations
+
+📊 Attendance Tracking:
+- **Daily Marking**: Mark attendance for each class
+- **75% Calculator**: Automatic attendance percentage tracking
+- **Analytics**: View attendance trends and patterns
+- **Professor Sync**: Connect with professor's attendance records
+
+📈 Performance Features:
+- **Assignment Marks**: Track your grades and progress
+- **Subject Feedback**: Give anonymous feedback for subjects
+- **Progress Analytics**: Monitor your academic performance
+
+STEP 5: DAILY USAGE TIPS
+=========================
+
+Getting Started:
+1. **Browse Subjects**: Explore all your subjects from the home screen
+2. **Take a Practice Test**: Try different modes to see how they work
+3. **Mark Today's Attendance**: Start tracking your attendance immediately
+4. **Download Study Materials**: Get your first set of notes and assignments
+
+QUICK TROUBLESHOOTING
+======================
+
+Common Issues:
+- **App won't load**: Check your internet connection
+- **Login problems**: Verify email and password, check if email is verified
+- **Attendance not syncing**: Ensure you entered correct roll number
+- **Files won't download**: Check storage space and permissions
+- **Forgot password**: Use "Forgot Password" link on login screen
+
+GETTING HELP
+=============
+ If you face any problem, message at : 8637008441
+ Or email: ranojitdas362@gmail.com
+

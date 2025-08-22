@@ -3,6 +3,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../theme/app_theme.dart';
 import '../../../models/subject.dart';
 import '../../../services/files_service.dart';
+import '../../../services/cached_file_resource_service.dart';
+import '../../../widgets/cached_file_list_widget.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../widgets/app_text.dart';
 import '../../common/pdf_viewer_screen.dart';
@@ -21,8 +23,6 @@ class _CodeScreenState extends State<CodeScreen> {
   String _searchQuery = '';
   String _selectedLanguage = 'All';
   String _selectedComplexity = 'All';
-  bool _isLoading = true;
-  List<FileResource> _allCode = [];
 
   List<String> get _languages => ['All', 'C++', 'Java', 'Python', 'JavaScript'];
 
@@ -32,44 +32,6 @@ class _CodeScreenState extends State<CodeScreen> {
     'Intermediate',
     'Advanced',
   ];
-
-  @override
-  void initState() {
-    super.initState();
-    _fetchCode();
-  }
-
-  Future<void> _fetchCode() async {
-    setState(() => _isLoading = true);
-    final files = await FilesService.getFiles(widget.subject.id, 'code');
-    setState(() {
-      _allCode = files;
-      _isLoading = false;
-    });
-  }
-
-  List<FileResource> get _filteredCode {
-    return _allCode.where((code) {
-      final name = code.name.toLowerCase();
-      final desc = code.description.toLowerCase();
-      final tags =
-          (code.metadata['tags'] as List?)?.map(
-            (e) => e.toString().toLowerCase(),
-          ) ??
-          [];
-      final matchesSearch =
-          name.contains(_searchQuery.toLowerCase()) ||
-          desc.contains(_searchQuery.toLowerCase()) ||
-          tags.any((tag) => tag.contains(_searchQuery.toLowerCase()));
-      final language = code.metadata['language']?.toString() ?? '';
-      final complexity = code.metadata['complexity']?.toString() ?? '';
-      final matchesLanguage =
-          _selectedLanguage == 'All' || language == _selectedLanguage;
-      final matchesComplexity =
-          _selectedComplexity == 'All' || complexity == _selectedComplexity;
-      return matchesSearch && matchesLanguage && matchesComplexity;
-    }).toList();
-  }
 
   Color _getComplexityColor(String complexity) {
     switch (complexity.toLowerCase()) {
@@ -132,7 +94,7 @@ class _CodeScreenState extends State<CodeScreen> {
                       ),
                     ),
                     AppText(
-                      '${_allCode.length} code examples available',
+                      'Browse code examples and samples',
                       style: GoogleFonts.poppins(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
@@ -559,9 +521,6 @@ class _CodeScreenState extends State<CodeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const Center(child: CircularProgressIndicator(color: Colors.teal));
-    }
     return Scaffold(
       appBar:
           widget.showAppBar
@@ -619,59 +578,63 @@ class _CodeScreenState extends State<CodeScreen> {
           // Dismiss keyboard when tapping outside
           FocusScope.of(context).unfocus();
         },
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _buildHeader(),
-              _buildSearchBar(),
-              _buildFilters(),
-              const SizedBox(height: 8),
-              _filteredCode.isEmpty
-                  ? SizedBox(
-                    height: 300,
-                    child: Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.code_outlined,
-                            size: 64,
-                            color: Colors.grey.shade400,
-                          ),
-                          const SizedBox(height: 16),
-                          AppText(
-                            'No code examples found',
-                            style: GoogleFonts.poppins(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          AppText(
-                            'Try adjusting your filters',
-                            style: GoogleFonts.poppins(
-                              fontSize: 14,
-                              color: Colors.grey.shade500,
-                            ),
-                          ),
-                        ],
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _buildHeader(),
+            _buildSearchBar(),
+            _buildFilters(),
+            const SizedBox(height: 8),
+            Expanded(
+              child: CachedFileListWidget(
+                subjectId: widget.subject.id,
+                fileType: FileResourceType.code,
+                itemBuilder: (file) => _buildCodeCard(file),
+                onFileTap: _openFile,
+                onError: (error) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: AppText('Error: $error'),
+                        backgroundColor: Colors.red,
                       ),
-                    ),
-                  )
-                  : Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: Column(
-                      children:
-                          _filteredCode
-                              .map((code) => _buildCodeCard(code))
-                              .toList(),
-                    ),
+                    );
+                  }
+                },
+                emptyWidget: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.code_outlined,
+                        size: 64,
+                        color: Colors.grey.shade400,
+                      ),
+                      const SizedBox(height: 16),
+                      AppText(
+                        'No code examples found',
+                        style: GoogleFonts.poppins(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      AppText(
+                        'Pull to refresh or check back later',
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          color: Colors.grey.shade500,
+                        ),
+                      ),
+                    ],
                   ),
-              const SizedBox(height: 20),
-            ],
-          ),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+              ),
+            ),
+            const SizedBox(height: 20),
+          ],
         ),
       ),
     );

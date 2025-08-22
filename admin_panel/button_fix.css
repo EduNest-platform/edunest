@@ -1,0 +1,49 @@
+/* Fix for Add New Class button */
+.add-btn {
+  background: #3b82f6 !important;
+  color: white !important;
+  border: none !important;
+  padding: 12px 24px !important;
+  border-radius: 8px !important;
+  cursor: pointer !important;
+  font-weight: 600 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  transition: background-color 0.2s !important;
+  z-index: 1000 !important;
+  position: relative !important;
+}
+
+.add-btn:hover {
+  background: #2563eb !important;
+}
+
+.add-btn:active {
+  background: #1d4ed8 !important;
+}
+
+.section-header {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  margin-bottom: 24px !important;
+}
+
+/* Ensure modal is properly styled */
+.modal {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  background: rgba(0, 0, 0, 0.5) !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  z-index: 9999 !important;
+}
+
+.modal.hidden {
+  display: none !important;
+}

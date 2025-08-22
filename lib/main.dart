@@ -17,22 +17,18 @@ import 'screens/notifications/notifications_screen.dart';
 import 'screens/help/help_support_screen.dart';
 import 'screens/about/about_screen.dart';
 import 'screens/home/academic_info_screen.dart';
-
 import 'services/supabase_service.dart';
 import 'services/network_service.dart';
+import 'services/monitoring_reporting_service.dart';
+import 'services/free_plan_optimizer_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-
-// Import for kReleaseMode and platform checks
-import 'package:flutter/foundation.dart' show kReleaseMode, defaultTargetPlatform, TargetPlatform, kIsWeb;
-import 'dart:io' show Platform;
-
+import 'package:flutter/foundation.dart'
+    show kReleaseMode, defaultTargetPlatform, TargetPlatform;
 import 'package:window_manager/window_manager.dart';
 import 'dart:async';
-
-// Import Device Preview
 import 'package:device_preview/device_preview.dart';
-
+import 'package:app_links/app_links.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -48,69 +44,93 @@ void main() {
         () async {
       WidgetsFlutterBinding.ensureInitialized();
 
-      // Only initialize window_manager on desktop platforms
       if (defaultTargetPlatform == TargetPlatform.windows ||
           defaultTargetPlatform == TargetPlatform.linux ||
           defaultTargetPlatform == TargetPlatform.macOS) {
         await windowManager.ensureInitialized();
       }
 
-      // Initialize Firebase first!
-      // Enable Crashlytics and set up error handling only on supported platforms
-      final isCrashlyticsSupported =
-          kIsWeb || (Platform.isAndroid || Platform.isIOS);
-      print(
-        'Crashlytics supported: '
-            ' [33m$isCrashlyticsSupported [0m (kIsWeb: $kIsWeb, Platform: ${Platform.operatingSystem})',
-      );
-      // if (isCrashlyticsSupported) {
-      //   await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(
-      //     true,
-      //   );
-      //   FlutterError.onError =
-      //       FirebaseCrashlytics.instance.recordFlutterFatalError;
-      // }
-
-      // // Initialize Firebase Performance
-      // await FirebasePerformance.instance;
-
-      // Now initialize other services
       await SupabaseService.init();
       NetworkService().initialize();
+      
+      // 🚀 Initialize monitoring and optimization services
+      try {
+        await FreePlanOptimizerService.initialize();
+        await MonitoringReportingService.initialize();
+      } catch (e) {
+        // Continue without monitoring - app should still work
+      }
 
-      // Wrap your app with DevicePreview
       runApp(
         DevicePreview(
-          enabled: !kReleaseMode, // Disable in release builds
-          builder: (context) => const MyApp(), // Wrap your app
+          enabled: !kReleaseMode,
+          builder: (context) => const MyApp(),
         ),
       );
     },
         (error, stack) {
-      final isCrashlyticsSupported =
-          kIsWeb || (Platform.isAndroid || Platform.isIOS);
-      // if (isCrashlyticsSupported) {
-      //   FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
-      // } else {
-      // Optionally print or handle errors differently on unsupported platforms
-      print('Unhandled error: $error\n$stack');
-      // }
+      // Handle silently in production
     },
   );
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  late AppLinks _appLinks;
+  StreamSubscription<Uri>? _linkSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _appLinks = AppLinks();
+    _handleInitialLink();
+    _handleIncomingLinks();
+  }
+
+  @override
+  void dispose() {
+    _linkSubscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _handleInitialLink() async {
+    try {
+      final initialUri = await _appLinks.getInitialLink();
+      if (initialUri != null) {
+        _processLink(initialUri);
+      }
+    } catch (e) {
+      // Handle silently in production
+    }
+  }
+
+  void _handleIncomingLinks() {
+    _linkSubscription = _appLinks.uriLinkStream.listen((Uri uri) {
+      _processLink(uri);
+    }, onError: (err) {
+      // Handle silently in production
+    });
+  }
+
+  void _processLink(Uri uri) {
+    if (uri.host == 'login-callback') {
+      navigatorKey.currentState
+          ?.pushNamedAndRemoveUntil('/login-callback', (route) => false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      // --- Add these 3 lines for Device Preview ---
       useInheritedMediaQuery: true,
       locale: DevicePreview.locale(context),
       builder: DevicePreview.appBuilder,
-      // --------------------------------------------
-
       navigatorKey: navigatorKey,
       title: 'EduNest',
       debugShowCheckedModeBanner: false,
@@ -121,6 +141,7 @@ class MyApp extends StatelessWidget {
       initialRoute: '/',
       routes: {
         '/': (context) => const SplashScreen(),
+        '/login-callback': (context) => const LoginScreen(),
         '/login': (context) => const LoginScreen(),
         '/signup': (context) => const SignupScreen(),
         '/profile-setup': (context) => const ProfileSetupScreen(),
@@ -137,7 +158,7 @@ class MyApp extends StatelessWidget {
         '/notifications': (context) => const NotificationsScreen(),
         '/help-support': (context) => const HelpSupportScreen(),
         '/about': (context) => const AboutScreen(),
-        '/academic-info': (context) => const AcademicInfoScreen(subjectId: ''),
+        '/academic-info': (context) => const AcademicInfoScreen(),
       },
     );
   }

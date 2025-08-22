@@ -8,6 +8,27 @@
   <link rel="stylesheet" href="topic_edit.css">
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <script src="supabaseClient.js"></script>
+  <!-- MathJax for mathematical expressions -->
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']],
+        displayMath: [['$$', '$$'], ['\\[', '\\]']],
+        processEscapes: true,
+        processEnvironments: true
+      },
+      options: {
+        skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre'],
+        ignoreHtmlClass: 'tex2jax_ignore',
+        processHtmlClass: 'tex2jax_process'
+      },
+      startup: {
+        typeset: false
+      }
+    };
+  </script>
 </head>
 <body>
   <div class="main-bg"></div>
@@ -278,24 +299,28 @@
           <div class="option-group">
             <label style="font-weight: 600; color: #374151; margin-right: 8px;">Questions:</label>
             <select id="questionCountSelect" style="padding: 6px 12px; border-radius: 6px; border: 1.5px solid #d1d5db; font-size: 0.95em;">
-              <option value="5">5 Questions</option>
-              <option value="10" selected>10 Questions</option>
-              <option value="15">15 Questions</option>
+              <option value="10">10 Questions</option>
+              <option value="15" selected>15 Questions</option>
+              <option value="20">20 Questions</option>
             </select>
           </div>
           <div class="option-group">
-            <label style="font-weight: 600; color: #374151; margin-right: 8px;">Difficulty:</label>
-            <select id="difficultySelect" style="padding: 6px 12px; border-radius: 6px; border: 1.5px solid #d1d5db; font-size: 0.95em;">
-              <option value="beginner" selected>Beginner</option>
-              <option value="intermediate">Intermediate</option>
-              <option value="advanced">Advanced</option>
+            <label style="font-weight: 600; color: #374151; margin-right: 8px;">Practice Mode:</label>
+            <select id="practiceModeSelect" style="padding: 6px 12px; border-radius: 6px; border: 1.5px solid #d1d5db; font-size: 0.95em;">
+              <option value="academic" selected>📚 Academic Mode</option>
+              <option value="competitive">🎯 Competitive Exam Mode</option>
+              <option value="career">💼 Career Prep Mode</option>
             </select>
           </div>
         </div>
         <button id="generateQuestionsBtn" class="submit-btn">Generate Questions with AI</button>
+        <button id="generateAllModesBtn" class="submit-btn" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); margin-top: 12px;">
+          <span id="generateAllModesText">Generate 20 Questions for All Modes</span>
+          <span id="generateAllModesSubtext" style="font-size: 0.85em; opacity: 0.9; display: block; margin-top: 2px;">Creates 60 questions total (20 per mode)</span>
+        </button>
       </div>
       
-      <!-- Questions by Difficulty Cards -->
+      <!-- Questions by Practice Mode Cards -->
       <div id="questionsCardsContainer" class="questions-cards-container">
         <!-- Cards will be dynamically generated here -->
       </div>
@@ -315,6 +340,70 @@
           <div id="modalQuestionsList" class="modal-questions-list">
             <!-- Questions will be loaded here -->
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Edit Question Modal -->
+    <div id="editQuestionModal" class="questions-modal hidden">
+      <div class="modal-overlay"></div>
+      <div class="modal-content edit-modal-content">
+        <div class="modal-header">
+          <h3 id="editModalTitle">Edit Question</h3>
+          <button id="closeEditModalBtn" class="close-modal-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+          <form id="editQuestionForm" class="edit-question-form">
+            <input type="hidden" id="editQuestionId" />
+            
+            <div class="form-group">
+              <label for="editQuestionText" class="form-label">Question Text</label>
+              <textarea id="editQuestionText" class="form-input" rows="3" placeholder="Enter the question..." required></textarea>
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">Options</label>
+              <div id="editOptionsContainer" class="options-container">
+                <div class="option-item">
+                  <span class="option-label">A.</span>
+                  <input type="text" class="form-input option-input" placeholder="Option A" required>
+                  <button type="button" class="remove-option-btn" style="display: none;">×</button>
+                </div>
+                <div class="option-item">
+                  <span class="option-label">B.</span>
+                  <input type="text" class="form-input option-input" placeholder="Option B" required>
+                  <button type="button" class="remove-option-btn" style="display: none;">×</button>
+                </div>
+                <div class="option-item">
+                  <span class="option-label">C.</span>
+                  <input type="text" class="form-input option-input" placeholder="Option C" required>
+                  <button type="button" class="remove-option-btn">×</button>
+                </div>
+                <div class="option-item">
+                  <span class="option-label">D.</span>
+                  <input type="text" class="form-input option-input" placeholder="Option D" required>
+                  <button type="button" class="remove-option-btn">×</button>
+                </div>
+              </div>
+              <button type="button" id="addOptionBtn" class="add-option-btn">+ Add Option</button>
+            </div>
+            
+            <div class="form-group">
+              <label for="editCorrectAnswer" class="form-label">Correct Answer</label>
+              <select id="editCorrectAnswer" class="form-input" required>
+                <option value="">Select correct answer</option>
+                <option value="0">A</option>
+                <option value="1">B</option>
+                <option value="2">C</option>
+                <option value="3">D</option>
+              </select>
+            </div>
+            
+            <div class="form-actions">
+              <button type="button" id="cancelEditBtn" class="cancel-btn">Cancel</button>
+              <button type="submit" id="saveEditBtn" class="save-btn">Save Changes</button>
+            </div>
+          </form>
         </div>
       </div>
     </div>
@@ -362,6 +451,107 @@
     }
     .delete-btn:hover {
       background: #ef4444;
+    }
+    
+    /* Mathematical expressions and diagrams styling */
+    .question-math {
+      font-family: 'Times New Roman', serif;
+      text-align: center;
+      margin: 15px 0;
+      padding: 10px;
+      background: #f8fafc;
+      border-radius: 8px;
+      border-left: 4px solid #6366f1;
+    }
+    
+    .question-diagram {
+      font-family: 'Courier New', monospace;
+      white-space: pre;
+      background: #f1f5f9;
+      padding: 15px;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+      overflow-x: auto;
+      margin: 15px 0;
+      font-size: 0.9em;
+      line-height: 1.2;
+    }
+    
+    .question-table {
+      margin: 15px 0;
+      overflow-x: auto;
+    }
+    
+    .question-table table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #fff;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .question-table th,
+    .question-table td {
+      padding: 8px 12px;
+      text-align: center;
+      border: 1px solid #e2e8f0;
+    }
+    
+    .question-table th {
+      background: #f8fafc;
+      font-weight: 600;
+      color: #374151;
+    }
+    
+    .question-content {
+      line-height: 1.6;
+    }
+    
+    .question-content .math-inline {
+      display: inline-block;
+      margin: 0 2px;
+    }
+    
+    .question-content .math-display {
+      display: block;
+      text-align: center;
+      margin: 15px 0;
+    }
+    
+    /* Modal content mathematical rendering */
+    .modal-question-text,
+    .modal-question-options,
+    .modal-question-answer {
+      font-family: inherit;
+    }
+    
+    .modal-question-text .question-math,
+    .modal-question-options .question-math {
+      margin: 10px 0;
+    }
+    
+    /* Edit modal improvements for math content */
+    .form-input {
+      font-family: inherit;
+    }
+    
+    .option-input {
+      min-height: 40px;
+      resize: vertical;
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+      .question-diagram {
+        font-size: 0.8em;
+        padding: 10px;
+      }
+      
+      .question-math {
+        font-size: 0.9em;
+        padding: 8px;
+      }
     }
   </style>
 </body>

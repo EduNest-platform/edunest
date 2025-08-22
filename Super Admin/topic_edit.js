@@ -81,7 +81,9 @@ window.addEventListener('DOMContentLoaded', async () => {
   await loadQuestions();
   document.getElementById('editTopicForm').addEventListener('submit', saveTopic);
   document.getElementById('generateQuestionsBtn').addEventListener('click', generateQuestions);
+  document.getElementById('generateAllModesBtn').addEventListener('click', generateAllModes);
   await loadSavedDescriptions();
+  await checkAllModesStatus();
 });
 
 function showMsg(msg, type = 'info', timeout = 2200) {
@@ -178,17 +180,17 @@ async function loadQuestions() {
       return;
     }
     
-    // Group questions by difficulty and question_count
+    // Group questions by practice_mode and question_count
     const questionsByGroup = {};
     questions.forEach((q, index) => {
-      const difficulty = q.difficulty || 'unknown';
+      const practiceMode = q.practice_mode || q.difficulty || 'academic'; // Fallback for migration
       // Convert question_count to number, default to 0 if invalid
       const questionCount = parseInt(q.question_count) || 0;
-      const groupKey = `${difficulty}_${questionCount}`;
+      const groupKey = `${practiceMode}_${questionCount}`;
       
       if (!questionsByGroup[groupKey]) {
         questionsByGroup[groupKey] = {
-          difficulty,
+          practiceMode,
           questionCount,
           questions: [],
           created_at: q.created_at
@@ -214,39 +216,54 @@ async function loadQuestions() {
 
 function createDifficultyCard(group) {
   const card = document.createElement('div');
-  card.className = `difficulty-card ${group.difficulty}`;
+  card.className = `difficulty-card ${group.practiceMode}`;
   
-  const difficultyIcons = {
-    'beginner': '🌱',
-    'intermediate': '⚡',
-    'advanced': '🔥',
+  const practiceModeIcons = {
+    'academic': '📚',
+    'competitive': '🎯',
+    'career': '💼',
+    // Legacy support during migration
+    'beginner': '📚',
+    'intermediate': '🎯',
+    'advanced': '💼',
     'unknown': '❓'
   };
   
-  const difficultyDescriptions = {
+  const practiceModeDescriptions = {
+    'academic': 'University exam preparation - Core syllabus concepts',
+    'competitive': 'GATE prep - Competitive exam style questions',
+    'career': 'Interview & practical - Job preparation questions',
+    // Legacy support during migration
     'beginner': 'Basic concepts and fundamental knowledge',
     'intermediate': 'Moderate complexity with practical applications',
     'advanced': 'Complex scenarios and deep understanding required',
-    'unknown': 'Questions without specified difficulty'
+    'unknown': 'Questions without specified mode'
   };
   
+  const displayName = group.practiceMode === 'academic' ? 'Academic Mode' :
+                    group.practiceMode === 'competitive' ? 'GATE Prep Mode' :
+                    group.practiceMode === 'career' ? 'Career Prep Mode' :
+                    group.practiceMode;
+
   card.innerHTML = `
     <div class="difficulty-card-header">
       <div class="difficulty-title">
-        <span class="difficulty-icon">${difficultyIcons[group.difficulty]}</span>
-        ${group.difficulty}
+        <span class="difficulty-icon">${practiceModeIcons[group.practiceMode]}</span>
+        ${displayName}
       </div>
       <div class="question-count">${group.questions.length} Q</div>
     </div>
     <div class="difficulty-card-content">
-      ${difficultyDescriptions[group.difficulty]}
+      ${practiceModeDescriptions[group.practiceMode]}
       <br><small>Generated: ${new Date(group.created_at).toLocaleDateString()}</small>
     </div>
-    <div class="difficulty-card-actions">
-      <button class="card-action-btn" onclick="openQuestionsModal('${group.difficulty}', ${group.questionCount})">
+    <div class="difficulty-card-actions" style="margin-top: 12px; display: flex; gap: 8px;">
+      <button class="card-action-btn" onclick="openQuestionsModal('${group.practiceMode}', ${group.questionCount})" 
+              style="background: #6366f1; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 0.9em;">
         View Questions
       </button>
-      <button class="card-action-btn" onclick="deleteQuestionGroup('${group.difficulty}', ${group.questionCount})">
+      <button class="card-action-btn" onclick="deleteQuestionGroup('${group.practiceMode}', ${group.questionCount})"
+              style="background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 0.9em;">
         Delete All
       </button>
     </div>
@@ -292,24 +309,62 @@ window.openQuestionsModal = async function(difficulty, questionCount) {
       questionCard.className = 'modal-question-card';
       
       // Format options with letters (A, B, C, D)
-      const optionsText = q.options && Array.isArray(q.options) 
-        ? q.options.map((opt, optIdx) => `${String.fromCharCode(65 + optIdx)}. ${escapeHtml(opt)}`).join('<br>')
-        : 'No options available';
+      let optionsText = 'No options available';
+      let optionsArray = [];
       
+      if (q.options) {
+        if (Array.isArray(q.options)) {
+          // Already an array
+          optionsArray = q.options;
+        } else if (typeof q.options === 'string') {
+          // Parse JSON string
+          try {
+            const parsedOptions = JSON.parse(q.options);
+            if (Array.isArray(parsedOptions)) {
+              optionsArray = parsedOptions;
+            } else {
+              optionsText = `Invalid options format`;
+            }
+          } catch (e) {
+            optionsText = `Failed to parse options`;
+          }
+        } else {
+          optionsText = `Unexpected options format`;
+        }
+        
+        // Format the options array if we have one
+        if (optionsArray.length > 0) {
+          optionsText = optionsArray.map((opt, optIdx) => {
+            const letter = String.fromCharCode(65 + optIdx);
+            const escaped = escapeHtml(opt);
+            return `${letter}. ${escaped}`;
+          }).join('<br>');
+        }
+      }
+
       // Get correct answer text
-      const correctAnswerText = (typeof q.correctanswer === 'number' && q.options && q.options[q.correctanswer]) 
-        ? escapeHtml(q.options[q.correctanswer])
-        : 'Not specified';
+      let correctAnswerText = 'Not specified';
+      if (typeof q.correctanswer === 'number' && optionsArray.length > 0) {
+        if (optionsArray[q.correctanswer]) {
+          correctAnswerText = escapeHtml(optionsArray[q.correctanswer]);
+        } else {
+          correctAnswerText = `Answer index: ${q.correctanswer} (out of range)`;
+        }
+      } else if (q.correctanswer !== undefined) {
+        correctAnswerText = `Answer: ${q.correctanswer} (type: ${typeof q.correctanswer})`;
+      }
       
       questionCard.innerHTML = `
         <div class="modal-question-text">
           <strong>Q${idx + 1}:</strong> ${escapeHtml(q.question)}
         </div>
-        <div class="modal-question-options">
+        <div class="modal-question-options" style="margin: 10px 0; padding: 10px; background: #f9fafb; border-radius: 6px;">
           <strong>Options:</strong><br>
-          ${optionsText}
+          <div style="margin-top: 8px; line-height: 1.6;">
+            ${optionsText}
+          </div>
         </div>
-        <div class="modal-question-answer">
+        <div class="modal-question-answer" style="margin: 10px 0; padding: 8px; background: #ecfdf5; border-radius: 6px;">
           <strong>Correct Answer:</strong> ${correctAnswerText}
         </div>
         <div class="modal-question-actions">
@@ -426,7 +481,7 @@ async function generateQuestions() {
   try {
     // Get user selections
     const questionCount = parseInt(document.getElementById('questionCountSelect').value);
-    const difficulty = document.getElementById('difficultySelect').value;
+    const practiceMode = document.getElementById('practiceModeSelect').value;
     
     // Get the topic content first
     const { data: topic, error: topicError } = await window.supabaseClient
@@ -471,7 +526,8 @@ async function generateQuestions() {
             topic_content: topic.content,
             topic_name: topic.name,
             question_count: questionCount,
-            difficulty_level: difficulty
+            difficulty_level: 'intermediate', // Keep for AI prompt compatibility
+            practice_mode: practiceMode
           })
         });
         
@@ -497,8 +553,11 @@ async function generateQuestions() {
       throw new Error('No questions returned by AI or invalid response format');
     }
     
-    showGeneratedQuestionsModal(result.questions);
-    showMsg(`AI generated ${result.questions.length} ${difficulty} questions! Review and save as needed.`, 'success', 4000);
+    showGeneratedQuestionsModal(result.questions, result.gate_note);
+    const displayName = practiceMode === 'academic' ? 'Academic Mode' :
+                       practiceMode === 'competitive' ? 'GATE Prep Mode' :
+                       practiceMode === 'career' ? 'Career Prep Mode' : practiceMode;
+    showMsg(`AI generated ${result.questions.length} ${displayName} questions! Review and save as needed.`, 'success', 4000);
     
   } catch (e) {
     // Provide more specific error messages
@@ -523,7 +582,7 @@ async function generateQuestions() {
 }
 
 // Modal to review and insert generated questions
-function showGeneratedQuestionsModal(questions) {
+function showGeneratedQuestionsModal(questions, gateNote = null) {
   // Remove existing modal if present
   let modal = document.getElementById('aiQuestionsModal');
   if (modal) modal.remove();
@@ -534,6 +593,7 @@ function showGeneratedQuestionsModal(questions) {
     <div style="background:#fff;border-radius:16px;box-shadow:0 8px 32px #6366f144;max-width:520px;width:96vw;max-height:90vh;display:flex;flex-direction:column;position:relative;">
       <div style="padding:28px 22px 18px 22px;border-bottom:1px solid #e5e7eb;">
         <h3 style="font-size:1.18em;font-weight:800;color:#6366f1;margin:0;">AI Generated Questions</h3>
+        ${gateNote ? `<div style="margin-top:12px;padding:12px;background:#fff3cd;border:1px solid #ffeaa7;border-radius:8px;color:#856404;font-size:0.9em;"><strong>Note:</strong> ${gateNote}</div>` : ''}
       </div>
       <div id="aiQuestionsList" style="flex:1;overflow-y:auto;padding:20px 22px;display:flex;flex-direction:column;gap:18px;max-height:60vh;"></div>
       <div style="padding:18px 22px;border-top:1px solid #e5e7eb;background:#f8fafc;border-bottom-left-radius:16px;border-bottom-right-radius:16px;">
@@ -667,15 +727,27 @@ async function insertGeneratedQuestions(questions) {
   }
   
   // Prepare all questions for insertion (matching the actual table schema)
-  const questionsToInsert = questions.map(q => ({
-    topic_id: topicId,
-    question: q.question,
-    options: q.options,
-    correctanswer: q.correctAnswer, // Match the database column name
-    difficulty: difficulty,
-    question_count: questionCount, // Store the question count for reference
-    created_at: new Date().toISOString()
-  }));
+  const questionsToInsert = questions.map(q => {
+    // Ensure options are stored as a proper array (Supabase will handle JSON serialization)
+    let processedOptions = q.options;
+    if (typeof q.options === 'string') {
+      try {
+        processedOptions = JSON.parse(q.options);
+      } catch (e) {
+        processedOptions = [q.options]; // Fallback to single option
+      }
+    }
+    
+    return {
+      topic_id: topicId,
+      question: q.question,
+      options: processedOptions, // Let Supabase handle JSON serialization
+      correctanswer: q.correctAnswer, // Match the database column name
+      difficulty: difficulty,
+      question_count: questionCount, // Store the question count for reference
+      created_at: new Date().toISOString()
+    };
+  });
 
   try {
     // Insert all questions in a single batch operation
@@ -794,5 +866,208 @@ async function loadSavedDescriptions() {
 function formatDate(timestamp) {
   const date = new Date(timestamp);
   return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
-} 
- 
+}
+
+// Generate 20 questions for all 3 practice modes
+async function generateAllModes() {
+  const btn = document.getElementById('generateAllModesBtn');
+  const btnText = document.getElementById('generateAllModesText');
+  const btnSubtext = document.getElementById('generateAllModesSubtext');
+  
+  btn.disabled = true;
+  btnSubtext.style.display = 'none';
+  
+  const modes = [
+    { mode: 'academic', name: 'Academic Mode' },
+    { mode: 'competitive', name: 'Competitive Exam Mode' },
+    { mode: 'career', name: 'Career Prep Mode' }
+  ];
+  
+  let successCount = 0;
+  let totalGenerated = 0;
+  
+  try {
+    // Get the topic content first
+    const { data: topic, error: topicError } = await window.supabaseClient
+      .from('topics')
+      .select('content, name')
+      .eq('id', topicId)
+      .single();
+    
+    if (topicError || !topic) {
+      throw new Error('Failed to load topic content');
+    }
+    
+    if (!topic.content || topic.content.trim().length < 10) {
+      showMsg('Please add some content to the topic first (at least 10 characters).', 'error', 4000);
+      return;
+    }
+    
+    for (let i = 0; i < modes.length; i++) {
+      const { mode, name } = modes[i];
+      
+      // Update progress
+      btnText.textContent = `Generating ${name}... (${i + 1}/3)`;
+      
+      try {
+        // Try multiple Edge Function URLs
+        const edgeFunctionUrls = [
+          'https://vpjzxhfrqyspcbgmwqjd.supabase.co/functions/v1/generate-topic-questions',
+          'https://vpjzxhfrqyspcbgmwqjd.functions.supabase.co/generate-topic-questions'
+        ];
+        
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZwanp4aGZycXlzcGNiZ213cWpkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTExMDQ5NzIsImV4cCI6MjA2NjY4MDk3Mn0.x9dnZg6gvSUWVfuL4-CB6dKUY6sESE1xyM_v9Wmv4Tc';
+        
+        let response = null;
+        let lastError = null;
+        
+        for (const edgeFunctionUrl of edgeFunctionUrls) {
+          try {
+            response = await fetch(edgeFunctionUrl, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${supabaseKey}`,
+                'apikey': supabaseKey
+              },
+              body: JSON.stringify({
+                topic_id: topicId,
+                topic_content: topic.content,
+                topic_name: topic.name,
+                question_count: 20,
+                difficulty_level: 'intermediate',
+                practice_mode: mode
+              })
+            });
+            
+            if (response.ok) {
+              break;
+            } else {
+              const errorText = await response.text();
+              lastError = `Status ${response.status}: ${errorText}`;
+            }
+          } catch (e) {
+            lastError = e.message;
+            continue;
+          }
+        }
+        
+        if (!response || !response.ok) {
+          throw new Error(`Failed to generate ${name} questions: ${lastError}`);
+        }
+        
+        const result = await response.json();
+        
+        if (result.questions && result.questions.length > 0) {
+          // Auto-insert the questions
+          const questionsToInsert = result.questions.map(q => ({
+            topic_id: topicId,
+            question: q.question,
+            options: q.options,
+            correctanswer: q.correctAnswer,
+            practice_mode: mode,
+            difficulty: 'intermediate',
+            question_count: 20,
+            created_at: new Date().toISOString()
+          }));
+          
+          const { error: insertError } = await window.supabaseClient
+            .from('questions')
+            .insert(questionsToInsert);
+          
+          if (insertError) {
+            console.error(`Error inserting ${name} questions:`, insertError);
+          } else {
+            successCount++;
+            totalGenerated += result.questions.length;
+          }
+        }
+      } catch (error) {
+        console.error(`Error generating ${name} questions:`, error);
+      }
+      
+      // Small delay between requests
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+    
+    // Show final result
+    if (successCount === 3) {
+      showMsg(`Successfully generated ${totalGenerated} questions across all practice modes!`, 'success', 4000);
+      btnText.textContent = 'All Modes Complete!';
+      setTimeout(() => {
+        btnText.textContent = 'Generate 20 Questions for All Modes';
+        btnSubtext.style.display = 'block';
+        checkAllModesStatus();
+      }, 2000);
+    } else if (successCount > 0) {
+      showMsg(`Generated questions for ${successCount}/3 modes. Total: ${totalGenerated} questions.`, 'warning', 4000);
+      btnText.textContent = `Partial Success (${successCount}/3)`;
+      setTimeout(() => {
+        btnText.textContent = 'Generate 20 Questions for All Modes';
+        btnSubtext.style.display = 'block';
+        checkAllModesStatus();
+      }, 2000);
+    } else {
+      showMsg('Failed to generate questions for any mode. Please try again.', 'error', 4000);
+      btnText.textContent = 'Generation Failed';
+      setTimeout(() => {
+        btnText.textContent = 'Generate 20 Questions for All Modes';
+        btnSubtext.style.display = 'block';
+      }, 2000);
+    }
+    
+    // Reload questions to show new content
+    await loadQuestions();
+    
+  } catch (error) {
+    console.error('Error in generateAllModes:', error);
+    showMsg('Failed to generate questions: ' + (error.message || error), 'error', 4000);
+    btnText.textContent = 'Generation Failed';
+    setTimeout(() => {
+      btnText.textContent = 'Generate 20 Questions for All Modes';
+      btnSubtext.style.display = 'block';
+    }, 2000);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// Check if all modes already have 20 questions and disable button if so
+async function checkAllModesStatus() {
+  const btn = document.getElementById('generateAllModesBtn');
+  const btnText = document.getElementById('generateAllModesText');
+  const btnSubtext = document.getElementById('generateAllModesSubtext');
+  
+  try {
+    const modes = ['academic', 'competitive', 'career'];
+    const modeCounts = {};
+    
+    for (const mode of modes) {
+      const { count, error } = await window.supabaseClient
+        .from('questions')
+        .select('*', { count: 'exact', head: true })
+        .eq('topic_id', topicId)
+        .eq('practice_mode', mode);
+      
+      if (!error) {
+        modeCounts[mode] = count || 0;
+      }
+    }
+    
+    const allModesComplete = modes.every(mode => modeCounts[mode] >= 20);
+    
+    if (allModesComplete) {
+      btn.disabled = true;
+      btnText.textContent = 'All Modes Complete';
+      btnSubtext.textContent = `Academic: ${modeCounts.academic}, Competitive: ${modeCounts.competitive}, Career: ${modeCounts.career}`;
+      btn.style.background = 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)';
+    } else {
+      btn.disabled = false;
+      btnText.textContent = 'Generate 20 Questions for All Modes';
+      btnSubtext.textContent = 'Creates 60 questions total (20 per mode)';
+      btn.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+    }
+  } catch (error) {
+    console.error('Error checking all modes status:', error);
+  }
+}

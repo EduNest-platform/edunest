@@ -48,7 +48,6 @@ class _SplashScreenState extends State<SplashScreen> {
       case AuthStatus.notLoggedIn:
       case AuthStatus.sessionExpired:
       case AuthStatus.error:
-      default:
         Navigator.pushReplacementNamed(context, '/login');
         break;
     }

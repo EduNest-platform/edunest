@@ -385,8 +385,15 @@ function loadAll() {
 // Load admin profile information
 async function loadAdminProfile() {
   try {
+    // Wait for supabaseAdmin to be initialized
+    let attempts = 0;
+    while (!window.supabaseAdmin && attempts < 50) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      attempts++;
+    }
+    
     if (!window.supabaseAdmin) {
-      console.error('Supabase Admin client not initialized');
+      console.error('Supabase Admin client not initialized after timeout');
       return;
     }
     
@@ -425,6 +432,14 @@ async function loadAdminProfile() {
     if (userEmail) userEmail.textContent = user.email || 'No email';
     if (userAvatar) userAvatar.textContent = user.email ? user.email.charAt(0).toUpperCase() : 'A';
     
+    // Store current user in sessionStorage for other functions to use
+    const currentUserData = {
+      id: user.id,
+      email: user.email,
+      role: adminRole
+    };
+    sessionStorage.setItem('currentUser', JSON.stringify(currentUserData));
+    
     // Update mobile sidebar
     const mobileUserName = document.getElementById('mobileUserName');
     const mobileUserRole = document.getElementById('mobileUserRole');
@@ -435,25 +450,26 @@ async function loadAdminProfile() {
     if (mobileUserEmail) mobileUserEmail.textContent = user.email || 'No email';
     if (mobileUserAvatar) mobileUserAvatar.textContent = user.email ? user.email.charAt(0).toUpperCase() : 'A';
 
-    // Hide Manual Question Entry and Assigned Tests for non-Professor roles
+    // Hide Classes (attendance) for non-Professor roles
     const isProfessor = adminRole.toLowerCase() === 'professor';
     // Desktop sidebar
-    const manualQBtn = document.querySelector('.sidebar-nav .nav-btn[onclick*="question_entry.html"]');
-    const assignedTestsBtn = document.querySelector('.sidebar-nav .nav-btn[onclick*="assigned_tests.html"]');
-    if (manualQBtn) manualQBtn.style.display = isProfessor ? '' : 'none';
-    if (assignedTestsBtn) assignedTestsBtn.style.display = isProfessor ? '' : 'none';
+    const attendanceBtn = document.querySelector('.sidebar-nav .nav-btn[onclick*="attendance.html"]');
+    if (attendanceBtn) attendanceBtn.style.display = isProfessor ? '' : 'none';
     // Mobile nav
-    const manualQMobile = document.querySelector('.mobile-nav-menu a[href="question_entry.html"]');
-    const assignedTestsMobile = document.querySelector('.mobile-nav-menu a[href="assigned_tests.html"]');
-    if (manualQMobile) manualQMobile.style.display = isProfessor ? '' : 'none';
-    if (assignedTestsMobile) assignedTestsMobile.style.display = isProfessor ? '' : 'none';
+    const attendanceMobile = document.querySelector('.mobile-nav-menu a[href="attendance.html"]');
+    if (attendanceMobile) attendanceMobile.style.display = isProfessor ? '' : 'none';
     // Quick actions
     const quickBtns = document.querySelectorAll('.quick-actions .action-btn');
     quickBtns.forEach(btn => {
-      if (btn.textContent.includes('Manual Question Entry') || btn.textContent.includes('Assigned Tests') || btn.textContent.includes('View Assigned Tests')) {
+      if (btn.textContent.includes('Manage Classes')) {
         btn.style.display = isProfessor ? '' : 'none';
       }
     });
+    
+    // Load attendance shortcuts after profile is loaded
+    if (currentView === 'overview') {
+      loadAttendanceShortcuts();
+    }
     
   } catch (error) {
     console.error('Error loading admin profile:', error);
@@ -660,7 +676,7 @@ function toggleMobileMenu() {
   const hamburgerBtn = document.querySelector('.hamburger-btn');
   const body = document.body;
   
-  container.classList.toggle('open');
+  container.classList.toggle('active');
   hamburgerBtn.classList.toggle('active');
   body.classList.toggle('menu-open');
 }
@@ -670,7 +686,7 @@ function closeMobileMenu() {
   const hamburgerBtn = document.querySelector('.hamburger-btn');
   const body = document.body;
   
-  container.classList.remove('open');
+  container.classList.remove('active');
   hamburgerBtn.classList.remove('active');
   body.classList.remove('menu-open');
 }
@@ -720,6 +736,7 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   loadStats();
   showOverview();
+  // Load admin profile which will then load attendance shortcuts
   loadAdminProfile();
 });
 
@@ -1466,7 +1483,7 @@ function toggleMobileMenu() {
   const hamburgerBtn = document.querySelector('.hamburger-btn');
   const body = document.body;
   
-  container.classList.toggle('open');
+  container.classList.toggle('active');
   hamburgerBtn.classList.toggle('active');
   body.classList.toggle('menu-open');
 }
@@ -1476,9 +1493,105 @@ function closeMobileMenu() {
   const hamburgerBtn = document.querySelector('.hamburger-btn');
   const body = document.body;
   
-  container.classList.remove('open');
+  container.classList.remove('active');
   hamburgerBtn.classList.remove('active');
   body.classList.remove('menu-open');
+}
+
+// Load attendance shortcuts for professor's classes
+async function loadAttendanceShortcuts() {
+  const shortcutsContainer = document.getElementById('attendanceShortcuts');
+  if (!shortcutsContainer) return;
+
+  try {
+    // Get current user from session
+    const currentUser = JSON.parse(sessionStorage.getItem('currentUser'));
+    if (!currentUser || !currentUser.email) {
+      shortcutsContainer.innerHTML = `
+        <div class="no-classes-message">
+          <h4>No User Found</h4>
+          <p>Please log in to view your classes.</p>
+        </div>
+      `;
+      return;
+    }
+
+    // Check if user is a professor
+    if (!currentUser.role || currentUser.role.toLowerCase() !== 'professor') {
+      // Hide the entire attendance shortcuts section for non-professors
+      const attendanceSection = shortcutsContainer.closest('.attendance-shortcuts-section');
+      if (attendanceSection) {
+        attendanceSection.style.display = 'none';
+      }
+      return;
+    }
+
+    // Wait for Supabase client to be available
+    let attempts = 0;
+    while (!window.supabaseClient && attempts < 50) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      attempts++;
+    }
+
+    if (!window.supabaseClient) {
+      shortcutsContainer.innerHTML = `
+        <div class="no-classes-message">
+          <h4>Connection Error</h4>
+          <p>Unable to connect to database. Please refresh the page.</p>
+        </div>
+      `;
+      return;
+    }
+
+    // Fetch professor's classes
+    const { data: professorClasses, error } = await window.supabaseClient
+      .from('professor_classes')
+      .select('*')
+      .eq('professor_email', currentUser.email);
+
+    if (error) {
+      console.error('Error loading classes:', error);
+      shortcutsContainer.innerHTML = `
+        <div class="no-classes-message">
+          <h4>Error Loading Classes</h4>
+          <p>Unable to load your classes. Please try again.</p>
+        </div>
+      `;
+      return;
+    }
+
+    if (!professorClasses || professorClasses.length === 0) {
+      shortcutsContainer.innerHTML = `
+        <div class="no-classes-message">
+          <h4>No Classes Found</h4>
+          <p>You don't have any classes assigned yet. Contact your administrator to get classes assigned.</p>
+        </div>
+      `;
+      return;
+    }
+
+    // Create attendance shortcut buttons
+    const shortcutsHTML = professorClasses.map(classData => `
+      <a href="attendance_tracker.html?classId=${classData.id}" class="attendance-class-btn">
+        <div class="attendance-class-icon">📋</div>
+        <div class="attendance-class-details">
+          <div class="attendance-class-name">${classData.subject_name}</div>
+          <div class="attendance-class-info">Attendance Tracking</div>
+        </div>
+      </a>
+    `).join('');
+
+    shortcutsContainer.innerHTML = shortcutsHTML;
+
+  } catch (error) {
+    console.error('Error loading attendance shortcuts:', error);
+    shortcutsContainer.innerHTML = `
+      <div class="no-classes-message">
+        <h4>Unexpected Error</h4>
+        <p>Something went wrong. Please refresh the page and try again.</p>
+      </div>
+    `;
+  }
 }
 
 // Make functions globally available
@@ -1506,6 +1619,7 @@ window.logout = logout;
 window.toggleMobileMenu = toggleMobileMenu;
 window.closeMobileMenu = closeMobileMenu;
 window.hideAllViews = hideAllViews;
+window.loadAttendanceShortcuts = loadAttendanceShortcuts;
 
 
  

@@ -5,43 +5,324 @@ const supabaseMain = window.supabaseMain = window.supabase.createClient(SUPABASE
   auth: { storageKey: 'supabase.main' }
 });
 
-// Questions Supabase client (already present)
+// Questions Supabase 
 const SUPABASE_QUESTIONS_URL = 'https://pfuzvpihupvhjshxiofn.supabase.co';
 const SUPABASE_QUESTIONS_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBmdXp2cGlodXB2aGpzaHhpb2ZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE1Mjg1MjIsImV4cCI6MjA2NzEwNDUyMn0.WAPJG6iaxuCAM75yCRu6UOcck37XuilVoDJK3uwyx-k';
 const supabaseQuestions = window.supabaseQuestions = window.supabase.createClient(SUPABASE_QUESTIONS_URL, SUPABASE_QUESTIONS_KEY, {
   auth: { storageKey: 'supabase.questions' }
 });
 
-let selectedCollegeId = null;
-let selectedBranchId = null;
-let selectedSemesterId = null;
+// Global variables
 let selectedCollegeName = null;
 let selectedBranchName = null;
 let selectedSemesterName = null;
-let numQuestions = 0;
-let currentQuestionIndex = 0;
-let questionsArray = [];
 let testName = '';
 let testSubject = '';
 let testDuration = 30;
+let numQuestions = 0;
+let currentQuestionIndex = 0;
+let questionsArray = [];
 
-function showStep(step) {
-  document.getElementById('contextModal').style.display = step === 1 ? 'flex' : 'none';
-  document.getElementById('questionSetModal').style.display = step === 2 ? 'flex' : 'none';
-  document.getElementById('reviewModal').style.display = step === 4 ? 'flex' : 'none';
-  document.getElementById('questionForm').style.display = step === 3 ? 'block' : 'none';
-  const progress = document.getElementById('questionSetProgress');
-  if (progress) progress.style.display = step === 3 ? 'block' : 'none';
-}
+// Class context variables
+let isClassContext = false;
+let classContextId = null;
+let classContextSubject = null;
+let classContextSubjectId = null;
 
-function updateProgress() {
-  const label = document.getElementById('questionNumberLabel');
-  if (label) {
-    label.textContent = currentQuestionIndex + 1;
+// Initialize page
+document.addEventListener('DOMContentLoaded', function() {
+  initializePage();
+  setupEventListeners();
+});
+
+function initializePage() {
+  checkClassContext();
+  populateSubjectDropdown(); // Always populate subjects
+  if (isClassContext) {
+    updateContextDisplay();
+  } else {
+    // For non-class context, try to get context from sessionStorage
+    selectedCollegeName = sessionStorage.getItem('selectedCollegeName');
+    selectedBranchName = sessionStorage.getItem('selectedBranchName');
+    selectedSemesterName = sessionStorage.getItem('selectedSemesterName');
+    updateContextDisplay();
   }
 }
 
-function clearForm() {
+function checkClassContext() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const classId = urlParams.get('classId');
+  const subject = urlParams.get('subject');
+  const college = urlParams.get('college');
+  const branch = urlParams.get('branch');
+  const semester = urlParams.get('semester');
+  
+  // Also check sessionStorage for complete context
+  const sessionClassId = sessionStorage.getItem('selectedClassId');
+  const sessionSubject = sessionStorage.getItem('selectedSubjectName');
+  const sessionSubjectId = sessionStorage.getItem('selectedSubjectId');
+  const sessionCollege = sessionStorage.getItem('selectedCollegeName');
+  const sessionBranch = sessionStorage.getItem('selectedBranchName');
+  const sessionSemester = sessionStorage.getItem('selectedSemesterName');
+  const context = sessionStorage.getItem('questionEntryContext');
+  
+  if ((classId && subject) || (sessionClassId && context === 'class')) {
+    isClassContext = true;
+    classContextId = classId || sessionClassId;
+    classContextSubject = subject || sessionSubject;
+    classContextSubjectId = sessionSubjectId;
+    
+    // Set complete context from URL parameters or sessionStorage
+    selectedCollegeName = college || sessionCollege;
+    selectedBranchName = branch || sessionBranch;
+    selectedSemesterName = semester || sessionSemester;
+    
+    // Update UI for class context
+    updateUIForClassContext();
+  }
+}
+
+function updateUIForClassContext() {
+  // Update page title
+  const headerTitle = document.querySelector('.page-title');
+  if (headerTitle && classContextSubject) {
+    headerTitle.textContent = `Question Entry - ${classContextSubject}`;
+  }
+  
+  // Update back button
+  const backBtn = document.querySelector('.back-btn');
+  if (backBtn && isClassContext) {
+    backBtn.href = `attendance.html`;
+    backBtn.textContent = 'Back to Classes';
+  }
+}
+
+function setupEventListeners() {
+  // Test configuration
+  const startBtn = document.getElementById('startQuestionEntry');
+  
+  // Question entry
+  const saveNextBtn = document.getElementById('saveAndNextBtn');
+  const finishBtn = document.getElementById('finishTestBtn');
+  
+  // Review
+  const backToQuestionsBtn = document.getElementById('backToQuestionsBtn');
+  const submitAllBtn = document.getElementById('submitAllBtn');
+  
+  if (startBtn) {
+    startBtn.addEventListener('click', startQuestionEntry);
+  }
+  
+  if (saveNextBtn) {
+    saveNextBtn.addEventListener('click', saveAndNext);
+  }
+  
+  if (finishBtn) {
+    finishBtn.addEventListener('click', finishTest);
+  }
+  
+  if (backToQuestionsBtn) {
+    backToQuestionsBtn.addEventListener('click', backToQuestions);
+  }
+  
+  if (submitAllBtn) {
+    submitAllBtn.addEventListener('click', submitAllQuestions);
+  }
+}
+
+async function populateSubjectDropdown() {
+  const subjectSelect = document.getElementById('subjectInput');
+  if (!subjectSelect) return;
+  
+  // Clear existing options
+  subjectSelect.innerHTML = '<option value="">Loading subjects...</option>';
+  
+  if (isClassContext && classContextSubject) {
+    // For class context, set the subject directly
+    subjectSelect.innerHTML = `<option value="${classContextSubject}" selected>${classContextSubject}</option>`;
+    return;
+  }
+  
+  // For non-class context, provide common subjects or allow manual entry
+  subjectSelect.innerHTML = `
+    <option value="">Select Subject</option>
+    <option value="Mathematics">Mathematics</option>
+    <option value="Physics">Physics</option>
+    <option value="Chemistry">Chemistry</option>
+    <option value="Computer Science">Computer Science</option>
+    <option value="English">English</option>
+    <option value="Other">Other (Custom)</option>
+  `;
+  
+  // Allow custom subject entry
+  subjectSelect.addEventListener('change', function() {
+    if (this.value === 'Other') {
+      const customSubject = prompt('Enter custom subject name:');
+      if (customSubject) {
+        const option = document.createElement('option');
+        option.value = customSubject;
+        option.textContent = customSubject;
+        option.selected = true;
+        this.appendChild(option);
+      }
+    }
+  });
+}
+
+function updateContextDisplay() {
+  const collegeSpan = document.getElementById('contextCollege');
+  const branchSpan = document.getElementById('contextBranch');
+  const semesterSpan = document.getElementById('contextSemester');
+  
+  if (selectedCollegeName && selectedBranchName && selectedSemesterName) {
+    if (collegeSpan) collegeSpan.textContent = selectedCollegeName;
+    if (branchSpan) branchSpan.textContent = selectedBranchName;
+    if (semesterSpan) semesterSpan.textContent = selectedSemesterName;
+  } else {
+    // Show placeholder text when context is not available
+    if (collegeSpan) collegeSpan.textContent = selectedCollegeName || 'College';
+    if (branchSpan) branchSpan.textContent = selectedBranchName || 'Branch';
+    if (semesterSpan) semesterSpan.textContent = selectedSemesterName || 'Semester';
+  }
+}
+
+function startQuestionEntry() {
+  // Validate configuration
+  const testNameInput = document.getElementById('testNameInput');
+  const subjectInput = document.getElementById('subjectInput');
+  const numQuestionsInput = document.getElementById('numQuestionsInput');
+  const testDurationInput = document.getElementById('testDurationInput');
+  
+  if (!testNameInput.value.trim()) {
+    showMessage('Please enter a test name', 'error');
+    return;
+  }
+  
+  if (!subjectInput.value.trim()) {
+    showMessage('Please select a subject', 'error');
+    return;
+  }
+  
+  if (!numQuestionsInput.value || numQuestionsInput.value < 1) {
+    showMessage('Please enter a valid number of questions', 'error');
+    return;
+  }
+  
+  if (!testDurationInput.value || testDurationInput.value < 1) {
+    showMessage('Please enter a valid test duration', 'error');
+    return;
+  }
+  
+  // Store configuration
+  testName = testNameInput.value.trim();
+  testSubject = subjectInput.value.trim();
+  numQuestions = parseInt(numQuestionsInput.value);
+  testDuration = parseInt(testDurationInput.value);
+  
+  // Reset question array and index
+  questionsArray = [];
+  currentQuestionIndex = 0;
+  
+  // Show question entry section
+  showSection('questionEntry');
+  updateQuestionProgress();
+  updateButtonVisibility();
+}
+
+function updateButtonVisibility() {
+  const saveNextBtn = document.getElementById('saveAndNextBtn');
+  const finishBtn = document.getElementById('finishTestBtn');
+  
+  if (saveNextBtn && finishBtn) {
+    if (numQuestions === 1) {
+      // If only 1 question total, hide save & next, show only review
+      saveNextBtn.style.display = 'none';
+      finishBtn.style.display = 'inline-block';
+      finishBtn.textContent = 'Review & Submit';
+    } else if (currentQuestionIndex + 1 === numQuestions) {
+      // On the last question, hide save & next, show only review
+      saveNextBtn.style.display = 'none';
+      finishBtn.style.display = 'inline-block';
+      finishBtn.textContent = 'Review & Submit';
+    } else {
+      // Otherwise show both buttons
+      saveNextBtn.style.display = 'inline-block';
+      finishBtn.style.display = 'inline-block';
+      finishBtn.textContent = 'Review Questions';
+    }
+  }
+}
+
+function saveAndNext() {
+  if (!validateCurrentQuestion()) {
+    return;
+  }
+  
+  const questionData = getCurrentQuestionData();
+  questionsArray[currentQuestionIndex] = questionData;
+  
+  if (currentQuestionIndex + 1 < numQuestions) {
+    currentQuestionIndex++;
+    clearQuestionForm();
+    updateQuestionProgress();
+    updateButtonVisibility();
+  }
+  
+  showMessage('Question saved successfully!', 'success');
+}
+
+function finishTest() {
+  if (!validateCurrentQuestion()) {
+    return;
+  }
+  
+  const questionData = getCurrentQuestionData();
+  questionsArray[currentQuestionIndex] = questionData;
+  
+  showSection('review');
+  displayReviewQuestions();
+}
+
+function validateCurrentQuestion() {
+  const questionText = document.getElementById('questionText').value.trim();
+  const optionA = document.getElementById('optionA').value.trim();
+  const optionB = document.getElementById('optionB').value.trim();
+  const optionC = document.getElementById('optionC').value.trim();
+  const optionD = document.getElementById('optionD').value.trim();
+  const correct = document.querySelector('input[name="correctOption"]:checked');
+  
+  if (!questionText) {
+    showMessage('Please enter the question text', 'error');
+    return false;
+  }
+  
+  if (!optionA || !optionB || !optionC || !optionD) {
+    showMessage('Please fill in all options', 'error');
+    return false;
+  }
+  
+  if (!correct) {
+    showMessage('Please select the correct answer', 'error');
+    return false;
+  }
+  
+  return true;
+}
+
+function getCurrentQuestionData() {
+  return {
+    question: document.getElementById('questionText').value.trim(),
+    options: [
+      document.getElementById('optionA').value.trim(),
+      document.getElementById('optionB').value.trim(),
+      document.getElementById('optionC').value.trim(),
+      document.getElementById('optionD').value.trim()
+    ],
+    correct: document.querySelector('input[name="correctOption"]:checked').value
+  };
+}
+
+function clearQuestionForm() {
   document.getElementById('questionText').value = '';
   document.getElementById('optionA').value = '';
   document.getElementById('optionB').value = '';
@@ -50,421 +331,151 @@ function clearForm() {
   document.querySelectorAll('input[name="correctOption"]').forEach(r => r.checked = false);
 }
 
-function fillForm(q) {
-  document.getElementById('questionText').value = q.question || '';
-  document.getElementById('optionA').value = q.options?.[0] || '';
-  document.getElementById('optionB').value = q.options?.[1] || '';
-  document.getElementById('optionC').value = q.options?.[2] || '';
-  document.getElementById('optionD').value = q.options?.[3] || '';
-  if (q.correct) {
-    document.getElementById(`option${q.correct}_radio`).checked = true;
-  } else {
-    document.querySelectorAll('input[name="correctOption"]').forEach(r => r.checked = false);
+function updateQuestionProgress() {
+  const questionNumberLabel = document.getElementById('questionNumberLabel');
+  const totalQuestionsLabel = document.getElementById('totalQuestionsLabel');
+  const currentQuestionNum = document.getElementById('currentQuestionNum');
+  const totalQuestions = document.getElementById('totalQuestions');
+  const progressFill = document.getElementById('progressFill');
+  
+  const current = currentQuestionIndex + 1;
+  
+  if (questionNumberLabel) questionNumberLabel.textContent = current;
+  if (totalQuestionsLabel) totalQuestionsLabel.textContent = numQuestions;
+  if (currentQuestionNum) currentQuestionNum.textContent = current;
+  if (totalQuestions) totalQuestions.textContent = numQuestions;
+  
+  if (progressFill) {
+    const percentage = (current / numQuestions) * 100;
+    progressFill.style.width = `${percentage}%`;
   }
 }
 
-async function populateSubjectDropdown() {
+function showSection(section) {
+  const configSection = document.querySelector('.test-config-section');
+  const questionSection = document.getElementById('questionEntrySection');
+  const reviewSection = document.getElementById('reviewSection');
+  
+  // Hide all sections
+  if (configSection) configSection.style.display = 'none';
+  if (questionSection) questionSection.style.display = 'none';
+  if (reviewSection) reviewSection.style.display = 'none';
+  
+  // Show selected section
+  if (section === 'config') {
+    if (configSection) configSection.style.display = 'block';
+  } else if (section === 'questionEntry') {
+    if (questionSection) questionSection.style.display = 'block';
+  } else if (section === 'review') {
+    if (reviewSection) reviewSection.style.display = 'block';
+  }
+}
 
-  const subjectSelect = document.getElementById('subjectInput');
-  // Remove all except the first option
-  while (subjectSelect.options.length > 1) subjectSelect.remove(1);
-  if (!selectedSemesterId) return;
+function displayReviewQuestions() {
+  const reviewList = document.getElementById('reviewQuestionsList');
+  if (!reviewList) return;
+  
+  reviewList.innerHTML = '';
+  
+  questionsArray.forEach((q, index) => {
+    const questionDiv = document.createElement('div');
+    questionDiv.className = 'review-question-card';
+    questionDiv.innerHTML = `
+      <div class="review-question-header">
+        <h4 class="review-question-title">Question ${index + 1}</h4>
+        <span class="review-question-badge">${index + 1}/${questionsArray.length}</span>
+      </div>
+      <div class="review-question-text">
+        <strong>Q:</strong> ${q.question}
+      </div>
+      <div class="review-options-list">
+        <div class="review-option ${q.correct === 'A' ? 'review-option-correct' : ''}">
+          <span class="option-label">A)</span> ${q.options[0]}
+          ${q.correct === 'A' ? '<span class="review-correct-check">✓</span>' : ''}
+        </div>
+        <div class="review-option ${q.correct === 'B' ? 'review-option-correct' : ''}">
+          <span class="option-label">B)</span> ${q.options[1]}
+          ${q.correct === 'B' ? '<span class="review-correct-check">✓</span>' : ''}
+        </div>
+        <div class="review-option ${q.correct === 'C' ? 'review-option-correct' : ''}">
+          <span class="option-label">C)</span> ${q.options[2]}
+          ${q.correct === 'C' ? '<span class="review-correct-check">✓</span>' : ''}
+        </div>
+        <div class="review-option ${q.correct === 'D' ? 'review-option-correct' : ''}">
+          <span class="option-label">D)</span> ${q.options[3]}
+          ${q.correct === 'D' ? '<span class="review-correct-check">✓</span>' : ''}
+        </div>
+      </div>
+    `;
+    reviewList.appendChild(questionDiv);
+  });
+}
+
+function backToQuestions() {
+  showSection('questionEntry');
+}
+
+async function submitAllQuestions() {
   try {
-    const { data: subjects, error } = await supabaseMain
-      .from('subjects')
-      .select('name')
-      .eq('semester_id', selectedSemesterId);
-
-    if (error) throw error;
-    if (subjects && subjects.length > 0) {
-      const uniqueNames = Array.from(new Set(subjects.map(subj => subj.name)));
-
-      uniqueNames.forEach(name => {
-        const opt = document.createElement('option');
-        opt.value = name;
-        opt.textContent = name;
-        subjectSelect.appendChild(opt);
-      });
-    } else {
-
-    }
-  } catch (e) {
-    console.error('Error fetching subjects:', e);
-  }
-}
-
-async function getCurrentUser() {
-  if (!window.supabaseAdmin) {
-    console.error('Supabase Admin client not initialized');
-    return null;
-  }
-  const { data, error } = await window.supabaseAdmin.auth.getUser();
-  if (error || !data || !data.user) return null;
-  return data.user;
-}
-
-document.addEventListener('DOMContentLoaded', async function() {
-  const form = document.getElementById('questionForm');
-  const msg = document.getElementById('questionMsg');
-  const contextModal = document.getElementById('contextModal');
-  const contextContinueBtn = document.getElementById('contextContinueBtn');
-  const collegeSelect = document.getElementById('collegeSelect');
-  const branchSelect = document.getElementById('branchSelect');
-  const semesterSelect = document.getElementById('semesterSelect');
-
-  // Show modal and prevent scroll
-  contextModal.style.display = 'flex';
-  document.body.classList.add('modal-open');
-  form.style.display = 'none';
-
-  // Populate colleges (id, name) - FILTERED by user communities
-  try {
-    const user = await getCurrentUser();
-    if (!user) throw new Error('Not logged in');
-    // Fetch assigned communities for this user (from supabaseAdmin)
-    const { data: adminRows, error: adminError } = await window.supabaseAdmin
-      .from('community_admins')
-      .select('community_id')
-      .eq('user_id', user.id);
-    if (adminError || !adminRows || adminRows.length === 0) throw new Error('No assigned communities');
-    // Fetch the community names (from supabaseAdmin)
-    const communityIds = adminRows.map(row => row.community_id);
-    const { data: communities, error: commError } = await window.supabaseAdmin
-      .from('communities')
-      .select('name')
-      .in('id', communityIds);
-    if (commError || !communities || communities.length === 0) throw new Error('No community details');
-    const allowedNames = communities.map(c => c.name);
-    // Fetch all colleges (from supabaseMain)
-    const { data: colleges, error: collegeError } = await supabaseMain.from('colleges').select('id, name');
-    if (collegeError || !colleges || colleges.length === 0) throw new Error('No colleges found');
-    // Filter colleges by allowed community/college names
-    const filteredColleges = colleges.filter(college => allowedNames.includes(college.name));
-    if (filteredColleges.length === 0) throw new Error('No colleges assigned');
-    filteredColleges.forEach(college => {
-      const opt = document.createElement('option');
-      opt.value = college.id;
-      opt.textContent = college.name;
-      opt.dataset.name = college.name;
-      collegeSelect.appendChild(opt);
-    });
-  } catch (e) {
-    showMessage('Failed to load assigned colleges: ' + (e.message || e), 'error');
-  }
-
-  // Dependent dropdowns logic
-  collegeSelect.addEventListener('change', async function() {
-    branchSelect.innerHTML = '<option value="">Select Branch</option>';
-    semesterSelect.innerHTML = '<option value="">Select Semester</option>';
-    const selectedCollege = collegeSelect.value;
-    if (!selectedCollege) return;
-    // Fetch branches for selected college
-    try {
-      const { data: branches, error: branchError } = await supabaseMain
-        .from('branches')
-        .select('id, name')
-        .eq('college_id', selectedCollege);
-      if (branchError) throw branchError;
-      branches?.forEach(branch => {
-        const opt = document.createElement('option');
-        opt.value = branch.id;
-        opt.textContent = branch.name;
-        opt.dataset.name = branch.name;
-        branchSelect.appendChild(opt);
-      });
-    } catch (e) {
-      showMessage('Failed to load branches', 'error');
-    }
-  });
-
-  branchSelect.addEventListener('change', async function() {
-    semesterSelect.innerHTML = '<option value="">Select Semester</option>';
-    const selectedBranch = branchSelect.value;
-    if (!selectedBranch) return;
-    // Fetch semesters for selected branch
-    try {
-      const { data: semesters, error: semesterError } = await supabaseMain
-        .from('semesters')
-        .select('id, name')
-        .eq('branch_id', selectedBranch);
-      if (semesterError) throw semesterError;
-      semesters?.forEach(sem => {
-        const opt = document.createElement('option');
-        opt.value = sem.id;
-        opt.textContent = sem.name;
-        opt.dataset.name = sem.name;
-        semesterSelect.appendChild(opt);
-      });
-    } catch (e) {
-      showMessage('Failed to load semesters', 'error');
-    }
-  });
-
-  contextContinueBtn.onclick = function() {
-    const collegeId = collegeSelect.value;
-    const branchId = branchSelect.value;
-    const semesterId = semesterSelect.value;
-    if (!collegeId || !branchId || !semesterId) {
-      showMessage('Please select college, branch, and semester.', 'error');
+    // Validate that we have all required context
+    if (!selectedCollegeName || !selectedBranchName || !selectedSemesterName) {
+      showMessage('Missing context information. Please try again from the classes page.', 'error');
       return;
     }
-    selectedCollegeId = collegeId;
-    selectedBranchId = branchId;
-    selectedSemesterId = semesterId;
-    selectedCollegeName = collegeSelect.options[collegeSelect.selectedIndex].textContent;
-    selectedBranchName = branchSelect.options[branchSelect.selectedIndex].textContent;
-    selectedSemesterName = semesterSelect.options[semesterSelect.selectedIndex].textContent;
-    updateContextDisplay();
-    populateSubjectDropdown();
-    showStep(2); // Now go to number of questions
-  };
-
-  form.addEventListener('submit', async function(e) {
-    e.preventDefault();
-    // Use selected context
-    const college = selectedCollegeName;
-    const branch = selectedBranchName;
-    const semester = selectedSemesterName;
-    const question = document.getElementById('questionText').value.trim();
-    const optionA = document.getElementById('optionA').value.trim();
-    const optionB = document.getElementById('optionB').value.trim();
-    const optionC = document.getElementById('optionC').value.trim();
-    const optionD = document.getElementById('optionD').value.trim();
-    const correct = document.querySelector('input[name="correctOption"]:checked');
-
-    // Validate
-    if (!college || !branch || !semester || !question || !optionA || !optionB || !optionC || !optionD || !correct) {
-      showMessage('Please fill in all fields and select the correct answer.', 'error');
+    
+    if (!questionsArray || questionsArray.length === 0) {
+      showMessage('No questions to submit!', 'error');
       return;
     }
-
-    // Prepare data
-    const data = {
-      college,
-      branch,
-      semester,
-      question,
-      options: [optionA, optionB, optionC, optionD],
-      correct: correct.value
-    };
-    // Save to Supabase questions project
-    const { error } = await supabaseQuestions.from('questions').insert([data]);
-    if (error) {
-      showMessage('Failed to add question: ' + (error.message || error), 'error');
-    } else {
-      showMessage('Question added successfully!', 'success');
-      form.reset();
-    }
-  });
-
-  function showMessage(text, type) {
-    msg.textContent = text;
-    msg.className = 'message ' + type + ' show';
-    setTimeout(() => {
-      msg.classList.remove('show');
-    }, 4000);
-  }
-
-  function updateContextDisplay() {
-    const collegeSpan = document.getElementById('contextCollege');
-    const branchSpan = document.getElementById('contextBranch');
-    const semesterSpan = document.getElementById('contextSemester');
-    if (selectedCollegeName && selectedBranchName && selectedSemesterName) {
-      collegeSpan.textContent = selectedCollegeName;
-      branchSpan.textContent = selectedBranchName;
-      semesterSpan.textContent = selectedSemesterName;
-    } else {
-      collegeSpan.textContent = 'College';
-      branchSpan.textContent = 'Branch';
-      semesterSpan.textContent = 'Semester';
-    }
-  }
-
-  // Step 2: Set test name and number of questions
-  document.getElementById('questionSetContinueBtn').onclick = function() {
-    const name = document.getElementById('testNameInput').value.trim();
-    const subject = document.getElementById('subjectInput').value;
-    const duration = parseInt(document.getElementById('testDurationInput').value, 10);
-    if (!name) {
-      alert('Please enter a test name.');
-      return;
-    }
-    const n = parseInt(document.getElementById('numQuestionsInput').value, 10);
-    if (!n || n < 1 || n > 50) {
-      alert('Please enter a valid number of questions (1-50).');
-      return;
-    }
-    if (!duration || duration < 1 || duration > 300) {
-      alert('Please enter a valid test duration (1-300 minutes).');
-      return;
-    }
-    testName = name;
-    testSubject = subject;
-    testDuration = duration;
-    numQuestions = n;
-    questionsArray = Array(numQuestions).fill(null).map(() => ({
+    
+    const questionsToSubmit = questionsArray.map(q => ({
       college: selectedCollegeName,
       branch: selectedBranchName,
       semester: selectedSemesterName,
       subject: testSubject,
-      duration_minutes: testDuration,
-      question: '', options: ['', '', '', ''], correct: ''
-    }));
-    currentQuestionIndex = 0;
-    fillForm(questionsArray[0]);
-    updateProgress();
-    showStep(3); // Show first question form
-    document.getElementById('questionMsg').textContent = '';
-  };
-
-  // Add Next/Previous/Review buttons to form
-  let navBtns = document.createElement('div');
-  navBtns.id = 'questionNavBtns';
-  navBtns.style = 'display:flex;justify-content:space-between;gap:12px;margin:18px 0;';
-  navBtns.innerHTML = `
-    <button type="button" id="prevQuestionBtn" class="submit-btn" style="background:#e0e7ef;color:#334155;">Previous</button>
-    <button type="button" id="nextQuestionBtn" class="submit-btn">Next</button>
-    <button type="button" id="reviewBtn" class="submit-btn" style="display:none;">Review</button>
-  `;
-  form.appendChild(navBtns);
-
-  function saveCurrentForm() {
-    const question = document.getElementById('questionText').value.trim();
-    const optionA = document.getElementById('optionA').value.trim();
-    const optionB = document.getElementById('optionB').value.trim();
-    const optionC = document.getElementById('optionC').value.trim();
-    const optionD = document.getElementById('optionD').value.trim();
-    const correct = document.querySelector('input[name="correctOption"]:checked');
-    questionsArray[currentQuestionIndex] = {
-      college: selectedCollegeName,
-      branch: selectedBranchName,
-      semester: selectedSemesterName,
-      question,
-      options: [optionA, optionB, optionC, optionD],
-      correct: correct ? correct.value : ''
-    };
-  }
-
-  document.getElementById('prevQuestionBtn').onclick = function() {
-    saveCurrentForm();
-    if (currentQuestionIndex > 0) {
-      currentQuestionIndex--;
-      fillForm(questionsArray[currentQuestionIndex]);
-      updateProgress();
-      document.getElementById('nextQuestionBtn').style.display = '';
-      document.getElementById('reviewBtn').style.display = 'none';
-    }
-    if (currentQuestionIndex === 0) {
-      this.disabled = true;
-    }
-    document.getElementById('nextQuestionBtn').disabled = false;
-  };
-  document.getElementById('nextQuestionBtn').onclick = function() {
-    saveCurrentForm();
-    if (!validateForm()) return;
-    if (numQuestions === 1) {
-      showReview();
-      return;
-    }
-    if (currentQuestionIndex < numQuestions - 1) {
-      currentQuestionIndex++;
-      fillForm(questionsArray[currentQuestionIndex]);
-      updateProgress();
-      document.getElementById('prevQuestionBtn').disabled = false;
-      if (currentQuestionIndex === numQuestions - 1) {
-        this.style.display = 'none';
-        document.getElementById('reviewBtn').style.display = '';
-      }
-    }
-  };
-  document.getElementById('reviewBtn').onclick = function() {
-    saveCurrentForm();
-    if (!validateForm()) return;
-    showReview();
-  };
-  function validateForm() {
-    const question = document.getElementById('questionText').value.trim();
-    const optionA = document.getElementById('optionA').value.trim();
-    const optionB = document.getElementById('optionB').value.trim();
-    const optionC = document.getElementById('optionC').value.trim();
-    const optionD = document.getElementById('optionD').value.trim();
-    const correct = document.querySelector('input[name="correctOption"]:checked');
-    if (!question || !optionA || !optionB || !optionC || !optionD || !correct) {
-      showMessage('Please fill in all fields and select the correct answer.', 'error');
-      return false;
-    }
-    return true;
-  }
-  function showReview() {
-    showStep(4);
-    // Render review list
-    const reviewList = document.getElementById('reviewQuestionsList');
-    reviewList.innerHTML = '';
-    questionsArray.forEach((q, i) => {
-      const div = document.createElement('div');
-      div.className = 'review-question-card';
-      let optionsHtml = '';
-      ['A', 'B', 'C', 'D'].forEach((opt, idx) => {
-        const isCorrect = q.correct === opt;
-        optionsHtml += `<div class="review-option${isCorrect ? ' review-option-correct' : ''}">${opt}: ${q.options[idx] || ''}${isCorrect ? ' <span class=\'review-correct-check\'>✔</span>' : ''}</div>`;
-      });
-      div.innerHTML = `
-        <div class="review-question-title">Q${i+1}: ${q.question}</div>
-        <div class="review-options-list">${optionsHtml}</div>
-        <button type="button" class="review-edit-btn editReviewBtn" data-index="${i}">Edit</button>
-      `;
-      reviewList.appendChild(div);
-    });
-    // Add edit handlers
-    document.querySelectorAll('.editReviewBtn').forEach(btn => {
-      btn.onclick = function() {
-        const idx = parseInt(this.getAttribute('data-index'), 10);
-        currentQuestionIndex = idx;
-        fillForm(questionsArray[idx]);
-        updateProgress();
-        showStep(3);
-        document.getElementById('prevQuestionBtn').disabled = idx === 0;
-        document.getElementById('nextQuestionBtn').style.display = idx === numQuestions - 1 ? 'none' : '';
-        document.getElementById('reviewBtn').style.display = idx === numQuestions - 1 ? '' : 'none';
-      };
-    });
-  }
-  document.getElementById('reviewBackBtn').onclick = function() {
-    showStep(3);
-    fillForm(questionsArray[currentQuestionIndex]);
-    updateProgress();
-  };
-  document.getElementById('submitAllBtn').onclick = async function() {
-    // Final validation
-    for (let i = 0; i < questionsArray.length; i++) {
-      const q = questionsArray[i];
-      if (!q.question || !q.options[0] || !q.options[1] || !q.options[2] || !q.options[3] || !q.correct) {
-        alert(`Question ${i+1} is incomplete.`);
-        return;
-      }
-    }
-    // Add test_name, subject, and duration to each question and insert all
-    const questionsToInsert = questionsArray.map(q => ({
-      ...q,
+      question: q.question,
+      options: q.options,
+      correct: q.correct,
       test_name: testName,
-      subject: testSubject,
       duration_minutes: testDuration
     }));
-    const { error } = await supabaseQuestions.from('questions').insert(questionsToInsert);
+    
+    // Save to questions table (this is where assigned tests are stored)
+    const { error } = await supabaseQuestions.from('questions').insert(questionsToSubmit);
+    
     if (error) {
-      alert('Failed to add questions: ' + (error.message || error));
-    } else {
-      alert('All questions added successfully!');
-      window.location.href = 'dashboard.html';
+      throw error;
     }
-  };
-
-  // If only 1 question, after filling and validating, go directly to review
-  if (numQuestions === 1) {
-    document.getElementById('nextQuestionBtn').style.display = 'none';
-    document.getElementById('reviewBtn').style.display = '';
+    
+    showMessage('All questions submitted successfully!', 'success');
+    
+    // Redirect back after a delay
+    setTimeout(() => {
+      if (isClassContext) {
+        window.location.href = 'attendance.html';
+      } else {
+        window.location.href = 'dashboard.html';
+      }
+    }, 2000);
+    
+  } catch (error) {
+    console.error('Error submitting questions:', error);
+    showMessage('Failed to submit questions: ' + (error.message || error), 'error');
   }
+}
 
-  // Start at step 1
-  showStep(1);
-}); 
+function showMessage(text, type) {
+  const msg = document.getElementById('questionMsg');
+  if (!msg) {
+    // Fallback to alert if message element not found
+    alert(text);
+    return;
+  }
+  
+  msg.textContent = text;
+  msg.className = 'message ' + type + ' show';
+  
+  setTimeout(() => {
+    msg.classList.remove('show');
+  }, 4000);
+}

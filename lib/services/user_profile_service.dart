@@ -97,6 +97,35 @@ class UserProfileService {
     }
   }
 
+  /// Check if student ID exists within the same academic context (college + branch + semester)
+  static Future<bool> checkStudentIdExistsInSameContext({
+    required String studentId,
+    required String college,
+    required String branch,
+    required String semester,
+    String? excludeUserId, // To exclude current user when editing
+  }) async {
+    try {
+      var query = SupabaseService.client
+          .from('profiles')
+          .select('id')
+          .eq('student_id', studentId)
+          .eq('college', college)
+          .eq('branch', branch)
+          .eq('semester', semester);
+      
+      // Exclude current user if provided (for edit scenarios)
+      if (excludeUserId != null) {
+        query = query.neq('id', excludeUserId);
+      }
+      
+      final response = await query.limit(1);
+      return (response as List).isNotEmpty;
+    } catch (e) {
+      return false;
+    }
+  }
+
   /// Uploads a profile image to Cloudinary and updates the user's profile with the image URL.
   static Future<String?> uploadProfileImageToCloudinary(File imageFile) async {
     try {

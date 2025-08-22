@@ -33,6 +33,13 @@ class _PracticeTestsScreenState extends State<PracticeTestsScreen>
   bool _hasNetworkError = false;
   final NetworkService _networkService = NetworkService();
 
+  // Caching variables
+  static UserProfile? _cachedUserProfile;
+  static List<Subject>? _cachedSubjects;
+  static DateTime? _lastProfileRefresh;
+  static DateTime? _lastSubjectsRefresh;
+  static const int _cacheValidityMinutes = 5;
+
   // Map to store custom color indices for each subject
   final Map<String, int> _subjectColorIndices = {};
   static const String _colorPrefsKey = 'practice_test_subject_colors';
@@ -362,6 +369,23 @@ class _PracticeTestsScreenState extends State<PracticeTestsScreen>
   Future<void> _loadUserProfileAndSubjects() async {
     // await startOperationTrace('practice_tests_data_loading');
 
+    // Check if we have valid cached data first
+    if (_cachedUserProfile != null &&
+        _cachedSubjects != null &&
+        _lastProfileRefresh != null &&
+        _lastSubjectsRefresh != null &&
+        DateTime.now().difference(_lastProfileRefresh!).inMinutes < _cacheValidityMinutes &&
+        DateTime.now().difference(_lastSubjectsRefresh!).inMinutes < _cacheValidityMinutes) {
+      setState(() {
+        _userProfile = _cachedUserProfile;
+        _subjects = _cachedSubjects!;
+        _isLoading = false;
+        _hasNetworkError = false;
+      });
+      await _checkOnboardingTip();
+      return;
+    }
+
     // Check network connectivity first
     final networkStatus = await _networkService.isConnected();
 
@@ -392,7 +416,12 @@ class _PracticeTestsScreenState extends State<PracticeTestsScreen>
         // await stopOperationTrace('practice_tests_data_loading');
         return;
       }
+      
+      // Cache profile
+      _cachedUserProfile = profile;
+      _lastProfileRefresh = DateTime.now();
       _userProfile = profile;
+      
       final subjects = await SubjectsService.getSubjectsByCollegeAndSemester(
         profile.college!,
         profile.semester!,
@@ -407,6 +436,11 @@ class _PracticeTestsScreenState extends State<PracticeTestsScreen>
             return subjectBranch.contains(userBranch) ||
                 userBranch.contains(subjectBranch);
           }).toList();
+      
+      // Cache filtered subjects
+      _cachedSubjects = filteredSubjects;
+      _lastSubjectsRefresh = DateTime.now();
+      
       setState(() {
         _subjects = filteredSubjects;
         _isLoading = false;
@@ -1571,6 +1605,14 @@ class _PracticeTestsScreenState extends State<PracticeTestsScreen>
         ],
       ),
     );
+  }
+
+  /// Clear cache for fresh data
+  static void clearCache() {
+    _cachedUserProfile = null;
+    _cachedSubjects = null;
+    _lastProfileRefresh = null;
+    _lastSubjectsRefresh = null;
   }
 
   @override

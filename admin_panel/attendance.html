@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>EduNest Class Management</title>
+  <link rel="stylesheet" href="style.css?v=1.2">
+  <link rel="stylesheet" href="mobile-nav.css?v=1.2">
+  <link rel="stylesheet" href="attendance.css?v=1.0">
+  <link rel="stylesheet" href="attendance_enhancements.css?v=1.0">
+  <link rel="stylesheet" href="button_fix.css?v=1.0">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script src="supabaseClient.js?v=1.2"></script>
+</head>
+
+<body>
+  <div class="main-bg"></div>
+
+  <!-- Hamburger Menu Button -->
+  <button class="hamburger-btn" onclick="toggleMobileMenu()">
+    <div class="hamburger-icon">
+      <div class="hamburger-line"></div>
+      <div class="hamburger-line"></div>
+      <div class="hamburger-line"></div>
+    </div>
+  </button>
+
+  <!-- Mobile Navigation Container -->
+  <div class="mobile-nav-container" id="mobileNavContainer">
+    <div class="mobile-nav-backdrop" onclick="closeMobileMenu()"></div>
+    <div class="mobile-sidebar">
+      <div class="mobile-header">
+        <div class="mobile-logo">🎓<span>EduNest</span></div>
+        <button class="mobile-close-btn" onclick="closeMobileMenu()">✕</button>
+      </div>
+
+      <nav class="mobile-nav-menu">
+        <a href="dashboard.html" class="mobile-nav-item">
+          <span class="mobile-nav-icon">📊</span>
+          Dashboard
+        </a>
+        <a href="colleges.html" class="mobile-nav-item">
+          <span class="mobile-nav-icon">🏗️</span>
+          Hierarchy
+        </a>
+        <a href="attendance.html" class="mobile-nav-item active">
+          <span class="mobile-nav-icon">📋</span>
+          Classes
+        </a>
+      </nav>
+
+      <div class="mobile-user-info">
+        <div class="mobile-user-avatar" id="mobileUserAvatar">👤</div>
+        <div class="mobile-user-name" id="mobileUserName">Loading...</div>
+        <div class="mobile-user-role" id="mobileUserRole">Loading...</div>
+        <div class="mobile-user-email" id="mobileUserEmail" style="font-size: 0.9em; color: #64748b; margin-top: 4px;">
+          Loading...</div>
+        <button class="mobile-logout-btn" onclick="logout()">Logout</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="dashboard-layout">
+    <aside class="sidebar">
+      <div class="sidebar-logo">🎓<span>EduNest</span></div>
+      <nav class="sidebar-nav">
+        <button class="nav-btn" onclick="window.location.href='dashboard.html'"><span class="nav-icon">📊</span>
+          Dashboard</button>
+        <button class="nav-btn" onclick="window.location.href='colleges.html'"><span class="nav-icon">🏗️</span>
+          Hierarchy</button>
+        <button class="nav-btn active" onclick="window.location.href='attendance.html'"><span class="nav-icon">📋</span>
+          Classes</button>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="user-info modern-user-card">
+          <div class="user-avatar">
+            <span class="avatar-circle" id="userAvatar">A</span>
+          </div>
+          <div class="user-details">
+            <div class="user-name" id="userName">Loading...</div>
+            <div class="user-role" id="userRole">Loading...</div>
+            <div class="user-email" id="userEmail" style="font-size: 0.85em; color: #64748b; margin-top: 2px;">
+              Loading...</div>
+          </div>
+        </div>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+      </div>
+    </aside>
+
+    <main class="main-content mobile-main-content">
+      <div class="attendance-container">
+
+        <!-- My Classes Section -->
+        <div class="my-classes-section">
+          <div class="section-header">
+            <h2>📚 My Classes</h2>
+            <div class="section-actions">
+              <button class="add-btn" onclick="console.log('Button clicked!'); showAddClassForm();" style="cursor: pointer; z-index: 10; position: relative;">
+                <span class="btn-icon">➕</span>
+                Add New Class
+              </button>
+              <button class="delete-btn" onclick="toggleDeleteMode();" style="cursor: pointer; z-index: 10; position: relative; margin-left: 0.5rem;">
+                <span class="btn-icon">🗑️</span>
+                Delete Classes
+              </button>
+            </div>
+          </div>
+
+          <div id="classesGrid" class="classes-grid">
+            <!-- Classes will be loaded here -->
+          </div>
+        </div>
+
+        <!-- Delete Classes Modal -->
+        <div id="deleteClassesModal" class="modal hidden">
+          <div class="modal-backdrop" onclick="closeDeleteModal()"></div>
+          <div class="modal-content delete-modal">
+            <div class="modal-header">
+              <h2>🗑️ Delete Classes</h2>
+              <button class="modal-close-btn" onclick="closeDeleteModal()">✕</button>
+            </div>
+            <div class="modal-body">
+              <p class="delete-warning">
+                ⚠️ <strong>Warning:</strong> Deleting a class will permanently remove all related data including attendance records, assignment marks, rosters, and test assignments. This action cannot be undone.
+              </p>
+              <div class="delete-classes-list" id="deleteClassesList">
+                <!-- Classes will be loaded here -->
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button class="btn btn-secondary" onclick="closeDeleteModal()">Cancel</button>
+              <button class="btn btn-danger" onclick="confirmDeleteSelectedClasses()" id="deleteSelectedBtn" disabled>
+                🗑️ Delete Selected Classes
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Roster Management Section -->
+        <div id="rosterSection" class="roster-section hidden">
+          <div class="section-header">
+            <h2 id="rosterTitle">📚 Class Roster</h2>
+            <div class="roster-actions">
+              <button class="action-btn secondary" onclick="downloadRoster()">
+                <span class="btn-icon">📥</span>
+                Download Roster
+              </button>
+              <button class="action-btn" onclick="showUploadRosterForm()">
+                <span class="btn-icon">📤</span>
+                Upload Roster
+              </button>
+            </div>
+          </div>
+
+          <div class="roster-info">
+            <div class="info-card">
+              <span class="info-label">Total Students:</span>
+              <span class="info-value" id="totalStudents">0</span>
+            </div>
+            <div class="info-card">
+              <span class="info-label">Verified Students:</span>
+              <span class="info-value" id="verifiedStudents">0</span>
+            </div>
+            <div class="info-card">
+              <span class="info-label">Last Updated:</span>
+              <span class="info-value" id="lastUpdated">Never</span>
+            </div>
+          </div>
+
+          <div class="roster-table-container">
+            <table class="roster-table">
+              <thead>
+                <tr>
+                  <th>Roll Number</th>
+                  <th>Student Name</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="rosterTableBody">
+                <!-- Roster data will be loaded here -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Attendance Marking Section -->
+        <div id="attendanceSection" class="attendance-section hidden">
+          <div class="section-header">
+            <h2>📅 Mark Attendance</h2>
+            <div class="attendance-actions">
+              <input type="date" id="attendanceDate" class="date-input" onchange="loadAttendanceData()">
+              <div class="bulk-actions">
+                <button class="action-btn secondary" onclick="markAllPresent()">
+                  <span class="btn-icon">✅</span>
+                  All Present
+                </button>
+                <button class="action-btn secondary" onclick="markAllAbsent()">
+                  <span class="btn-icon">❌</span>
+                  All Absent
+                </button>
+              </div>
+              <button class="action-btn primary" onclick="saveAttendance()">
+                <span class="btn-icon">💾</span>
+                Save Attendance
+              </button>
+            </div>
+          </div>
+
+          <div class="attendance-summary">
+            <div class="summary-card present">
+              <span class="summary-label">Present</span>
+              <span class="summary-value" id="presentCount">0</span>
+            </div>
+            <div class="summary-card absent">
+              <span class="summary-label">Absent</span>
+              <span class="summary-value" id="absentCount">0</span>
+            </div>
+            <div class="summary-card total">
+              <span class="summary-label">Total</span>
+              <span class="summary-value" id="totalCount">0</span>
+            </div>
+          </div>
+
+          <div class="attendance-table-container">
+            <table class="attendance-table">
+              <thead>
+                <tr>
+                  <th>Roll Number</th>
+                  <th>Student Name</th>
+                  <th>Attendance</th>
+                  <th>Last Marked</th>
+                </tr>
+              </thead>
+              <tbody id="attendanceTableBody">
+                <!-- Attendance data will be loaded here -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Message Display -->
+        <div id="messageDisplay" class="message"></div>
+      </div>
+
+      <footer class="footer">
+        <div class="footer-content">
+          <div class="footer-left">
+            <span class="footer-logo">🎓 EduNest</span>
+            <span class="footer-text">Attendance Management &copy; 2024</span>
+          </div>
+          <div class="footer-right">
+            <span class="footer-status" id="connectionStatus">🟢 Connected</span>
+          </div>
+        </div>
+      </footer>
+    </main>
+  </div>
+
+  <!-- Add Class Modal -->
+  <div id="addClassModal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Add New Class</h3>
+        <button class="close-btn" onclick="closeModal('addClassModal')">✕</button>
+      </div>
+      <form id="addClassForm" class="modal-form">
+        <div class="form-group">
+          <label>College</label>
+          <div id="classCollegeName"
+            style="padding:.75rem;border:1px solid #e5e7eb;border-radius:8px;background:#f8fafc;color:#111827">
+            Loading...</div>
+        </div>
+        <div class="form-group">
+          <label for="classBranch">Branch</label>
+          <select id="classBranch" required onchange="loadSemesters()">
+            <option value="">Select Branch</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="classSemester">Semester</label>
+          <select id="classSemester" required onchange="loadSubjects()">
+            <option value="">Select Semester</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="classSubject">Subject</label>
+          <select id="classSubject" required>
+            <option value="">Select Subject</option>
+          </select>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn-secondary" onclick="closeModal('addClassModal')">Cancel</button>
+          <button type="submit" class="btn-primary">Add Class</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Upload Roster Modal -->
+  <div id="uploadRosterModal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Upload Class Roster</h3>
+        <button class="close-btn" onclick="closeModal('uploadRosterModal')">✕</button>
+      </div>
+      <form id="uploadRosterForm" class="modal-form">
+        <div class="form-group">
+          <label for="rosterFile">Upload CSV/Excel File</label>
+          <input type="file" id="rosterFile" accept=".csv,.xlsx,.xls" required>
+          <small>File should contain: Roll Number, Student Name</small>
+        </div>
+        <div class="form-group">
+          <label>
+            <input type="checkbox" id="overwriteRoster">
+            Overwrite existing roster
+          </label>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn-secondary" onclick="closeModal('uploadRosterModal')">Cancel</button>
+          <button type="submit" class="btn-primary">Upload Roster</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Loading Overlay -->
+  <div id="loadingOverlay" class="loading-overlay hidden">
+    <div class="loading-spinner"></div>
+    <p id="loadingText">Loading...</p>
+  </div>
+
+  <script src="login.js"></script>
+  <script src="supabaseAdmin.js"></script>
+  <script src="attendance.js?v=1.1"></script>
+</body>
+
+</html>

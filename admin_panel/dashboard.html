@@ -15,6 +15,7 @@
   <link rel="stylesheet" href="drilldown.css?v=1.2">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script src="supabaseClient.js?v=1.2"></script>
+  <script src="supabaseAdmin.js?v=1.2"></script>
 </head>
 <body>
   <div class="main-bg"></div>
@@ -46,13 +47,9 @@
           <span class="mobile-nav-icon">🏗️</span>
           Hierarchy
         </a>
-        <a href="question_entry.html" class="mobile-nav-item">
-          <span class="mobile-nav-icon">📝</span>
-          Manual Question Entry
-        </a>
-        <a href="assigned_tests.html" class="mobile-nav-item">
-          <span class="mobile-nav-icon">📊</span>
-          Assigned Tests
+        <a href="attendance.html" class="mobile-nav-item">
+          <span class="mobile-nav-icon">📋</span>
+          Classes
         </a>
       </nav>
       
@@ -72,8 +69,7 @@
       <nav class="sidebar-nav">
         <button class="nav-btn active" onclick="showOverview()"><span class="nav-icon">📊</span> Overview</button>
         <button class="nav-btn" onclick="window.location.href='colleges.html'"><span class="nav-icon">🏗️</span> Hierarchy</button>
-        <button class="nav-btn" onclick="window.location.href='question_entry.html'"><span class="nav-icon">📝</span> Manual Question Entry</button>
-        <button class="nav-btn" onclick="window.location.href='assigned_tests.html'"><span class="nav-icon">📊</span> Assigned Tests</button>
+        <button class="nav-btn" onclick="window.location.href='attendance.html'"><span class="nav-icon">📋</span> Classes</button>
       </nav>
       <div class="sidebar-footer">
         <div class="user-info modern-user-card">
@@ -83,7 +79,7 @@
           <div class="user-details">
             <div class="user-name" id="userName">Loading...</div>
             <div class="user-role" id="userRole">Loading...</div>
-            <div class="user-email" id="userEmail" style="font-size: 0.85em; color: #64748b; margin-top: 2px;">Loading...</div>
+            <div class="user-email" id="userEmail" style="font-size: 0.85em; color: #64748b; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Loading...</div>
           </div>
         </div>
         <button class="logout-btn" onclick="logout()">Logout</button>
@@ -105,14 +101,20 @@
               <span class="action-icon">🏗️</span>
               Manage Hierarchy
             </button>
-            <button class="action-btn" onclick="window.location.href='question_entry.html'">
-              <span class="action-icon">📝</span>
-              Manual Question Entry
+            <button class="action-btn" onclick="window.location.href='attendance.html'">
+              <span class="action-icon">📋</span>
+              Manage Classes
             </button>
-            <button class="action-btn" onclick="window.location.href='assigned_tests.html'">
-              <span class="action-icon">📊</span>
-              View Assigned Tests
-            </button>
+          </div>
+          
+          <!-- Attendance Shortcuts within Quick Actions -->
+          <div class="attendance-shortcuts-section">
+            <div id="attendanceShortcuts" class="attendance-shortcuts-grid">
+              <div class="loading-classes">
+                <div class="loading-spinner-small"></div>
+                <span>Loading your classes...</span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -240,8 +242,7 @@
   </div>
 
   <script src="login.js"></script>
-  <script src="supabaseAdmin.js"></script>
-  <script src="app.js?v=1.1"></script>
+  <script src="app.js?v=1.2"></script>
 </body>
 </html> 
  

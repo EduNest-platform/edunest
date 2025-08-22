@@ -49,6 +49,16 @@ class _HomeScreenState extends State<HomeScreen>
   List<FileResource> _recentFiles = [];
   bool _recentLoading = true;
 
+  // Caching variables
+  static UserProfile? _cachedUserProfile;
+  static List<Subject>? _cachedCurrentSubjects;
+  static List<Subject>? _cachedAllSubjects;
+  static List<FileResource>? _cachedRecentFiles;
+  static DateTime? _lastProfileRefresh;
+  static DateTime? _lastSubjectsRefresh;
+  static DateTime? _lastRecentRefresh;
+  static const int _cacheValidityMinutes = 5;
+
   // First-time user onboarding
   bool _isFirstTime = false;
   bool _showOnboarding = false;
@@ -144,8 +154,8 @@ class _HomeScreenState extends State<HomeScreen>
     // await startOperationTrace('home_data_loading');
     await _loadUserProfile();
     await _loadSubjectsForSearch();
-    // Reduced delay for faster onboarding
-    await Future.delayed(const Duration(milliseconds: 50));
+    // Minimal delay for instant onboarding
+    await Future.delayed(const Duration(milliseconds: 10));
     await _checkFirstTimeUser();
     // await stopOperationTrace('home_data_loading');
   }
@@ -159,8 +169,8 @@ class _HomeScreenState extends State<HomeScreen>
 
     // Check if user profile is loaded
     if (_userProfile == null) {
-      // Reduced wait time for profile to load
-      await Future.delayed(const Duration(milliseconds: 100));
+      // Minimal wait time for instant onboarding
+      await Future.delayed(const Duration(milliseconds: 20));
     }
 
     final prefs = await SharedPreferences.getInstance();
@@ -175,8 +185,8 @@ class _HomeScreenState extends State<HomeScreen>
 
       // Start onboarding after widgets are rendered
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        // Reduced delay for faster onboarding
-        Future.delayed(const Duration(milliseconds: 400), () {
+        // Instant onboarding - minimal delay for UI to render
+        Future.delayed(const Duration(milliseconds: 100), () {
           if (_showOnboarding && mounted) {
             _startOnboarding();
           }
@@ -229,12 +239,12 @@ class _HomeScreenState extends State<HomeScreen>
       if (context != null) {
         Scrollable.ensureVisible(
           context,
-          duration: const Duration(milliseconds: 500),
+          duration: const Duration(milliseconds: 200),
           curve: Curves.easeInOut,
         );
 
-        // Reduced delay after scrolling for faster onboarding
-        Future.delayed(const Duration(milliseconds: 500), () {
+        // Instant tooltip after scrolling
+        Future.delayed(const Duration(milliseconds: 150), () {
           if (mounted) {
             _showTooltip(step);
             // Mark as seen only when first tooltip is successfully shown
@@ -244,8 +254,8 @@ class _HomeScreenState extends State<HomeScreen>
           }
         });
       } else {
-        // If context is null, try again after a shorter delay
-        Future.delayed(const Duration(milliseconds: 100), () {
+        // If context is null, try again after minimal delay
+        Future.delayed(const Duration(milliseconds: 50), () {
           if (_showOnboarding && mounted) {
             _showOnboardingStep(step);
           }
@@ -269,7 +279,7 @@ class _HomeScreenState extends State<HomeScreen>
       },
       {
         'title': 'Academic Info',
-        'description': 'Access syllabus, timetables, and academic information.',
+        'description': 'Access assignment marks, give subject feedback, view syllabus, timetables, and all academic information in one place.',
         'position': 'bottom',
       },
       {
@@ -556,7 +566,6 @@ class _HomeScreenState extends State<HomeScreen>
                                         ),
                                         child: IconButton(
                                           onPressed: () {
-                                            overlayEntry.remove();
                                             _nextOnboardingStep();
                                           },
                                           icon: const Icon(
@@ -654,7 +663,6 @@ class _HomeScreenState extends State<HomeScreen>
                                         ),
                                         child: ElevatedButton(
                                           onPressed: () {
-                                            overlayEntry.remove();
                                             _nextOnboardingStep();
                                           },
                                           style: ElevatedButton.styleFrom(
@@ -715,10 +723,32 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   void _nextOnboardingStep() {
-    _showOnboardingStep(_currentOnboardingStep + 1);
+    // Add fade-out animation before removing current overlay
+    if (_searchOverlayEntry?.mounted ?? false) {
+      // Animate current tooltip out
+      Future.delayed(const Duration(milliseconds: 150), () {
+        if (_searchOverlayEntry?.mounted ?? false) {
+          _searchOverlayEntry?.remove();
+        }
+        _searchOverlayEntry = null;
+      });
+    }
+    
+    // Add smooth transition delay between tooltips for better readability
+    Future.delayed(const Duration(milliseconds: 400), () {
+      if (_showOnboarding && mounted) {
+        _showOnboardingStep(_currentOnboardingStep + 1);
+      }
+    });
   }
 
   void _endOnboarding() {
+    // Clean up any existing overlay
+    if (_searchOverlayEntry?.mounted ?? false) {
+      _searchOverlayEntry?.remove();
+    }
+    _searchOverlayEntry = null;
+    
     setState(() {
       _showOnboarding = false;
       _currentOnboardingStep = 0;
@@ -773,7 +803,39 @@ class _HomeScreenState extends State<HomeScreen>
 
   Future<void> _loadUserProfile() async {
     try {
+      // Check if we have valid cached data
+      if (_cachedUserProfile != null &&
+          _lastProfileRefresh != null &&
+          DateTime.now().difference(_lastProfileRefresh!).inMinutes < _cacheValidityMinutes) {
+        setState(() {
+          _userProfile = _cachedUserProfile;
+          _isLoading = false;
+        });
+        // Still load subjects with cached profile if available
+        if (_userProfile != null &&
+            _userProfile!.college != null &&
+            _userProfile!.semester != null &&
+            _userProfile!.branch != null) {
+          await _loadCurrentSubjects(
+            _userProfile!.college!,
+            _userProfile!.branch!,
+            _userProfile!.semester!.toString(),
+          );
+          await _loadRecentActivity();
+        } else {
+          setState(() {
+            _subjectsLoading = false;
+            _recentLoading = false;
+          });
+        }
+        return;
+      }
+
       final profile = await UserProfileService.getCurrentUserProfile();
+      // Cache the profile data
+      _cachedUserProfile = profile;
+      _lastProfileRefresh = DateTime.now();
+      
       setState(() {
         _userProfile = profile;
         _isLoading = false;
@@ -812,6 +874,17 @@ class _HomeScreenState extends State<HomeScreen>
       _subjectsLoading = true;
     });
     try {
+      // Check if we have valid cached subjects
+      if (_cachedCurrentSubjects != null &&
+          _lastSubjectsRefresh != null &&
+          DateTime.now().difference(_lastSubjectsRefresh!).inMinutes < _cacheValidityMinutes) {
+        setState(() {
+          _currentSubjects = _cachedCurrentSubjects!;
+          _subjectsLoading = false;
+        });
+        return;
+      }
+
       final subjects = await SubjectsService.getSubjectsByCollegeAndSemester(
         college,
         semester,
@@ -826,6 +899,11 @@ class _HomeScreenState extends State<HomeScreen>
             return subjectBranch.contains(userBranch) ||
                 userBranch.contains(subjectBranch);
           }).toList();
+      
+      // Cache the filtered subjects
+      _cachedCurrentSubjects = filteredSubjects;
+      _lastSubjectsRefresh = DateTime.now();
+      
       setState(() {
         _currentSubjects = filteredSubjects;
         _subjectsLoading = false;
@@ -842,9 +920,20 @@ class _HomeScreenState extends State<HomeScreen>
       _recentLoading = true;
     });
     try {
+      // Check if we have valid cached recent files
+      if (_cachedRecentFiles != null &&
+          _lastRecentRefresh != null &&
+          DateTime.now().difference(_lastRecentRefresh!).inMinutes < _cacheValidityMinutes) {
+        setState(() {
+          _recentFiles = _cachedRecentFiles!;
+          _recentLoading = false;
+        });
+        return;
+      }
+
       List<FileResource> allFiles = [];
       final uuidRegExp = RegExp(
-        r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}␀?$',
+        r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\0?$',
       );
       for (final subject in _currentSubjects) {
         // Only fetch for valid UUIDs
@@ -854,8 +943,14 @@ class _HomeScreenState extends State<HomeScreen>
         }
       }
       allFiles.sort((a, b) => b.uploadDate.compareTo(a.uploadDate));
+      final recentFilesList = allFiles.take(10).toList();
+      
+      // Cache the recent files
+      _cachedRecentFiles = recentFilesList;
+      _lastRecentRefresh = DateTime.now();
+      
       setState(() {
-        _recentFiles = allFiles.take(10).toList();
+        _recentFiles = recentFilesList;
         _recentLoading = false;
       });
     } catch (e) {
@@ -888,7 +983,20 @@ class _HomeScreenState extends State<HomeScreen>
 
   Future<void> _loadSubjectsForSearch() async {
     if (_subjectsLoadedForSearch) return;
-    final profile = await UserProfileService.getCurrentUserProfile();
+    
+    // Check if we can reuse cached subjects for search
+    if (_cachedAllSubjects != null &&
+        _lastSubjectsRefresh != null &&
+        DateTime.now().difference(_lastSubjectsRefresh!).inMinutes < _cacheValidityMinutes) {
+      setState(() {
+        _allSubjects = _cachedAllSubjects!;
+        _subjectsLoadedForSearch = true;
+      });
+      return;
+    }
+
+    // Use cached profile if available
+    final profile = _cachedUserProfile ?? await UserProfileService.getCurrentUserProfile();
     List<Subject> subjects;
     if (profile != null &&
         profile.college != null &&
@@ -911,24 +1019,49 @@ class _HomeScreenState extends State<HomeScreen>
     } else {
       subjects = await SubjectsService.getAllSubjects();
     }
+    
+    // Cache all subjects for search
+    _cachedAllSubjects = subjects;
+    
     setState(() {
       _allSubjects = subjects;
       _subjectsLoadedForSearch = true;
     });
   }
 
+  // Cache for search results
+  static final Map<String, List<Map<String, dynamic>>> _searchCache = {};
+  static final Map<String, DateTime> _searchCacheTimestamps = {};
+  static const int _searchCacheValidityMinutes = 10;
+
   void _onInlineSearchChanged(String query) {
     if (_searchDebounce?.isActive ?? false) _searchDebounce!.cancel();
     _searchDebounce = Timer(const Duration(milliseconds: 400), () async {
       if (query.trim().isNotEmpty) {
+        final trimmedQuery = query.trim().toLowerCase();
+        
+        // Check if we have cached search results
+        if (_searchCache.containsKey(trimmedQuery) &&
+            _searchCacheTimestamps[trimmedQuery] != null &&
+            DateTime.now().difference(_searchCacheTimestamps[trimmedQuery]!).inMinutes < _searchCacheValidityMinutes) {
+          setState(() {
+            _searchResults = _searchCache[trimmedQuery]!;
+            _searchLoading = false;
+          });
+          if (!(Platform.isWindows || Platform.isMacOS)) {
+            _showSearchOverlay();
+          }
+          return;
+        }
+
         setState(() {
           _searchLoading = true;
         });
         List<Map<String, dynamic>> allResults = [];
         for (final subject in _allSubjects) {
           // Add both study/resources and practice exam entries for each subject
-          if (subject.name.toLowerCase().contains(query.toLowerCase()) ||
-              (subject.code?.toLowerCase().contains(query.toLowerCase()) ??
+          if (subject.name.toLowerCase().contains(trimmedQuery) ||
+              (subject.code?.toLowerCase().contains(trimmedQuery) ??
                   false)) {
             allResults.add({
               'type': 'subject',
@@ -949,6 +1082,11 @@ class _HomeScreenState extends State<HomeScreen>
             allResults.add({'file': file, 'subject': subject});
           }
         }
+        
+        // Cache search results
+        _searchCache[trimmedQuery] = allResults;
+        _searchCacheTimestamps[trimmedQuery] = DateTime.now();
+        
         setState(() {
           _searchResults = allResults;
           _searchLoading = false;
@@ -1210,6 +1348,25 @@ class _HomeScreenState extends State<HomeScreen>
     if (Platform.isWindows || Platform.isMacOS) return;
     _searchOverlayEntry?.remove();
     _searchOverlayEntry = null;
+  }
+
+  /// Clear cache when app is backgrounded or memory pressure
+  static void clearCache() {
+    _cachedUserProfile = null;
+    _cachedCurrentSubjects = null;
+    _cachedAllSubjects = null;
+    _cachedRecentFiles = null;
+    _lastProfileRefresh = null;
+    _lastSubjectsRefresh = null;
+    _lastRecentRefresh = null;
+    _searchCache.clear();
+    _searchCacheTimestamps.clear();
+  }
+
+  /// Force refresh all data by clearing cache
+  Future<void> refreshAllData() async {
+    clearCache();
+    await _initializeApp();
   }
 
   @override
@@ -1571,23 +1728,12 @@ class _HomeScreenState extends State<HomeScreen>
                 subtitle: 'Syllabus & Timetable',
                 color: AppTheme.primaryLight,
                 onTap: () {
-                  if (_currentSubjects.isNotEmpty) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder:
-                            (context) => AcademicInfoScreen(
-                              subjectId: _currentSubjects.first.id,
-                            ),
-                      ),
-                    );
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('No subject found for Academic Info.'),
-                      ),
-                    );
-                  }
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const AcademicInfoScreen(),
+                    ),
+                  );
                 },
               ),
             ),

@@ -27,13 +27,11 @@ ManifestDPIAware true
 !define MUI_UNICON "assets\images\edunest-desktop.ico"
 !define MUI_WELCOMEFINISHPAGE_BITMAP "assets\images\Wizard.bmp"
 
-; --- Pages (Simplified for an Updater) ---
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_INSTFILES
 !define MUI_FINISHPAGE_RUN "$INSTDIR\${APP_EXE}"
 !insertmacro MUI_PAGE_FINISH
 
-; --- Uninstaller Pages ---
 !insertmacro MUI_UNPAGE_CONFIRM
 !insertmacro MUI_UNPAGE_INSTFILES
 
@@ -46,17 +44,17 @@ ManifestDPIAware true
 Section "Update Files"
   SectionIn RO
 
-  ; Read the install location from the registry
   ReadRegStr $INSTDIR HKLM "${UNINSTALL_KEY}" "InstallLocation"
-
-  ; Set the output path to that directory
   SetOutPath $INSTDIR
 
-  ; Install all application files, overwriting old ones
   File /r "build\windows\x64\runner\Release\*.*"
 
-  ; Update the version number in the registry
   WriteRegStr HKLM "${UNINSTALL_KEY}" "DisplayVersion" "${APP_VERSION}"
+
+  ; --- NEW: Re-register the URL Protocol to ensure it's correct ---
+  WriteRegStr HKCR "io.supabase.edunest" "" "URL:EduNest Protocol"
+  WriteRegStr HKCR "io.supabase.edunest" "URL Protocol" ""
+  WriteRegStr HKCR "io.supabase.edunest\shell\open\command" "" '"$INSTDIR\${APP_EXE}" "%1"'
 SectionEnd
 
 ;--------------------------------
@@ -70,5 +68,8 @@ Section "Uninstall"
   Delete "$DESKTOP\${APP_NAME}.lnk"
   Delete "$STARTUP\${APP_NAME}.lnk"
   RmDir /r "$INSTDIR"
+
+  ; Note: The main uninstaller should handle both of these keys
+  DeleteRegKey HKCR "io.supabase.edunest"
   DeleteRegKey HKLM "${UNINSTALL_KEY}"
 SectionEnd

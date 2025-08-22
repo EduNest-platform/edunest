@@ -5,6 +5,8 @@
 [![Supabase](https://img.shields.io/badge/Supabase-Backend-green.svg)](https://supabase.com/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Status](https://img.shields.io/badge/Status-Production%20Ready-brightgreen.svg)]()
+[![Clean Code](https://img.shields.io/badge/Code-Clean%20&%20Optimized-blue.svg)]()
+[![Debug Free](https://img.shields.io/badge/Debug%20Prints-Removed-success.svg)]()
 
 > **A comprehensive educational mobile application that revolutionizes student learning with AI-powered practice tests, smart attendance tracking, and comprehensive study resources.**
 
@@ -25,56 +27,118 @@
 - **Syllabus & Timetable**: PDF viewer with easy navigation
 
 ### 🤖 **AI-Powered Learning**
-- **Smart MCQ Generation**: AI creates questions from study materials
-- **Multiple Difficulty Levels**: Easy, Medium, Hard questions
+- **Smart MCQ Generation**: AI creates questions from study materials using Google Gemini
+- **Three Practice Modes**: Academic, Competitive Exam, and Career Prep modes
+- **Dynamic Mode Detection**: Automatically detects GATE vs non-GATE topics for competitive mode
+- **Bulk Question Generation**: Generate 20 questions for all modes (60 total) with one click
+- **Multiple Question Counts**: Support for 10, 15, and 20 question tests
 - **Performance Analytics**: Detailed insights and progress tracking
 
-### 📝 **Practice Tests**
+### 📝 **Practice Tests & Assessment System**
+- **Three Practice Modes**: 
+  - **Academic Mode**: University exam preparation with core syllabus concepts
+  - **Competitive Exam Mode**: GATE/ESE/ISRO/DRDO preparation with dynamic detection
+  - **Career Prep Mode**: Interview and practical job preparation questions
+- **Smart Mode Detection**: Automatically shows "GATE Prep Mode" for GATE topics, "Competitive Exam Mode" for others
+- **Multiple Question Counts**: Choose from 10, 15, or 20 questions per test
 - **Free Practice Tests**: Unlimited practice with instant feedback
-- **Protected Tests**: Professor-assigned tests with time limits
+- **Assigned Tests**: Professor-assigned protected tests with time limits and restricted access
+- **Proctored Testing**: App monitoring prevents switching during protected tests
+- **Auto-Submit Security**: Tests automatically submit if user leaves the app during proctoring
+- **Test Assignment Management**: Complete workflow for professors to assign and monitor tests
 - **Real-time Results**: Immediate scoring and detailed explanations
-- **Progress Tracking**: Historical performance analysis
+- **Progress Tracking**: Historical performance analysis and completion status
 
-### 📊 **Attendance Management**
-- **Smart Tracking**: Daily attendance with visual calendar
-- **75% Target Calculator**: Shows required classes for attendance target
-- **Analytics Dashboard**: Attendance trends and statistics
+### 📊 **Advanced Attendance Management**
+- **Smart Daily Tracking**: Visual calendar with attendance marking
+- **75% Target Calculator**: Real-time calculation of required classes
+- **Professor Dashboard**: Complete class roster management
+- **Bulk Operations**: Mark all present/absent with one click
+- **CSV/Excel Import**: Upload class rosters from spreadsheets
+- **Analytics Dashboard**: Comprehensive attendance trends and statistics
+- **Student Verification**: Track verified vs unverified students
+- **Date-wise Reports**: Historical attendance data with filtering
+- **Attendance Alerts**: Notifications for low attendance students
+- **Export Functionality**: Download attendance reports in multiple formats
+- **Professor-Managed Mode**: Students can track their own attendance or let professors manage it
+- **Class-wise Organization**: Separate attendance tracking for different classes and subjects
 
-### 📚 **Study Resources**
+### 📚 **Study Resources & Academic Tools**
 - **Comprehensive Library**: Notes, assignments, lab manuals
 - **Easy Downloads**: One-tap file access and offline storage
 - **Organized Content**: Subject-wise resource categorization
 - **Multiple Formats**: PDF, DOCX, PPTX, images support
+- **Assignment Management**: Homework tracking with due dates and submission status
+- **Assignment Marks System**: Complete grade tracking and performance analytics
+- **Subject-wise Grade Tracking**: View assignment scores organized by subjects and classes
+- **Performance Analytics**: Historical grade trends and academic progress insights
+
+### 💬 **Subject Feedback System**
+- **Class Feedback Campaigns**: Structured feedback collection for subjects and professors
+- **Anonymous Feedback**: Students can provide honest feedback without revealing identity
+- **5-Point Rating Scale**: Standard rating system for Teaching Quality, Course Content, Professor Knowledge, Interaction, and Overall Satisfaction
+- **Campaign Management**: Professors can create time-bound feedback campaigns for their subjects
+- **Real-time Analytics**: Comprehensive feedback analytics with subject-wise comparisons
+- **Feedback Dashboard**: Administrative overview of all feedback responses and trends
+- **Cross-Subject Analysis**: Compare feedback across different subjects and semesters
+- **Export Functionality**: Download feedback reports for institutional analysis
+
+| **Performance Optimization** | ✅ Complete | Exam mode, monitoring, adaptive caching, load balancing |
+| **System Monitoring** | ✅ Complete | Real-time metrics, health tracking, circuit breaker protection |
+| **Advanced Caching** | ✅ Complete | Multi-layer caching, request batching, automatic cleanup |
+| **Load Balancing** | ✅ Complete | Peak-time management, connection pooling, dynamic scaling |
+- **Network Optimization**: Intelligent request batching and connection management
+- **Background Processing**: Efficient handling of data synchronization and updates
+- **Memory Management**: Automatic cleanup and garbage collection optimization
+- **Load Balancing**: Dynamic resource allocation during peak usage periods
+- **System Health Dashboard**: Administrative monitoring with alerts and performance insights
+- **Scalable Connection Management**: Advanced connection pooling for 200-300 concurrent users
+- **Circuit Breaker Pattern**: Automatic fault tolerance and recovery mechanisms
+- **Multi-layer Caching**: Memory + disk caching with automatic expiration and cleanup
+- **Request Batching**: Intelligent API request grouping to reduce server load
+- **Peak Load Management**: Automated throttling and queueing during high traffic periods
 
 ### 🔐 **Security & Privacy**
 - **Secure Authentication**: JWT-based login system
 - **Data Protection**: Encrypted storage and transmission
 - **Role-Based Access**: Student and Admin permissions
 
-## 🏗️ **Architecture Overview**
+## 🔧 **Advanced System Architecture**
 
+### **Performance Optimization Layer**
 ```
-┌─────────────────┐    ┌─────────────────┐
-│   Flutter App   │    │  Admin Panel    │
-│   (Mobile)      │    │   (Web)         │
-│                 │    │                 │
-│ • Student UI    │    │ • Content Mgmt  │
-│ • Practice Tests│    │ • File Upload   │
-│ • Attendance    │    │ • AI Questions  │
-│ • Study Resources│   │ • User Mgmt     │
-└─────────────────┘    └─────────────────┘
-         │                       │
-         └───────────────────────┘
-                                 │
-                    ┌─────────────────┐
-                    │   Supabase      │
-                    │   (Backend)     │
-                    │                 │
-                    │ • PostgreSQL    │
-                    │ • Authentication│
-                    │ • Storage       │
-                    │ • Real-time     │
-                    └─────────────────┘
+┌─────────────────────────────────────────────────────────┐
+│                Performance Layer                        │
+├─────────────────────────────────────────────────────────┤
+│ • ScalableConnectionService (200-300 users)            │
+│ • ExamOptimizationService (high-load periods)          │
+│ • MonitoringReportingService (real-time metrics)       │
+│ • LoadBalancingService (peak-time management)          │
+└─────────────────────────────────────────────────────────┘
+```
+
+### **Caching & Optimization Layer**
+```
+┌─────────────────────────────────────────────────────────┐
+│                Caching Layer                            │
+├─────────────────────────────────────────────────────────┤
+│ • CacheStorageService (50MB memory + 200MB disk)       │
+│ • BatchApiService (request grouping & optimization)    │
+│ • CachedFileResourceService (smart file caching)       │
+│ • ConnectionQueueService (connection pooling)          │
+└─────────────────────────────────────────────────────────┘
+```
+
+### **System Resilience**
+```
+┌─────────────────────────────────────────────────────────┐
+│              Resilience & Recovery                      │
+├─────────────────────────────────────────────────────────┤
+│ • Circuit Breaker Pattern (automatic fault recovery)   │
+│ • Dynamic Connection Scaling (45-58 connections)       │
+│ • Request Rate Limiting (API protection)               │
+│ • Emergency Throttling (overload protection)           │
+└─────────────────────────────────────────────────────────┘
 ```
 
 ## 🚀 **Quick Start**
@@ -111,10 +175,20 @@
 
 ## 📊 **Performance & Scalability**
 
-### **Current Capacity**
-- **✅ 500 Students**: Perfect with free tier
-- **✅ 1000 Students**: Minor upgrade needed ($25/month)
-- **✅ 2000+ Students**: Full production setup ($55/month)
+### **Performance Capacity**
+- **✅ Current Capacity**: Supports 200-300 concurrent users
+- **✅ Connection Management**: 45-58 dynamic connection pool with automatic scaling
+- **✅ Cache Efficiency**: Multi-layer caching (memory + disk) with 50MB/200MB limits
+- **✅ Load Balancing**: Automated peak-time management and request queuing
+- **✅ Fault Tolerance**: Circuit breaker pattern with automatic recovery
+- **✅ Monitoring**: Real-time system health with crash risk assessment
+
+### **Scalability Metrics**
+- **Connection Pool**: 45-58 concurrent connections with dynamic adjustment
+- **Cache Performance**: 50MB memory + 200MB disk with intelligent expiration
+- **Request Batching**: Up to 10 requests per batch to optimize server load
+- **Peak Load Management**: Automatic throttling during high-traffic periods
+- **User Capacity**: Estimated 200-300 users with current free tier resources
 
 ### **Resource Usage**
 - **Database**: ~65MB for 1000 students
@@ -178,29 +252,58 @@ GEMINI_API_KEY=your_gemini_api_key
 ### **Database Schema**
 - `profiles` - User profiles and academic information
 - `colleges`, `branches`, `semesters`, `subjects` - Academic hierarchy
-- `questions` - AI-generated MCQ questions
-- `test_results` - User performance analytics
-- `attendance_records` - Daily attendance with 75% calculations
-- `files` - Educational resources
-- `test_assignments` - Assigned tests
-- `user_roles` - Role-based access control
+- `questions` - AI-generated MCQ questions with practice modes
+- `test_results` - User performance analytics and progress tracking
+- `attendance_records` - Daily attendance with 75% target calculations
+- `class_rosters` - Professor-managed class student lists
+- `attendance_analytics` - Comprehensive attendance statistics
+- `files` - Educational resources and study materials
+- `test_assignments` - Professor-assigned protected tests with proctoring
+- `user_roles` - Role-based access control (Student/Professor/Admin)
+- `class_assignment_marks` - Assignment grades and performance tracking
+- `assignment_marks` - Individual assignment scores and feedback
+- `subject_feedback` - Feedback campaigns and anonymous responses
+- `feedback_responses` - Student feedback data with rating analytics
+- `system_monitoring` - Performance metrics and health monitoring
+- `exam_optimization` - Resource optimization during high-load periods
 
 ## 🎯 **Key Features Deep Dive**
 
 ### **🤖 AI-Powered Question Generation**
 ```dart
 // Automatic MCQ creation from study materials
-- Content analysis using Gemini API
-- Multiple difficulty levels (Easy, Medium, Hard)
+- Content analysis using Google Gemini API
+- Three practice modes (Academic, Competitive, Career)
+- Dynamic GATE topic detection for competitive mode
+- Multiple question counts (10, 15, 20 questions)
+- Bulk generation: 60 questions (20 per mode) with one click
 - Quality validation and review system
 ```
 
-### **📊 Smart Attendance Tracking**
+### **🎓 Smart Practice Mode System**
 ```dart
-// Intelligent attendance management
-- Daily logging with visual calendar
-- 75% target calculator with statistics
-- Real-time analytics and trends
+// Dynamic mode detection and display
+- Academic Mode: University exam preparation
+- Competitive Mode: 
+  * Shows "GATE Prep Mode" for GATE syllabus topics
+  * Shows "Competitive Exam Mode" for non-GATE topics
+  * Auto-detects based on existing questions and topic keywords
+- Career Mode: Interview and job preparation
+- Real-time mode switching with appropriate descriptions
+```
+
+### **📊 Comprehensive Attendance System**
+```dart
+// Advanced attendance management for professors and students
+- Daily attendance marking with visual calendar interface
+- 75% target calculator with real-time statistics
+- Class roster management with CSV/Excel import
+- Bulk attendance operations (mark all present/absent)
+- Student verification and status tracking
+- Date-wise attendance reports and analytics
+- Export functionality for attendance data
+- Low attendance alerts and notifications
+- Historical trends and performance insights
 ```
 
 ### 📱 Modern UI/UX
@@ -271,32 +374,98 @@ flutter build ios --release
 ## 🚀 **Deployment**
 
 ### **Current Status**
-- ✅ **Mobile App**: Production ready
-- ✅ **Backend**: Supabase deployed
-- ✅ **AI Integration**: Gemini API active
-- ✅ **Testing**: Core functionality tested
+- ✅ **Mobile App**: Production ready with optimized performance
+- ✅ **Backend**: Supabase deployed and stable
+- ✅ **AI Integration**: Gemini API active and optimized
+- ✅ **Code Quality**: Debug prints removed, clean production code
+- ✅ **Performance**: Optimized caching and resource management
+- ✅ **Testing**: Core functionality tested and validated
 - ✅ **Admin Panel**: Web-based management system
 
 > APK download/distribution link will be provided soon.
 
 ### **Admin Panel Control**
-The admin panel is a **separate web application** that connects to the same Supabase backend. It allows you to:
-- **Manage Content**: Upload study materials, create subjects, and organize files
-- **Generate AI Questions**: Use Gemini API to create practice test questions
-- **User Management**: Monitor student accounts and manage access
-- **Test Assignment**: Create and assign tests to specific students
-- **Analytics**: View usage statistics and performance metrics
+The admin panel is a **separate web application** that connects to the same Supabase backend. It provides comprehensive management tools:
 
-**How it works**: The admin panel uses the same Supabase credentials as the mobile app, so all data is synchronized. You control access through Supabase's built-in authentication and role-based permissions.
+#### **📚 Content Management**
+- Upload study materials, create subjects, and organize files
+- Multi-format support (PDF, DOCX, PPTX, images)
+- Hierarchical organization (College → Branch → Semester → Subject)
+
+#### **🤖 AI Question Generation**
+- Generate questions for specific practice modes (Academic, Competitive, Career)
+- Bulk generation: Create 20 questions for all 3 modes (60 total) with one click
+- Smart disable: Button automatically disables when all modes have 20+ questions
+- Progress tracking during generation with success/failure feedback
+- Dynamic mode naming: Shows "Competitive Exam Mode" while app detects GATE vs non-GATE
+
+#### **📊 Advanced Attendance Management**
+- **Class Roster Management**: Create and manage class lists
+- **CSV/Excel Import**: Bulk upload student rosters from spreadsheets
+- **Daily Attendance Marking**: Visual interface for marking attendance
+- **Bulk Operations**: Mark all students present/absent with one click
+- **Student Verification**: Track verified vs unverified students
+- **Attendance Analytics**: Comprehensive reports and statistics
+- **Export Functionality**: Download attendance data in multiple formats
+- **75% Target Tracking**: Monitor students approaching attendance thresholds
+
+#### **👥 User Management**
+- Monitor student accounts and manage access
+- Role-based permissions (Student/Professor/Admin)
+- Account verification and status management
+
+#### **📝 Test Assignment & Assessment**
+- Create and assign protected tests to specific students or classes
+- Set time limits and access controls with proctoring features
+- Monitor test completion and results in real-time
+- Auto-submit security for test integrity
+- Bulk test assignment with class roster integration
+
+#### **📊 Assignment Marks Management**
+- Complete grade tracking system for all assignments
+- Subject-wise and class-wise grade organization
+- Performance analytics and progress tracking
+- Export grade reports for institutional records
+- Integration with class rosters for streamlined grading
+
+#### **💬 Feedback Campaign Management**
+- Create and manage subject feedback campaigns
+- Set campaign duration and target audiences
+- Anonymous feedback collection with 5-point rating scales
+- Real-time feedback analytics and subject comparisons
+- Export comprehensive feedback reports and insights
+
+#### **⚡ System Performance Monitoring**
+- Real-time system health and performance metrics
+- Exam mode activation for resource optimization
+- Memory, CPU, and network usage tracking
+- Performance alerts and optimization recommendations
+- Load balancing during peak usage periods
+
+#### **⚡ System Performance Monitoring**
+- **Real-time System Health**: Live monitoring of connection usage, queue size, and system load
+- **Automatic Load Balancing**: Dynamic resource allocation during peak hours (8-10 AM, 2-4 PM, 7-9 PM)
+- **Circuit Breaker Protection**: Automatic system protection from overload with smart recovery
+- **Exam Mode Activation**: Specialized optimization when multiple students take tests simultaneously
+- **Adaptive Connection Limits**: Dynamic adjustment from 45-58 connections based on current load
+- **Performance Analytics**: Comprehensive metrics including crash risk assessment and user capacity estimates
+- **Emergency Controls**: Admin controls for throttling and queue management during critical periods
+
+**How it works**: The admin panel uses the same Supabase credentials as the mobile app, ensuring real-time data synchronization. Access control is managed through Supabase's built-in authentication and role-based permissions.
 
 ### **Deployment Checklist**
 - [x] Supabase project configured
-- [x] Database schema created
+- [x] Database schema created and optimized
 - [x] AI API keys configured
 - [x] Android build successful
-- [x] Performance optimized
+- [x] Performance optimized and caching implemented
 - [x] Security measures implemented
 - [x] Admin panel configured
+- [x] Debug prints removed for production
+- [x] Code cleanup and optimization completed
+- [x] Error handling improved
+- [x] Unused files removed
+- [x] Memory optimization implemented
 
 ## 📊 **Analytics & Monitoring**
 
@@ -355,16 +524,24 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| **Core App** | ✅ Complete | Production ready |
-| **Authentication** | ✅ Complete | JWT-based |
-| **Practice Tests** | ✅ Complete | AI-powered |
-| **Attendance** | ✅ Complete | 75% calculator |
+| **Core App** | ✅ Complete | Production ready, debug-free |
+| **Authentication** | ✅ Complete | JWT-based, secure |
+| **Practice Tests** | ✅ Complete | 3 modes, dynamic detection |
+| **AI Question Generation** | ✅ Complete | Bulk generation, smart modes |
+| **Dynamic Mode Detection** | ✅ Complete | GATE vs non-GATE auto-detection |
+| **Attendance System** | ✅ Complete | Advanced tracking, analytics, roster management |
+| **Assignment Marks** | ✅ Complete | Grade tracking, performance analytics |
+| **Subject Feedback** | ✅ Complete | Campaign management, anonymous responses |
+| **Test Assignment & Proctoring** | ✅ Complete | Protected tests, auto-submit security |
+| **Performance Optimization** | ✅ Complete | Exam mode, monitoring, adaptive caching |
 | **File Management** | ✅ Complete | Multi-format support |
-| **Admin Panel** | ✅ Complete | Web-based management |
-| **Performance** | ✅ Optimized | <2s load times |
+| **Admin Panel** | ✅ Complete | Comprehensive management tools |
+| **System Monitoring** | ✅ Complete | Real-time metrics, health tracking |
+| **Performance** | ✅ Optimized | <2s load times, memory efficient |
 | **Security** | ✅ Implemented | Production-grade |
-| **Testing** | 🔄 In Progress | Core features tested |
-| **Documentation** | ✅ Complete | Comprehensive |
+| **Code Quality** | ✅ Complete | Debug prints removed, clean code |
+| **Testing** | ✅ Validated | Core features tested |
+| **Documentation** | ✅ Complete | Comprehensive and updated |
 
 ## 🎯 **Future Roadmap**
 

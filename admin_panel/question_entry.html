@@ -8,80 +8,7 @@
 </head>
 <body>
   <div class="main-bg"></div>
-  <!-- Context Selection Modal -->
-  <div id="contextModal" class="context-modal" style="display:none;">
-    <div class="context-modal-content">
-      <div class="modal-header">
-        <span class="modal-badge">🏫</span>
-        <h3>Select Context</h3>
-        <div class="modal-desc">Please select the College, Branch, and Semester before adding questions.</div>
-      </div>
-      <div class="modal-form-group">
-        <label for="collegeSelect">College *</label>
-        <select id="collegeSelect" required>
-          <option value="">Select College</option>
-        </select>
-      </div>
-      <div class="modal-form-group">
-        <label for="branchSelect">Branch *</label>
-        <select id="branchSelect" required>
-          <option value="">Select Branch</option>
-        </select>
-      </div>
-      <div class="modal-form-group">
-        <label for="semesterSelect">Semester *</label>
-        <select id="semesterSelect" required>
-          <option value="">Select Semester</option>
-        </select>
-      </div>
-      <button id="contextContinueBtn" class="modal-continue-btn">Continue</button>
-    </div>
-  </div>
-  <!-- Question Set Modal (Step 2) -->
-  <div id="questionSetModal" class="context-modal" style="display:none;">
-    <div class="context-modal-content">
-      <div class="modal-header">
-        <span class="modal-badge">📝</span>
-        <h3>Set Test Name & Number of Questions</h3>
-        <div class="modal-desc">Enter a name for this test and how many questions you want to add.</div>
-      </div>
-      <div class="modal-form-group">
-        <label for="testNameInput">Test Name *</label>
-        <input type="text" id="testNameInput" required placeholder="e.g., Unit Test 1, Chapter 3 Quiz" style="width:100%;padding:10px 14px;border-radius:8px;border:1.5px solid #d1d5db;font-size:1em;">
-      </div>
-      <div class="modal-form-group">
-        <label for="subjectInput">Subject *</label>
-        <select id="subjectInput" style="width:100%;padding:10px 14px;border-radius:8px;border:1.5px solid #d1d5db;font-size:1em;">
-          <option value="">No Specific Subject</option>
-          <!-- Options will be populated by JS -->
-        </select>
-      </div>
-      <div class="modal-form-group">
-        <label for="numQuestionsInput">Number of Questions *</label>
-        <input type="number" id="numQuestionsInput" min="1" max="50" value="5" required style="width:100%;padding:10px 14px;border-radius:8px;border:1.5px solid #d1d5db;font-size:1em;">
-      </div>
-      <div class="modal-form-group">
-        <label for="testDurationInput">Test Duration (minutes) *</label>
-        <input type="number" id="testDurationInput" min="1" max="300" value="30" required style="width:100%;padding:10px 14px;border-radius:8px;border:1.5px solid #d1d5db;font-size:1em;">
-      </div>
-      <button id="questionSetContinueBtn" class="modal-continue-btn">Continue</button>
-    </div>
-  </div>
-  <!-- Review Modal (Step 3) -->
-  <div id="reviewModal" class="context-modal" style="display:none;">
-    <div class="context-modal-content" style="max-width:700px;width:98vw;">
-      <div class="modal-header">
-        <span class="modal-badge">🔍</span>
-        <h3>Review Questions</h3>
-        <div class="modal-desc">Please review all questions before submitting. You can edit any question by clicking Edit.</div>
-      </div>
-      <div id="reviewQuestionsList" style="max-height:50vh;overflow-y:auto;margin-bottom:18px;"></div>
-      <div style="display:flex;justify-content:space-between;gap:12px;">
-        <button id="reviewBackBtn" class="modal-continue-btn" style="background:#e0e7ef;color:#334155;">Back</button>
-        <button id="submitAllBtn" class="modal-continue-btn">Submit All</button>
-      </div>
-    </div>
-  </div>
+  
   <header class="header" style="background: linear-gradient(120deg,#6366f1 0%,#60a5fa 50%,#a78bfa 100%); box-shadow: 0 4px 24px rgba(99,102,241,0.13); border-bottom-left-radius: 18px; border-bottom-right-radius: 18px; position: relative; z-index: 10;">
     <div class="header-content">
       <div class="appbar-top-row">
@@ -106,13 +33,62 @@
       </div>
     </div>
   </header>
+
   <main class="main-content modern-bg">
-    <section class="question-entry-section modern-card">
-      <form id="questionForm" style="display:block;">
+    <!-- Test Configuration Section -->
+    <section class="test-config-section modern-card">
+      <div class="section-header">
+        <h3>📝 Test Configuration</h3>
+        <p>Configure your test settings before adding questions</p>
+      </div>
+      
+      <div class="config-grid">
         <div class="form-group">
-          <label for="questionText">Question <span id="questionNumberLabel">1</span></label>
+          <label for="testNameInput">Test Name *</label>
+          <input type="text" id="testNameInput" required placeholder="e.g., Unit Test 1, Chapter 3 Quiz">
+        </div>
+        
+        <div class="form-group">
+          <label for="subjectInput">Subject *</label>
+          <select id="subjectInput">
+            <option value="">Loading subjects...</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label for="numQuestionsInput">Number of Questions *</label>
+          <input type="number" id="numQuestionsInput" min="1" max="50" value="15" required>
+        </div>
+        
+        <div class="form-group">
+          <label for="testDurationInput">Test Duration (minutes) *</label>
+          <input type="number" id="testDurationInput" min="1" max="300" value="30" required>
+        </div>
+      </div>
+      
+      <div class="config-actions">
+        <button id="startQuestionEntry" class="start-btn">Start Adding Questions</button>
+      </div>
+    </section>
+
+    <!-- Question Entry Section -->
+    <section class="question-entry-section modern-card" id="questionEntrySection" style="display:none;">
+      <div class="section-header">
+        <h3>❓ Question <span id="questionNumberLabel">1</span> of <span id="totalQuestionsLabel">15</span></h3>
+        <div class="question-progress">
+          <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+          </div>
+          <span class="progress-text"><span id="currentQuestionNum">1</span>/<span id="totalQuestions">15</span></span>
+        </div>
+      </div>
+      
+      <form id="questionForm">
+        <div class="form-group">
+          <label for="questionText">Question Text *</label>
           <textarea id="questionText" required placeholder="Enter the question here..."></textarea>
         </div>
+        
         <div class="form-group">
           <label>Options *</label>
           <div class="options-list">
@@ -138,11 +114,32 @@
             </div>
           </div>
         </div>
-        <div class="form-note">* All fields are required. Please double-check before submitting.</div>
+        
+        <div class="form-actions">
+          <button type="button" id="saveAndNextBtn" class="save-next-btn">Save & Next Question</button>
+          <button type="button" id="finishTestBtn" class="finish-btn">Review & Submit</button>
+        </div>
       </form>
+      
       <div id="questionMsg" class="message"></div>
     </section>
+
+    <!-- Review Section -->
+    <section class="review-section modern-card" id="reviewSection" style="display:none;">
+      <div class="section-header">
+        <h3>🔍 Review All Questions</h3>
+        <p>Check all your questions below, then submit to add them to the database</p>
+      </div>
+      
+      <div id="reviewQuestionsList"></div>
+      
+      <div class="review-actions">
+        <button id="backToQuestionsBtn" class="back-btn-secondary">Back to Edit</button>
+        <button id="submitAllBtn" class="submit-btn">Submit to Database</button>
+      </div>
+    </section>
   </main>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script src="question_entry.js"></script>
 </body>

@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Monitoring Dashboard - EduNest Super Admin</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="mobile-nav.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <style>
+        .monitoring-container {
+            padding: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: calc(100vh - 80px);
+            border-radius: 10px;
+        }
+        
+        .page-header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            padding: 20px;
+        }
+        
+        .page-header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .page-header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+        
+        .status-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+            border-left: 5px solid #007bff;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .status-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 35px rgba(0,0,0,0.2);
+        }
+        
+        .status-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, #007bff, #0056b3);
+        }
+        
+        .status-card.critical { 
+            border-left-color: #dc3545;
+            background: linear-gradient(135deg, #fff 0%, #fff5f5 100%);
+        }
+        .status-card.critical::before { 
+            background: linear-gradient(90deg, #dc3545, #c82333);
+        }
+        
+        .status-card.warning { 
+            border-left-color: #ffc107;
+            background: linear-gradient(135deg, #fff 0%, #fffbf0 100%);
+        }
+        .status-card.warning::before { 
+            background: linear-gradient(90deg, #ffc107, #e0a800);
+        }
+        
+        .status-card.success { 
+            border-left-color: #28a745;
+            background: linear-gradient(135deg, #fff 0%, #f8fff9 100%);
+        }
+        .status-card.success::before { 
+            background: linear-gradient(90deg, #28a745, #1e7e34);
+        }
+        
+        .status-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .status-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #2c3e50;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .status-indicator {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #28a745;
+            position: relative;
+            box-shadow: 0 0 10px rgba(40, 167, 69, 0.4);
+        }
+        
+        .status-indicator::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 8px;
+            height: 8px;
+            background: inherit;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+            70% { transform: translate(-50%, -50%) scale(1.4); opacity: 0; }
+            100% { transform: translate(-50%, -50%) scale(1.4); opacity: 0; }
+        }
+        
+        .status-indicator.critical { 
+            background: #dc3545;
+            box-shadow: 0 0 10px rgba(220, 53, 69, 0.4);
+        }
+        .status-indicator.warning { 
+            background: #ffc107;
+            box-shadow: 0 0 10px rgba(255, 193, 7, 0.4);
+        }
+        
+        .metric-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 12px 0;
+            padding: 12px 15px;
+            background: rgba(248, 249, 250, 0.8);
+            border-radius: 10px;
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+        
+        .metric-label {
+            color: #6c757d;
+            font-size: 14px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .metric-label::before {
+            content: '📊';
+            font-size: 12px;
+        }
+        
+        .metric-value {
+            font-weight: 700;
+            color: #2c3e50;
+            font-size: 16px;
+            padding: 4px 12px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 12px;
+            background: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 12px 0;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #28a745, #20c997);
+            transition: width 0.5s ease;
+            position: relative;
+        }
+        
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            animation: shine 2s infinite;
+        }
+        
+        @keyframes shine {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+        
+        .progress-fill.warning { 
+            background: linear-gradient(90deg, #ffc107, #fd7e14);
+        }
+        .progress-fill.critical { 
+            background: linear-gradient(90deg, #dc3545, #e74c3c);
+        }
+        
+        .charts-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 40px;
+            min-height: 400px;
+        }
+        
+        .chart-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+            position: relative;
+            overflow: hidden;
+            height: 400px;
+            min-width: 0;
+        }
+        
+        .chart-card canvas {
+            max-height: 300px !important;
+            width: 100% !important;
+            height: 300px !important;
+        }
+        
+        .chart-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+        }
+        
+        .chart-card h3 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 1.3rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            height: 40px;
+        }
+        
+        .chart-card h3::before {
+            content: '📈';
+            font-size: 1.2rem;
+        }
+        
+        .emergency-panel {
+            background: linear-gradient(135deg, #fff5f5 0%, #fee);
+            border: 2px solid #fc8181;
+            border-radius: 15px;
+            padding: 25px;
+            margin-top: 30px;
+            box-shadow: 0 8px 25px rgba(252, 129, 129, 0.2);
+            animation: emergencyPulse 3s infinite;
+        }
+        
+        @keyframes emergencyPulse {
+            0%, 100% { box-shadow: 0 8px 25px rgba(252, 129, 129, 0.2); }
+            50% { box-shadow: 0 12px 35px rgba(252, 129, 129, 0.4); }
+        }
+        
+        .emergency-header {
+            color: #c53030;
+            font-weight: 700;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            font-size: 1.2rem;
+            gap: 10px;
+        }
+        
+        .emergency-header::before {
+            content: '🚨';
+            font-size: 1.5rem;
+            animation: spin 2s linear infinite;
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .emergency-actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        
+        .emergency-btn {
+            background: linear-gradient(135deg, #c53030, #e53e3e);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(197, 48, 48, 0.3);
+        }
+        
+        .emergency-btn:hover {
+            background: linear-gradient(135deg, #9c1c1c, #c53030);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(197, 48, 48, 0.4);
+        }
+        
+        .logs-container {
+            background: linear-gradient(135deg, #1a1a1a, #2d2d2d);
+            color: #00ff00;
+            padding: 20px;
+            border-radius: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            height: 250px;
+            overflow-y: auto;
+            margin-top: 30px;
+            border: 2px solid #333;
+            box-shadow: inset 0 4px 15px rgba(0,0,0,0.5);
+        }
+        
+        .logs-container::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .logs-container::-webkit-scrollbar-track {
+            background: #2d2d2d;
+            border-radius: 10px;
+        }
+        
+        .logs-container::-webkit-scrollbar-thumb {
+            background: #00ff00;
+            border-radius: 10px;
+        }
+        
+        .error-log { color: #ff6b6b; }
+        .emergency-log { color: #ff8c42; font-weight: bold; }
+        .success-log { color: #51cf66; }
+        .warning-log { color: #ffd43b; }
+        
+        .auto-refresh {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            flex-wrap: wrap;
+        }
+        
+        .auto-refresh label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        .auto-refresh button {
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);
+        }
+        
+        .auto-refresh button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 123, 255, 0.4);
+        }
+        
+        #lastUpdate {
+            color: #6c757d;
+            font-style: italic;
+        }
+        
+        .header-nav a:hover {
+            background: rgba(255,255,255,0.4) !important;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        @media (max-width: 768px) {
+            .charts-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .status-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .page-header > div {
+                flex-direction: column !important;
+                gap: 15px;
+            }
+            
+            .page-header .header-nav {
+                display: flex;
+                gap: 10px;
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="monitoring-container">
+        <div class="page-header">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <div>
+                    <h1>🖥️ System Monitoring Dashboard</h1>
+                    <p>Real-time monitoring of EduNest platform performance and health metrics</p>
+                </div>
+                <div class="header-nav" style="display: flex; gap: 15px; align-items: center;">
+                    <a href="dashboard.html" style="color: white; text-decoration: none; padding: 8px 16px; background: rgba(255,255,255,0.2); border-radius: 20px; transition: all 0.3s ease; font-weight: 600;">
+                        🏠 Dashboard
+                    </a>
+                    <a href="system_monitoring.html" style="color: white; text-decoration: none; padding: 8px 16px; background: rgba(255,255,255,0.3); border-radius: 20px; transition: all 0.3s ease; font-weight: 600;">
+                        📊 System Monitor
+                    </a>
+                    <a href="index.html" style="color: white; text-decoration: none; padding: 8px 16px; background: rgba(255,255,255,0.2); border-radius: 20px; transition: all 0.3s ease; font-weight: 600;">
+                        🚪 Logout
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="auto-refresh">
+            <label>
+                <input type="checkbox" id="autoRefresh" checked> 
+                <span>🔄 Auto Refresh (30s)</span>
+            </label>
+            <button onclick="refreshAll()">🔄 Refresh Now</button>
+            <span id="lastUpdate">⏰ Last updated: Never</span>
+            <small style="color: #6c757d;">📊 Data updates every 5 minutes</small>
+        </div>
+
+        <!-- System Status Overview -->
+        <div class="status-grid">
+            <div class="status-card" id="connectionCard">
+                <div class="status-header">
+                    <span class="status-title">🔗 Connection Status</span>
+                    <div class="status-indicator" id="connectionIndicator"></div>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-label">Active Connections</span>
+                    <span class="metric-value" id="activeConnections">0</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="connectionProgress"></div>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-label">Queue Size</span>
+                    <span class="metric-value" id="queueSize">0</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-label">Connection Limit</span>
+                    <span class="metric-value" id="connectionLimit">60</span>
+                </div>
+            </div>
+
+            <div class="status-card" id="performanceCard">
+                <div class="status-header">
+                    <span class="status-title">⚡ Performance</span>
+                    <div class="status-indicator" id="performanceIndicator"></div>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-label">System Load</span>
+                    <span class="metric-value" id="systemLoad">0%</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-label">Crash Risk</span>
+                    <span class="metric-value" id="crashRisk">LOW</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-label">Peak Users Today</span>
+                    <span class="metric-value" id="peakUsers">0</span>
+                </div>
+            </div>
+
+            <div class="status-card" id="examCard">
+                <div class="status-header">
+                    <span class="status-title">📚 Exam Status</span>
+                    <div class="status-indicator" id="examIndicator"></div>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-label">Exam Mode</span>
+                    <span class="metric-value" id="examMode">Inactive</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-label">Active Test Takers</span>
+                    <span class="metric-value" id="activeTestTakers">0</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-label">Running Exams</span>
+                    <span class="metric-value" id="activeExams">0</span>
+                </div>
+            </div>
+
+            <div class="status-card" id="cacheCard">
+                <div class="status-header">
+                    <span class="status-title">💾 Cache Performance</span>
+                    <div class="status-indicator" id="cacheIndicator"></div>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-label">Cache Hit Rate</span>
+                    <span class="metric-value" id="cacheHitRate">0%</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-label">Cached Entries</span>
+                    <span class="metric-value" id="cacheEntries">0</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-label">DB Load Reduction</span>
+                    <span class="metric-value" id="dbLoadReduction">0%</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="charts-container">
+            <div class="chart-card">
+                <h3>Connection Usage (Last 10 Minutes)</h3>
+                <div style="position: relative; height: 300px; width: 100%;">
+                    <canvas id="connectionChart"></canvas>
+                </div>
+            </div>
+            <div class="chart-card">
+                <h3>User Activity Timeline</h3>
+                <div style="position: relative; height: 300px; width: 100%;">
+                    <canvas id="activityChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Emergency Panel -->
+        <div class="emergency-panel" id="emergencyPanel" style="display: none;">
+            <div class="emergency-header">
+                🚨 EMERGENCY ACTIONS AVAILABLE
+            </div>
+            <p>System is under heavy load. Emergency controls are now available.</p>
+            <div class="emergency-actions">
+                <button class="emergency-btn" onclick="emergencyThrottle()">
+                    🛑 Emergency Throttle
+                </button>
+                <button class="emergency-btn" onclick="clearQueue()">
+                    🧹 Clear Queue
+                </button>
+                <button class="emergency-btn" onclick="activateMaintenanceMode()">
+                    🔧 Maintenance Mode
+                </button>
+                <button class="emergency-btn" onclick="forceGarbageCollection()">
+                    🗑️ Force GC
+                </button>
+            </div>
+        </div>
+
+        <!-- Live Logs -->
+        <div class="chart-card">
+            <h3>🔍 Live System Logs</h3>
+            <div class="logs-container" id="systemLogs">
+                <div>System monitoring started...</div>
+                <div>Waiting for data...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Include monitoring script -->
+    <script src="system_monitoring.js"></script>
+</body>
+</html>

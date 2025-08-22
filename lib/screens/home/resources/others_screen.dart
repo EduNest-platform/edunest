@@ -3,6 +3,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../theme/app_theme.dart';
 import '../../../models/subject.dart';
 import '../../../services/files_service.dart';
+import '../../../services/cached_file_resource_service.dart';
+import '../../../widgets/cached_file_list_widget.dart';
 import '../../../widgets/app_text.dart';
 import '../../common/pdf_viewer_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -24,8 +26,6 @@ class OthersScreen extends StatefulWidget {
 class _OthersScreenState extends State<OthersScreen> {
   String _searchQuery = '';
   String _selectedType = 'All';
-  bool _isLoading = true;
-  List<FileResource> _allOthers = [];
 
   List<String> get _types => [
     'All',
@@ -36,22 +36,6 @@ class _OthersScreenState extends State<OthersScreen> {
     'Video',
     'Template',
   ];
-
-  List<FileResource> get _filteredOthers {
-    return _allOthers.where((other) {
-      final matchesSearch =
-          other.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          other.description.toLowerCase().contains(
-            _searchQuery.toLowerCase(),
-          ) ||
-          other.tags.any(
-            (tag) => tag.toLowerCase().contains(_searchQuery.toLowerCase()),
-          );
-      final type = other.metadata['type']?.toString() ?? '';
-      final matchesType = _selectedType == 'All' || type == _selectedType;
-      return matchesSearch && matchesType;
-    }).toList();
-  }
 
   Color _getTypeColor(String type) {
     switch (type.toLowerCase()) {
@@ -89,21 +73,6 @@ class _OthersScreenState extends State<OthersScreen> {
       default:
         return Icons.insert_drive_file_rounded;
     }
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _fetchOthers();
-  }
-
-  Future<void> _fetchOthers() async {
-    setState(() => _isLoading = true);
-    final files = await FilesService.getFiles(widget.subject.id, 'other');
-    setState(() {
-      _allOthers = files;
-      _isLoading = false;
-    });
   }
 
   Widget _buildHeader() {
@@ -154,7 +123,7 @@ class _OthersScreenState extends State<OthersScreen> {
                       ),
                     ),
                     AppText(
-                      '${_allOthers.length} resources available',
+                      'Browse additional resources',
                       style: GoogleFonts.poppins(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
@@ -654,71 +623,70 @@ class _OthersScreenState extends State<OthersScreen> {
                 ),
               )
               : null,
-      body:
-          _isLoading
-              ? const Center(
-                child: CircularProgressIndicator(color: Colors.indigo),
-              )
-              : GestureDetector(
-                onTap: () {
-                  // Dismiss keyboard when tapping outside
-                  FocusScope.of(context).unfocus();
+      body: GestureDetector(
+        onTap: () {
+          // Dismiss keyboard when tapping outside
+          FocusScope.of(context).unfocus();
+        },
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _buildHeader(),
+            _buildSearchBar(),
+            _buildFilters(),
+            const SizedBox(height: 8),
+            Expanded(
+              child: CachedFileListWidget(
+                subjectId: widget.subject.id,
+                fileType: FileResourceType.others,
+                itemBuilder: (file) => _buildOtherCard(file),
+                onFileTap: _openFile,
+                onError: (error) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: AppText('Error: $error'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
                 },
-                child: SingleChildScrollView(
+                emptyWidget: Center(
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      _buildHeader(),
-                      _buildSearchBar(),
-                      _buildFilters(),
+                      Icon(
+                        Icons.folder_outlined,
+                        size: 64,
+                        color: Colors.grey.shade400,
+                      ),
+                      const SizedBox(height: 16),
+                      AppText(
+                        'No resources found',
+                        style: GoogleFonts.poppins(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
                       const SizedBox(height: 8),
-                      _filteredOthers.isEmpty
-                          ? SizedBox(
-                            height: 300,
-                            child: Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.folder_outlined,
-                                    size: 64,
-                                    color: Colors.grey.shade400,
-                                  ),
-                                  const SizedBox(height: 16),
-                                  AppText(
-                                    'No resources found',
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.grey.shade600,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  AppText(
-                                    'Try adjusting your filters',
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 14,
-                                      color: Colors.grey.shade500,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          )
-                          : Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 24),
-                            child: Column(
-                              children:
-                                  _filteredOthers
-                                      .map((other) => _buildOtherCard(other))
-                                      .toList(),
-                            ),
-                          ),
-                      const SizedBox(height: 20),
+                      AppText(
+                        'Pull to refresh or check back later',
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          color: Colors.grey.shade500,
+                        ),
+                      ),
                     ],
                   ),
                 ),
+                padding: const EdgeInsets.symmetric(horizontal: 24),
               ),
+            ),
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
     );
   }
 }

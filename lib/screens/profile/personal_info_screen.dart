@@ -159,11 +159,28 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
     }
 
     try {
-      final isDuplicate = await UserProfileService.checkStudentIdExists(
-        value.trim(),
-      );
-      if (isDuplicate) {
-        return 'This Student ID is already registered by another user';
+      // Use context-aware validation (same college + branch + semester)
+      if (_userProfile?.college != null && 
+          _userProfile?.branch != null && 
+          _userProfile?.semester != null) {
+        final isDuplicate = await UserProfileService.checkStudentIdExistsInSameContext(
+          studentId: value.trim(),
+          college: _userProfile!.college!,
+          branch: _userProfile!.branch!,
+          semester: _userProfile!.semester!,
+          excludeUserId: _userProfile!.id,
+        );
+        if (isDuplicate) {
+          return 'This Roll Number is already taken by another student in your college, branch, and semester';
+        }
+      } else {
+        // Fallback to global check if academic context is incomplete
+        final isDuplicate = await UserProfileService.checkStudentIdExists(
+          value.trim(),
+        );
+        if (isDuplicate) {
+          return 'This Student ID is already registered by another user';
+        }
       }
       return null;
     } catch (e) {

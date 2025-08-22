@@ -7,6 +7,7 @@ class SupabaseService {
     await Supabase.initialize(
       url: ConfigService.supabaseUrl,
       anonKey: ConfigService.supabaseAnonKey,
+      debug: false, // Disable debug in production
     );
     // Manual session restoration for hot restart/app restart
     if (Supabase.instance.client.auth.currentUser == null) {
@@ -44,5 +45,22 @@ class SupabaseService {
   // Call this on logout
   static Future<void> clearSessionTokens() async {
     await SecureStorageService.clearTokens();
+  }
+  
+  // Add query optimization helper
+  static Future<T?> executeWithRetry<T>(
+    Future<T> Function() operation, {
+    int maxRetries = 3,
+    Duration delay = const Duration(milliseconds: 500),
+  }) async {
+    for (int i = 0; i < maxRetries; i++) {
+      try {
+        return await operation();
+      } catch (e) {
+        if (i == maxRetries - 1) rethrow;
+        await Future.delayed(delay * (i + 1));
+      }
+    }
+    return null;
   }
 }

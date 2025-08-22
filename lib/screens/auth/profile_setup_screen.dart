@@ -70,7 +70,8 @@ class _ProfileSetupScreenBodyState extends State<_ProfileSetupScreenBody>
   bool _allRequiredFieldsFilled(ProfileSetupController controller) {
     return controller.selectedCollegeId != null &&
         controller.selectedBranchId != null &&
-        controller.selectedSemesterId != null;
+        controller.selectedSemesterId != null &&
+        controller.rollNumberController.text.trim().isNotEmpty;
   }
 
   Widget _buildCustomDropdown({
@@ -399,6 +400,67 @@ class _ProfileSetupScreenBodyState extends State<_ProfileSetupScreenBody>
                                 },
                                 enabled: controller.selectedBranchId != null,
                               ),
+                              // Roll Number Field
+                              const SizedBox(height: 16),
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(16),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.08),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: TextFormField(
+                                  controller: controller.rollNumberController,
+                                  decoration: InputDecoration(
+                                    labelText: 'Roll Number',
+                                    hintText: 'Enter your roll number',
+                                    prefixIcon: Container(
+                                      margin: const EdgeInsets.all(12),
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: AppTheme.primaryBlue.withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Icon(
+                                        Icons.badge_rounded,
+                                        color: AppTheme.primaryBlue,
+                                        size: 20,
+                                      ),
+                                    ),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                    filled: true,
+                                    fillColor: Colors.white,
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 20,
+                                      vertical: 16,
+                                    ),
+                                  ),
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  validator: (value) {
+                                    if (value == null || value.trim().isEmpty) {
+                                      return 'Please enter your roll number';
+                                    }
+                                    if (value.trim().length < 2) {
+                                      return 'Roll number must be at least 2 characters';
+                                    }
+                                    return null;
+                                  },
+                                  onChanged: (value) {
+                                    // Field will trigger rebuild automatically
+                                  },
+                                ),
+                              ),
                               const SizedBox(height: 32),
                               // Academic Path Summary
                               if (_allRequiredFieldsFilled(controller))
@@ -499,6 +561,15 @@ class _ProfileSetupScreenBodyState extends State<_ProfileSetupScreenBody>
                                                       color:
                                                           AppTheme
                                                               .textSecondary,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(height: 4),
+                                                  Text(
+                                                    'Roll No: ${controller.rollNumberController.text}',
+                                                    style: GoogleFonts.poppins(
+                                                      fontSize: 13,
+                                                      fontWeight: FontWeight.w500,
+                                                      color: AppTheme.primaryBlue,
                                                     ),
                                                   ),
                                                 ],

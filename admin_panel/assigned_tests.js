@@ -30,19 +30,96 @@ let selectedCollegeName = null;
 let selectedBranchName = null;
 let selectedSemesterName = null;
 
-// Check authentication on page load
+// Class context variables
+let isClassContext = false;
+let classContextId = null;
+let classContextSubject = null;
+let classContextSubjectId = null;
+
+// Check authentication and context on page load
 document.addEventListener('DOMContentLoaded', function() {
   if (!sessionStorage.getItem('adminLoggedIn')) {
     window.location.href = 'index.html';
     return;
   }
   
-  // Show context modal first
-  showContextModal();
-  
-  // Setup context modal event listeners
-  setupContextModal();
+  checkClassContext();
 });
+
+// Check for class context
+function checkClassContext() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const classId = urlParams.get('classId');
+  const subject = urlParams.get('subject');
+  const college = urlParams.get('college');
+  const branch = urlParams.get('branch');
+  const semester = urlParams.get('semester');
+  
+  // Also check sessionStorage for complete context
+  const sessionClassId = sessionStorage.getItem('selectedClassId');
+  const sessionSubject = sessionStorage.getItem('selectedSubjectName');
+  const sessionSubjectId = sessionStorage.getItem('selectedSubjectId');
+  const sessionCollege = sessionStorage.getItem('selectedCollegeName');
+  const sessionBranch = sessionStorage.getItem('selectedBranchName');
+  const sessionSemester = sessionStorage.getItem('selectedSemesterName');
+  const context = sessionStorage.getItem('assignedTestsContext');
+  
+  if ((classId && subject) || (sessionClassId && context === 'class')) {
+    isClassContext = true;
+    classContextId = classId || sessionClassId;
+    classContextSubject = subject || sessionSubject;
+    classContextSubjectId = sessionSubjectId;
+    
+    // Set complete context from URL parameters or sessionStorage
+    selectedCollegeName = college || sessionCollege;
+    selectedBranchName = branch || sessionBranch;
+    selectedSemesterName = semester || sessionSemester;
+    
+    // Update UI for class context
+    updateUIForClassContext();
+    
+    // Skip context modal and load tests directly with full context
+    if (classContextSubjectId && selectedCollegeName && selectedBranchName && selectedSemesterName) {
+      selectedSemesterId = classContextSubjectId;
+      hideContextModal();
+      loadAssignedTests();
+    }
+  } else {
+    // Show context modal for regular flow
+    showContextModal();
+    setupContextModal();
+  }
+}
+
+function updateUIForClassContext() {
+  // Update page title
+  const headerTitle = document.querySelector('.page-title, h1');
+  if (headerTitle && classContextSubject) {
+    headerTitle.textContent = `Assigned Tests - ${classContextSubject}`;
+  }
+  
+  // Update back button
+  const backBtn = document.querySelector('.back-btn');
+  if (backBtn && isClassContext) {
+    backBtn.href = `attendance.html`;
+    backBtn.textContent = 'Back to Classes';
+  }
+  
+  // Update context display
+  updateContextDisplay();
+}
+
+function updateContextDisplay() {
+  const contextDisplay = document.getElementById('contextDisplay');
+  if (contextDisplay && isClassContext) {
+    contextDisplay.innerHTML = `
+      <div class="context-info">
+        <span class="context-label">Class Context:</span>
+        <span class="context-value">${classContextSubject}</span>
+      </div>
+    `;
+  }
+}
 
 // Show context selection modal
 function showContextModal() {

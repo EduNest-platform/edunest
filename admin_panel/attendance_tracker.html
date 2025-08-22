@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance Tracker - EduNest</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1rem;
+        }
+        
+        .header-container {
+            width: 100%;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .tracker-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 0 0 12px 12px;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+            position: relative;
+        }
+        
+        /* Full width header for desktop only */
+        @media (min-width: 769px) {
+            .tracker-header {
+                width: 100vw;
+                margin-left: calc(-50vw + 50%);
+            }
+        }
+        
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1rem;
+        }
+        
+        .header-top {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .tracker-header h1 {
+            margin: 0;
+            font-size: 1.4rem;
+            font-weight: 600;
+            flex: 1;
+        }
+
+        .class-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 0.75rem;
+            margin-top: 0.75rem;
+        }
+
+        .info-card {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 0.75rem;
+            border-radius: 8px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .info-card h4 {
+            margin: 0 0 0.25rem 0;
+            font-size: 0.75rem;
+            opacity: 0.9;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 500;
+        }
+
+        .info-card p {
+            margin: 0;
+            font-size: 0.9rem;
+            font-weight: 600;
+            line-height: 1.2;
+        }
+
+        .attendance-controls {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .date-picker {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .date-picker input {
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 1rem;
+        }
+
+        .bulk-actions {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .btn-info {
+            background: #06b6d4;
+            color: white;
+        }
+
+        .btn-info:hover {
+            background: #0891b2;
+        }
+
+        .btn-success {
+            background: #22c55e;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #16a34a;
+        }
+
+        .btn-secondary {
+            background: #6b7280;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #4b5563;
+        }
+
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2563eb;
+        }
+
+        .attendance-table {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .table-container {
+            overflow-x: auto;
+        }
+
+        .table-header {
+            background: #f8fafc;
+            padding: 1rem;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .attendance-stats {
+            display: flex;
+            gap: 2rem;
+            font-size: 0.9rem;
+        }
+
+        .stat {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .stat-present {
+            color: #22c55e;
+        }
+
+        .stat-absent {
+            color: #ef4444;
+        }
+
+        .stat-total {
+            color: #64748b;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        th {
+            background: #f8fafc;
+            font-weight: 600;
+            color: #374151;
+        }
+
+        .student-info {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .student-name {
+            font-weight: 600;
+            color: #1f2937;
+        }
+
+        .student-email {
+            font-size: 0.85rem;
+            color: #6b7280;
+        }
+
+        .attendance-toggle {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 60px;
+            height: 30px;
+            background: #e2e8f0;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-switch.active {
+            background: #22c55e;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 24px;
+            height: 24px;
+            background: white;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .toggle-switch.active .toggle-slider {
+            transform: translateX(30px);
+        }
+
+        .status-text {
+            font-weight: 500;
+            min-width: 60px;
+        }
+
+        .status-present {
+            color: #22c55e;
+        }
+
+        .status-absent {
+            color: #ef4444;
+        }
+
+        .back-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.5rem 0.75rem;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            font-size: 0.85rem;
+            font-weight: 500;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            flex-shrink: 0;
+        }
+
+        .back-button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #64748b;
+        }
+
+        .empty-state h3 {
+            margin-bottom: 0.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 0 0.5rem;
+            }
+            
+            .tracker-header {
+                width: auto;
+                margin-left: 0;
+                padding: 0.75rem 1rem;
+                margin-bottom: 1rem;
+                border-radius: 12px;
+            }
+            
+            .header-content {
+                padding: 0;
+            }
+            
+            .header-top {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.5rem;
+            }
+            
+            .back-button {
+                padding: 0.4rem 0.6rem;
+                font-size: 0.8rem;
+                align-self: flex-start;
+            }
+            
+            .tracker-header h1 {
+                font-size: 1.2rem;
+            }
+
+            .tracker-header h1 {
+                font-size: 1.2rem;
+                margin-bottom: 0.5rem;
+            }
+
+            .class-info {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 0.5rem;
+                margin-top: 0.5rem;
+            }
+
+            .info-card {
+                padding: 0.5rem;
+            }
+
+            .info-card h4 {
+                font-size: 0.7rem;
+                margin-bottom: 0.2rem;
+            }
+
+            .info-card p {
+                font-size: 0.8rem;
+            }
+
+            .attendance-controls {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 1rem;
+            }
+
+            .bulk-actions {
+                justify-content: center;
+                gap: 0.5rem;
+            }
+
+            .btn {
+                padding: 0.75rem 1rem;
+                font-size: 0.85rem;
+                flex: 1;
+                justify-content: center;
+            }
+
+            .table-header {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 1rem;
+            }
+
+            .attendance-stats {
+                justify-content: center;
+                gap: 1rem;
+            }
+
+            table {
+                font-size: 0.85rem;
+            }
+
+            th,
+            td {
+                padding: 0.75rem 0.5rem;
+            }
+
+            .attendance-toggle {
+                gap: 0.5rem;
+            }
+
+            .toggle-switch {
+                width: 50px;
+                height: 26px;
+            }
+
+            .toggle-slider {
+                width: 20px;
+                height: 20px;
+                top: 2px;
+                left: 2px;
+            }
+
+            .toggle-switch.active .toggle-slider {
+                transform: translateX(24px);
+            }
+        }
+
+        @media (max-width: 480px) {
+            .tracker-header {
+                padding: 0.75rem;
+            }
+            
+            .back-button {
+                padding: 0.35rem 0.5rem;
+                font-size: 0.75rem;
+            }
+            
+            .tracker-header h1 {
+                font-size: 1.1rem;
+            }
+
+            .tracker-header h1 {
+                font-size: 1.1rem;
+            }
+
+            .class-info {
+                grid-template-columns: 1fr;
+                gap: 0.4rem;
+            }
+
+            .info-card {
+                padding: 0.5rem;
+            }
+
+            .info-card h4 {
+                font-size: 0.65rem;
+            }
+
+            .info-card p {
+                font-size: 0.75rem;
+            }
+
+            .bulk-actions {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+            }
+
+            .attendance-stats {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+        }
+        
+        /* Loading spinner animation */
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Hide email on mobile for better space utilization */
+        @media (max-width: 768px) {
+            .mobile-hidden {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Full Width Header -->
+    <div class="tracker-header">
+        <div class="header-content">
+            <div class="header-top">
+                <a href="dashboard.html" class="back-button">
+                    ← Back to Dashboard
+                </a>
+                <h1 id="classTitle">📚 Loading Class...</h1>
+            </div>
+            <div class="class-info" id="classInfo">
+                <!-- Class info will be populated here -->
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+
+        <!-- Attendance Controls -->
+        <div class="attendance-controls">
+            <div class="date-picker">
+                <label for="attendanceDate">📅 Date:</label>
+                <input type="date" id="attendanceDate" onchange="loadAttendanceData()">
+            </div>
+
+            <div class="bulk-actions">
+                <button class="btn btn-info" onclick="openStudentManagement()">
+                    👥 Manage Students
+                </button>
+                <button class="btn btn-success" onclick="markAllPresent()">
+                    ✓ Mark All Present
+                </button>
+                <button class="btn btn-secondary" onclick="markAllAbsent()">
+                    ✗ Mark All Absent
+                </button>
+                <button class="btn btn-info" onclick="viewAnalytics()">
+                    📊 View Analytics
+                </button>
+            </div>
+        </div>
+
+        <!-- Attendance Table -->
+        <div class="attendance-table">
+            <div class="table-header">
+                <h3>📋 Student Attendance</h3>
+                <div class="attendance-stats">
+                    <div class="stat stat-present">
+                        <span>✓</span>
+                        <span>Present: <strong id="presentCount">0</strong></span>
+                    </div>
+                    <div class="stat stat-absent">
+                        <span>✗</span>
+                        <span>Absent: <strong id="absentCount">0</strong></span>
+                    </div>
+                    <div class="stat stat-total">
+                        <span>👥</span>
+                        <span>Total: <strong id="totalCount">0</strong></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Roll Number</th>
+                            <th>Student Name</th>
+                            <th>Attendance</th>
+                            <th>Last Updated</th>
+                        </tr>
+                    </thead>
+                    <tbody id="attendanceTableBody">
+                        <!-- Table content will be loaded here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Message Display -->
+        <div id="messageDisplay" class="message-display"></div>
+
+        <!-- Bottom Save Button -->
+        <div style="text-align: center; margin: 2rem 0; padding: 1rem;">
+            <button class="btn btn-primary" onclick="saveAttendance()" style="font-size: 1rem; padding: 1rem 2rem; min-width: 200px;">
+                💾 Save Attendance
+            </button>
+        </div>
+
+        <!-- Loading Overlay -->
+        <div id="loadingOverlay" class="loading-overlay hidden">
+            <div class="loading-spinner">
+                <div class="spinner"></div>
+                <p id="loadingText">Loading...</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+    <script src="supabaseClient.js?v=1.2"></script>
+    <script src="login.js"></script>
+    <script src="supabaseAdmin.js"></script>
+    <script src="attendance_tracker.js?v=2.1"></script>
+</body>
+
+</html>

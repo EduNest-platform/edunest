@@ -42,14 +42,31 @@ class SubjectsService {
     }
   }
 
-  // Fetch subjects by semester
+  // Fetch subjects by semester - OPTIMIZED
   static Future<List<Subject>> getSubjectsBySemester(String semesterId) async {
     try {
-      // Get all subjects and filter by semester
-      final allSubjects = await getAllSubjects();
-      return allSubjects
-          .where((subject) => subject.semesterId == semesterId)
-          .toList();
+      // Query directly with filter instead of fetching all
+      final response = await _client
+          .from('subjects')
+          .select('''
+            *,
+            semesters (
+              id,
+              name,
+              branches (
+                id,
+                name,
+                colleges (
+                  id,
+                  name
+                )
+              )
+            )
+          ''')
+          .eq('semester_id', semesterId)
+          .order('name');
+
+      return (response as List).map((data) => Subject.fromJson(data)).toList();
     } catch (e) {
       return [];
     }

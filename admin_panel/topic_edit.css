@@ -587,6 +587,208 @@ body {
   transform: translateY(-1px);
 }
 
+/* Edit Question Modal Styles */
+.edit-modal-content {
+  max-width: 600px;
+  max-height: 85vh;
+}
+
+.edit-question-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-label {
+  font-weight: 700;
+  color: #374151;
+  font-size: 0.95em;
+}
+
+.form-input {
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 2px solid #e5e7eb;
+  font-size: 0.95em;
+  background: #fff;
+  color: #374151;
+  transition: all 0.2s ease;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
+}
+
+.form-input:hover {
+  border-color: #a5b4fc;
+}
+
+.form-input[required]:invalid {
+  border-color: #ef4444;
+}
+
+.options-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.option-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.option-label {
+  font-weight: 600;
+  color: #6366f1;
+  min-width: 24px;
+  font-size: 0.95em;
+}
+
+.option-input {
+  flex: 1;
+}
+
+.remove-option-btn {
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.remove-option-btn:hover {
+  background: #dc2626;
+  transform: scale(1.1);
+}
+
+.add-option-btn {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 0.9em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  align-self: flex-start;
+}
+
+.add-option-btn:hover {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  transform: translateY(-1px);
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 10px;
+  border-top: 1px solid #f3f4f6;
+}
+
+.cancel-btn {
+  background: #e5e7eb;
+  color: #374151;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cancel-btn:hover {
+  background: #d1d5db;
+  transform: translateY(-1px);
+}
+
+.save-btn {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.save-btn:hover {
+  background: linear-gradient(135deg, #5855eb 0%, #7c3aed 100%);
+  transform: translateY(-1px);
+}
+
+.save-btn:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Mobile responsiveness for edit modal */
+@media (max-width: 600px) {
+  .edit-modal-content {
+    max-width: 95vw;
+    max-height: 90vh;
+  }
+  
+  .edit-question-form {
+    gap: 16px;
+  }
+  
+  .form-input {
+    padding: 8px 10px;
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+  
+  .option-item {
+    gap: 8px;
+  }
+  
+  .option-label {
+    min-width: 20px;
+    font-size: 0.9em;
+  }
+  
+  .remove-option-btn {
+    width: 20px;
+    height: 20px;
+    font-size: 14px;
+  }
+  
+  .form-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .cancel-btn,
+  .save-btn {
+    width: 100%;
+    padding: 12px 16px;
+  }
+}
+
 .empty-state {
   margin-top: 32px;
   color: #6b7280;

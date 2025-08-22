@@ -12,6 +12,9 @@ import '../../../services/network_service.dart';
 import '../../../services/error_message_service.dart';
 import 'package:flutter/foundation.dart';
 import '../../../widgets/desktop_sidebar.dart';
+import '../../../models/user_profile.dart';
+import '../../../services/monitoring_integration_helper.dart';
+import 'dart:async';
 
 class AttendanceScreen extends StatefulWidget {
   const AttendanceScreen({super.key});
@@ -21,15 +24,23 @@ class AttendanceScreen extends StatefulWidget {
 }
 
 class _AttendanceScreenState extends State<AttendanceScreen>
-    with SingleTickerProviderStateMixin, NetworkAwareMixin {
+    with SingleTickerProviderStateMixin {
   final AttendanceService _attendanceService = AttendanceService();
   final NetworkService _networkService = NetworkService();
   bool _loading = false;
   bool _initialLoading = true;
   List<AttendanceRecord> _attendanceRecords = [];
   List<Map<String, String>> _subjects = [];
-  String? _semesterFromProfile;
+  // semester is resolved internally; no need to keep a separate field
   bool _hasNetworkError = false;
+
+  // Caching variables
+  UserProfile? _userProfileCache;
+  DateTime? _lastRefreshTime;
+  static const Duration _cacheValidityDuration = Duration(minutes: 5);
+  
+  // Cached calculations
+  final Map<String, Map<String, dynamic>> _attendanceStatsCache = {};
 
   @override
   void initState() {
@@ -37,9 +48,16 @@ class _AttendanceScreenState extends State<AttendanceScreen>
     _fetchAttendanceAndSubjects();
   }
 
-  Future<void> _fetchAttendanceAndSubjects() async {
+  Future<void> _fetchAttendanceAndSubjects({bool forceRefresh = false}) async {
+    // Check if we have recent data and don't need to refresh
+    if (!forceRefresh && _lastRefreshTime != null && 
+        DateTime.now().difference(_lastRefreshTime!) < _cacheValidityDuration &&
+        _subjects.isNotEmpty) {
+      return; // Skip refresh if data is still fresh
+    }
+
     setState(() {
-      _initialLoading = true;
+      _loading = true; // Set loading immediately
       _hasNetworkError = false;
     });
 
@@ -54,69 +72,146 @@ class _AttendanceScreenState extends State<AttendanceScreen>
       return;
     }
 
-    setState(() {
-      _loading = true;
-      _initialLoading = false;
-      _hasNetworkError = false;
-    });
-
     try {
       final user = Supabase.instance.client.auth.currentUser;
-      if (user == null) return;
-
-      final profile = await UserProfileService.getCurrentUserProfile();
-      if (profile == null || profile.semester == null) {
+      if (user == null) {
         setState(() {
           _loading = false;
+          _initialLoading = false;
         });
         return;
       }
 
-      _semesterFromProfile = profile.semester.toString();
-      final allSubjects = await SubjectsService.getAllSubjects();
-      final filtered =
-          allSubjects.where((s) {
-            final subjectCollege =
-                s.semester?.branch?.college?.name.toLowerCase() ?? '';
-            final userCollege = (profile.college ?? '').toLowerCase();
-            final subjectBranch = s.semester?.branch?.name.toLowerCase() ?? '';
-            final userBranch = (profile.branch ?? '').toLowerCase();
-            final subjectSemester = s.semester?.name.toLowerCase() ?? '';
-            final userSemester = (profile.semester ?? '').toLowerCase();
-            return (subjectCollege.contains(userCollege) ||
-                    userCollege.contains(subjectCollege)) &&
-                (subjectBranch.contains(userBranch) ||
-                    userBranch.contains(subjectBranch)) &&
-                (subjectSemester.contains(userSemester) ||
-                    userSemester.contains(subjectSemester));
-          }).toList();
-      _subjects = filtered.map((s) => {'name': s.name, 'code': s.id}).toList();
-
-      List<AttendanceRecord> records;
-      if (profile.college != null ||
-          profile.branch != null ||
-          profile.semester != null) {
-        // Use roll number as the key for fetching attendance
-        records = await _attendanceService.getStudentAttendanceByContext(
-          profile.studentId ?? user.id,
-          college: profile.college,
-          branch: profile.branch,
-          semester: profile.semester,
-        );
-      } else {
-        records = await _attendanceService.getStudentAttendance(
-          profile.studentId ?? user.id,
-        );
+      // Use cached profile if available
+      UserProfile? profile = _userProfileCache;
+      if (profile == null || forceRefresh) {
+        profile = await UserProfileService.getCurrentUserProfile();
+        _userProfileCache = profile; // Cache the profile
+      }
+      
+      if (profile == null || profile.semester == null) {
+        setState(() {
+          _loading = false;
+          _initialLoading = false;
+        });
+        return;
       }
 
+      // At this point, profile is guaranteed to be non-null
+      final nonNullProfile = profile;
+
+      // OPTIMIZED: Use direct database query instead of filtering all subjects
+      List<Map<String, String>> subjects = [];
+      try {
+        final response = await Supabase.instance.client
+            .from('subjects')
+            .select('''
+              id,
+              name,
+              semesters!inner (
+                name,
+                branches!inner (
+                  name,
+                  colleges!inner (
+                    name
+                  )
+                )
+              )
+            ''')
+            .ilike('semesters.name', '%${nonNullProfile.semester}%')
+            .ilike('semesters.branches.name', '%${nonNullProfile.branch}%')
+            .ilike('semesters.branches.colleges.name', '%${nonNullProfile.college}%')
+            .order('name')
+            .limit(50); // Limit results for better performance
+
+        subjects = (response as List).map((s) => {
+          'name': s['name'] as String,
+          'code': s['id'] as String
+        }).toList();
+
+      } catch (e) {
+        // Fallback to old method if direct query fails
+        final allSubjects = await SubjectsService.getAllSubjects();
+        final filtered = allSubjects.where((s) {
+          final subjectCollege = s.semester?.branch?.college?.name.toLowerCase() ?? '';
+          final userCollege = (nonNullProfile.college ?? '').toLowerCase();
+          final subjectBranch = s.semester?.branch?.name.toLowerCase() ?? '';
+          final userBranch = (nonNullProfile.branch ?? '').toLowerCase();
+          final subjectSemester = s.semester?.name.toLowerCase() ?? '';
+          final userSemester = (nonNullProfile.semester ?? '').toLowerCase();
+          return (subjectCollege.contains(userCollege) || userCollege.contains(subjectCollege)) &&
+              (subjectBranch.contains(userBranch) || userBranch.contains(subjectBranch)) &&
+              (subjectSemester.contains(userSemester) || userSemester.contains(subjectSemester));
+        }).toList();
+        subjects = filtered.map((s) => {'name': s.name, 'code': s.id}).toList();
+      }
+
+      // Load attendance records with optimized connection management
+      List<AttendanceRecord> records = [];
+      
+      try {
+        // Use monitoring integration for optimized data loading
+        final results = await MonitoringIntegrationHelper.loadExamDataWithOptimization<List<List<AttendanceRecord>>>(
+          operation: 'load_attendance_data',
+          dataLoader: () async {
+            // Add timeout to prevent hanging
+            final attendanceFuture = Future.wait([
+              _attendanceService.getStudentAttendanceByContext(
+                nonNullProfile.studentId ?? user.id,
+                college: nonNullProfile.college,
+                branch: nonNullProfile.branch,
+                semester: nonNullProfile.semester,
+              ),
+              _attendanceService.getStudentAttendanceWithSubjectNames(user.id),
+            ]);
+
+            return await attendanceFuture.timeout(
+              const Duration(seconds: 10),
+              onTimeout: () {
+                throw TimeoutException('Attendance loading timed out', const Duration(seconds: 10));
+              },
+            );
+          },
+          examId: 'attendance_${nonNullProfile.college ?? 'unknown'}_${nonNullProfile.branch ?? 'unknown'}',
+          studentId: user.id,
+        );
+
+        final professorRecords = results[0];
+        final studentRecords = results[1];
+
+        // Merge records efficiently
+        records.addAll(professorRecords);
+        final professorManagedSubjects = professorRecords.map((r) => r.subjectName).toSet();
+        
+        for (final studentRecord in studentRecords) {
+          if (!professorManagedSubjects.contains(studentRecord.subjectName)) {
+            records.add(studentRecord);
+          }
+        }
+      } catch (e) {
+        // Continue with empty records rather than failing completely
+      }
+
+      // Clear stats cache when new data is loaded
+      _attendanceStatsCache.clear();
+      
       setState(() {
+        _subjects = subjects;
         _attendanceRecords = records;
         _loading = false;
+        _initialLoading = false;
         _hasNetworkError = false;
       });
+      
+      // Update last refresh time
+      _lastRefreshTime = DateTime.now();
     } catch (e) {
       final message = ErrorMessageService.getFriendlyMessage(e);
       if (mounted) {
+        setState(() {
+          _loading = false;
+          _initialLoading = false;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(message), backgroundColor: Colors.red),
         );
@@ -130,7 +225,6 @@ class _AttendanceScreenState extends State<AttendanceScreen>
       _hasNetworkError = false;
     });
 
-    await refreshNetworkStatus();
     final networkStatus = await _networkService.isConnected();
 
     if (networkStatus) {
@@ -280,18 +374,38 @@ class _AttendanceScreenState extends State<AttendanceScreen>
     );
   }
 
-  Widget _buildSubjectCard(Map<String, String> subject, int index) {
-    final subjectRecords =
-        _attendanceRecords
-            .where((r) => r.subjectId == subject['code'])
-            .toList();
-    final presentCount =
-        subjectRecords.where((r) => r.status == 'present').length;
-    final absentCount =
-        subjectRecords.where((r) => r.status == 'absent').length;
+  // Get cached attendance stats for a subject
+  Map<String, dynamic> _getAttendanceStats(String subjectName) {
+    // Check cache first
+    if (_attendanceStatsCache.containsKey(subjectName)) {
+      return _attendanceStatsCache[subjectName]!;
+    }
+    
+    // Calculate and cache
+    final subjectRecords = _attendanceRecords
+        .where((r) => r.subjectName == subjectName)
+        .toList();
+    final presentCount = subjectRecords.where((r) => r.status == 'present').length;
+    final absentCount = subjectRecords.where((r) => r.status == 'absent').length;
     final total = subjectRecords.length;
-    final percent =
-        total > 0 ? (presentCount / total * 100).toStringAsFixed(1) : '0';
+    final percent = total > 0 ? (presentCount / total * 100).toStringAsFixed(1) : '0';
+    
+    final stats = {
+      'presentCount': presentCount,
+      'absentCount': absentCount,
+      'total': total,
+      'percent': percent,
+    };
+    
+    _attendanceStatsCache[subjectName] = stats;
+    return stats;
+  }
+
+  Widget _buildSubjectCard(Map<String, String> subject, int index) {
+    final stats = _getAttendanceStats(subject['name'] ?? '');
+    final presentCount = stats['presentCount'] as int;
+    final absentCount = stats['absentCount'] as int;
+    final percent = stats['percent'] as String;
     final Color accentColor =
         [
           AppTheme.primaryBlue,
@@ -738,45 +852,91 @@ class _AttendanceScreenState extends State<AttendanceScreen>
       ),
       actions: [
         IconButton(
-          icon:
-              _loading
-                  ? SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        AppTheme.primaryBlue,
-                      ),
+          icon: _loading
+              ? SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      AppTheme.primaryBlue,
                     ),
-                  )
-                  : const Icon(Icons.refresh_rounded, size: 18),
-          onPressed:
-              _loading
-                  ? null
-                  : () async {
-                    setState(() {
-                      _loading = true;
-                    });
-                    await _retryWithNetworkCheck();
-
-                    if (!mounted) return;
-
-                    setState(() {
-                      _loading = false;
-                    });
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Attendance data refreshed'),
-                        backgroundColor: AppTheme.secondaryGreen,
-                        behavior: SnackBarBehavior.floating,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        duration: const Duration(milliseconds: 1500),
+                  ),
+                )
+              : const Icon(Icons.refresh_rounded, size: 18),
+          onPressed: _loading
+              ? null
+              : () async {
+                  // Show immediate feedback
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Row(
+                        children: [
+                          SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          const Text('Refreshing attendance data...'),
+                        ],
                       ),
-                    );
-                  },
+                      backgroundColor: AppTheme.primaryBlue,
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+
+                  try {
+                    await _fetchAttendanceAndSubjects(forceRefresh: true);
+                    
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Row(
+                            children: [
+                              Icon(Icons.check_circle, color: Colors.white, size: 16),
+                              const SizedBox(width: 8),
+                              const Text('Attendance data refreshed successfully'),
+                            ],
+                          ),
+                          backgroundColor: AppTheme.secondaryGreen,
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          duration: const Duration(seconds: 2),
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Row(
+                            children: [
+                              Icon(Icons.error, color: Colors.white, size: 16),
+                              const SizedBox(width: 8),
+                              Text('Failed to refresh: ${e.toString()}'),
+                            ],
+                          ),
+                          backgroundColor: Colors.red,
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          duration: const Duration(seconds: 3),
+                        ),
+                      );
+                    }
+                  }
+                },
           tooltip: 'Refresh',
         ),
       ],
@@ -801,10 +961,27 @@ class _AttendanceScreenState extends State<AttendanceScreen>
               onNavigate: (route) => Navigator.pushNamed(context, route),
             ),
             Expanded(
-              child:
-                  _initialLoading
-                      ? const Center(child: CircularProgressIndicator())
-                      : _hasNetworkError
+              child: _initialLoading
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          CircularProgressIndicator(
+                            color: AppTheme.primaryBlue,
+                            strokeWidth: 3,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Loading attendance data...',
+                            style: GoogleFonts.poppins(
+                              fontSize: 16,
+                              color: AppTheme.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : _hasNetworkError
                       ? buildNetworkErrorWidget(
                         title: '📡 No Internet Connection',
                         message:
@@ -880,10 +1057,27 @@ class _AttendanceScreenState extends State<AttendanceScreen>
     }
     return Scaffold(
       backgroundColor: AppTheme.backgroundLight,
-      body:
-          _initialLoading
-              ? const Center(child: CircularProgressIndicator())
-              : _hasNetworkError
+      body: _initialLoading
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(
+                    color: AppTheme.primaryBlue,
+                    strokeWidth: 3,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Loading attendance data...',
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      color: AppTheme.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : _hasNetworkError
               ? buildNetworkErrorWidget(
                 title: '📡 No Internet Connection',
                 message:
@@ -950,6 +1144,61 @@ class _AttendanceScreenState extends State<AttendanceScreen>
                   child: const Icon(Icons.add, size: 32, color: Colors.white),
                 ),
               ),
+    );
+  }
+
+  Widget buildNetworkErrorWidget({
+    required String title,
+    required String message,
+    required String customEmoji,
+    required VoidCallback onRetry,
+  }) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            customEmoji,
+            style: const TextStyle(fontSize: 64),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            title,
+            style: GoogleFonts.poppins(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: AppTheme.textPrimary,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Text(
+              message,
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                color: AppTheme.textSecondary,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            onPressed: onRetry,
+            icon: const Icon(Icons.refresh),
+            label: const Text('Try Again'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryBlue,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

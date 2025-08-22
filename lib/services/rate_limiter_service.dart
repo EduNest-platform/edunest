@@ -113,6 +113,28 @@ class RateLimiterService {
     }
   }
 
+  /// Execute a function with rate limiting
+  static Future<T> executeWithLimit<T>(
+    Future<T> Function() operation, {
+    String endpoint = 'default',
+    int maxCalls = 60,
+    Duration window = const Duration(minutes: 1),
+  }) async {
+    // Check if API call is allowed
+    final isAllowed = await isApiCallAllowed(
+      endpoint,
+      maxCalls: maxCalls,
+      window: window,
+    );
+
+    if (!isAllowed) {
+      throw Exception('Rate limit exceeded for endpoint: $endpoint');
+    }
+
+    // Execute the operation
+    return await operation();
+  }
+
   /// Clear all rate limiting data (for testing or admin purposes)
   static void clearAllData() {
     _apiCallHistory.clear();

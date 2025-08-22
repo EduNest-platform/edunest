@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../theme/app_theme.dart';
 import '../../../widgets/app_text.dart';
 import '../../widgets/desktop_sidebar.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -47,6 +48,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
     super.dispose();
   }
 
+  // Helper function to launch URLs
+  Future<void> _launchInApp(BuildContext context, String urlString) async {
+    final Uri url = Uri.parse(urlString);
+    if (!await launchUrl(
+      url,
+      mode: LaunchMode.inAppWebView, // This opens the URL inside the app
+    )) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Could not launch $urlString'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   Color _getCollapsedAppBarColor(bool isCollapsed) {
     return isCollapsed ? AppTheme.primaryBlue : Colors.transparent;
   }
@@ -76,6 +93,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       );
     }
   }
+
+
 
   Widget _buildAppBarLeading(bool isCollapsed) {
     // Always use the floating, rounded, shadowed back button design
@@ -513,6 +532,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                         top: 10,
                                         bottom: 24,
                                       ),
+                                      // Your updated Column widget
                                       child: Column(
                                         children: [
                                           _simpleTile(
@@ -520,16 +540,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                             subtitle: 'Read our privacy policy',
                                             icon: Icons.privacy_tip_rounded,
                                             onTap: () {
-                                              ScaffoldMessenger.of(
+                                              // Opens the Privacy Policy inside the app
+                                              _launchInApp(
                                                 context,
-                                              ).showSnackBar(
-                                                const SnackBar(
-                                                  content: Text(
-                                                    'Privacy policy page coming soon!',
-                                                  ),
-                                                  backgroundColor:
-                                                      Colors.orange,
-                                                ),
+                                                'http://edunest.me/EduNest-Privacy-Policy/',
                                               );
                                             },
                                           ),
@@ -537,19 +551,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                           _simpleTile(
                                             title: 'Terms of Service',
                                             subtitle:
-                                                'Read our terms of service',
+                                            'Read our terms of service',
                                             icon: Icons.description_rounded,
                                             onTap: () {
-                                              ScaffoldMessenger.of(
+                                              // Opens the Terms of Service inside the app
+                                              _launchInApp(
                                                 context,
-                                              ).showSnackBar(
-                                                const SnackBar(
-                                                  content: Text(
-                                                    'Terms of service page coming soon!',
-                                                  ),
-                                                  backgroundColor:
-                                                      Colors.orange,
-                                                ),
+                                                'http://edunest.me/EduNest-Terms-Condition/',
                                               );
                                             },
                                           ),
@@ -1042,6 +1050,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   top: 10,
                                   bottom: 24,
                                 ),
+                                // Your updated Column widget
                                 child: Column(
                                   children: [
                                     _simpleTile(
@@ -1049,33 +1058,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                       subtitle: 'Read our privacy policy',
                                       icon: Icons.privacy_tip_rounded,
                                       onTap: () {
-                                        ScaffoldMessenger.of(
+                                        // Opens the Privacy Policy inside the app
+                                        _launchInApp(
                                           context,
-                                        ).showSnackBar(
-                                          const SnackBar(
-                                            content: Text(
-                                              'Privacy policy page coming soon!',
-                                            ),
-                                            backgroundColor: Colors.orange,
-                                          ),
+                                          'http://edunest.me/EduNest-Privacy-Policy/',
                                         );
                                       },
                                     ),
                                     _divider(),
                                     _simpleTile(
                                       title: 'Terms of Service',
-                                      subtitle: 'Read our terms of service',
+                                      subtitle:
+                                      'Read our terms of service',
                                       icon: Icons.description_rounded,
                                       onTap: () {
-                                        ScaffoldMessenger.of(
+                                        // Opens the Terms of Service inside the app
+                                        _launchInApp(
                                           context,
-                                        ).showSnackBar(
-                                          const SnackBar(
-                                            content: Text(
-                                              'Terms of service page coming soon!',
-                                            ),
-                                            backgroundColor: Colors.orange,
-                                          ),
+                                          'http://edunest.me/EduNest-Terms-Condition/',
                                         );
                                       },
                                     ),

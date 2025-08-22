@@ -8,12 +8,15 @@ This book is a comprehensive, deep-dive guide to the EduNest desktop app. Each s
 
 EduNest is a smart learning platform for students, built with Flutter for desktop (Windows, macOS, Linux). It features:
 - Secure authentication (Supabase)
-- Practice tests (AI-powered)
-- Attendance tracking
-- Study resources
-- Modern UI/UX
+- AI-powered practice tests with three modes (Academic, Competitive, Career)
+- Smart attendance tracking with professor management
+- Assignment marks system with grade tracking
+- Subject feedback campaigns with anonymous responses
+- Study resources and file management
+- Performance optimization and system monitoring
+- Modern UI/UX with Material Design 3
 - Desktop-specific enhancements (scrollbars, window management, etc.)
-- Robust error handling and performance
+- Robust error handling and performance optimization
 
 The app is organized into screens, each with a clear purpose and structure. Let’s dive into each one!
 
@@ -120,9 +123,9 @@ ElevatedButton(
 - **Widgets:**
   - `_SidebarSectionLabel`, `_SidebarButton` for navigation
   - `_buildWelcomeSection()` – greeting, user name, avatar
-  - `_buildQuickActions()` – `Row` of action cards
-  - `_buildMyCurrentSubjects()` – horizontal `ListView` of subject cards
-  - `_buildRecentActivity()` – vertical list of recent files/resources
+  - `_buildQuickActions()` – `Row` of action cards (Practice Tests, Assignments, Attendance, Feedback)
+  - `_buildMyCurrentSubjects()` – horizontal `ListView` of subject cards with assignment marks integration
+  - `_buildRecentActivity()` – vertical list of recent files/resources and test completions
 
 **State Management:**
 - `StatefulWidget` with local state for loading, subjects, recent files, onboarding, etc.
@@ -133,10 +136,12 @@ ElevatedButton(
 - **UserProfileService.getCurrentUserProfile()**
 - **SubjectsService.getSubjectsByCollegeAndSemester()**
 - **FilesService.getRecentFiles(subjectId, limit)**
+- **AssignmentMarksService.getAllAssignmentMarks()**
+- **TestResultsService.getRecentTestResults()**
 - **SupabaseService.client.auth.currentUser**
 
 **Backend Interaction:**
-- **Supabase tables:** `profiles`, `subjects`, `files`
+- **Supabase tables:** `profiles`, `subjects`, `files`, `class_assignment_marks`, `test_results`, `subject_feedback`
 - **Example query:**
   ```dart
   final response = await SupabaseService.client
@@ -146,7 +151,7 @@ ElevatedButton(
       .eq('semester', userProfile.semester);
   ```
 - **Data flow:**
-  - On init, loads user profile → loads subjects → loads recent files.
+  - On init, loads user profile → loads subjects → loads recent files → loads assignment marks → loads recent test results.
 
 **Error Handling:**
 - Try/catch around all async service calls.
@@ -345,16 +350,56 @@ try {
 **Backend Interaction:** None (local only, uses `flutter_secure_storage`).
 **Learning Tips:** Never store tokens in plain text or shared preferences.
 
+### AssignmentMarksService
+**Purpose:** Manages assignment grades and academic performance tracking.
+**Key Methods:**
+- `Future<Map<String, List<AssignmentMark>>> getAllAssignmentMarks()`
+- `Future<List<Map<String, dynamic>>> getClassSubjectInfo(List<String> classIds)`
+- `Future<List<AssignmentMark>> getAssignmentMarksByClass(String classId)`
+**Backend Interaction:** Reads from `class_assignment_marks` table. Processes grade data and calculates performance metrics.
+**Learning Tips:** Use data aggregation for performance analytics. Cache grade data for better UX.
+
+### SubjectFeedbackService
+**Purpose:** Handles feedback campaigns and anonymous response submission.
+**Key Methods:**
+- `Future<List<Map<String, dynamic>>> getActiveCampaigns()`
+- `Future<void> submitFeedback(Map<String, dynamic> feedbackData)`
+- `Future<List<Map<String, dynamic>>> getFeedbackHistory()`
+**Backend Interaction:** Reads from and writes to `subject_feedback` table. Ensures anonymous feedback submission.
+**Learning Tips:** Implement proper anonymization. Use campaign-based feedback collection.
+
+### TestResultsService
+**Purpose:** Manages test performance data and analytics.
+**Key Methods:**
+- `Future<void> saveTestResult(TestResult result)`
+- `Future<List<TestResult>> getTestHistory(String subjectId)`
+- `Future<bool> hasCompletedAssignedTest(String testId)`
+**Backend Interaction:** Reads from and writes to `test_results` table. Tracks assigned test completion.
+**Learning Tips:** Track both practice and assigned test results separately. Implement performance analytics.
+
+### ExamOptimizationService
+**Purpose:** Optimizes app performance during high-load periods (exams).
+**Key Methods:**
+- `static void activateExamMode(String examId, int expectedStudents)`
+- `static void deactivateExamMode(String examId)`
+- `static Map<String, dynamic> getPerformanceMetrics()`
+**Backend Interaction:** Local optimization service with performance monitoring.
+**Learning Tips:** Use singleton pattern for global optimization. Monitor resource usage during exams.
+
 ---
 
 ## 8. **Mixins and Utilities (Desktop)**
 
-- **PerformanceMixin:** Adds reusable logic for performance monitoring.
-- **NetworkAwareMixin:** Adds network awareness to screens.
+- **PerformanceMixin:** Adds reusable logic for performance monitoring and exam mode optimization.
+- **NetworkAwareMixin:** Adds network awareness to screens with full-page error overlays.
 - **SessionTrackingService:** Manages user sessions, active devices, and session timeouts.
 - **RateLimiterService:** Prevents abuse by limiting API call frequency.
-- **HybridAIService:** Handles AI-powered features (e.g., question generation).
-- **TestResultsService:** Manages test result storage and analytics.
+- **HybridAIService:** Handles AI-powered features using Google Gemini API (question generation, bulk creation).
+- **TestResultsService:** Manages test result storage, analytics, and assigned test tracking.
+- **AssignmentMarksService:** Handles grade tracking and performance analytics.
+- **SubjectFeedbackService:** Manages feedback campaigns and anonymous response collection.
+- **ExamOptimizationService:** Optimizes system performance during high-load periods.
+- **MonitoringIntegrationHelper:** Provides real-time system health and performance tracking.
 
 **Learning Tips:**
 - Use mixins to avoid code duplication across screens.
@@ -365,20 +410,87 @@ try {
 
 ## 9. **Models and Theme (Desktop)**
 
-- **Models:** `Subject`, `UserProfile`, `AttendanceRecord`, etc. Define data structures for app entities. Use `fromJson`/`toJson` for serialization.
-- **Theme:** `app_theme.dart` centralizes all color, font, and style definitions. Use color and font constants throughout the app.
+- **Models:** `Subject`, `UserProfile`, `AttendanceRecord`, `AssignmentMark`, `TestResult`, etc. Define data structures for app entities. Use `fromJson`/`toJson` for serialization.
+- **Theme:** `app_theme.dart` centralizes all color, font, and style definitions. Uses Material Design 3 with Google Fonts for consistent typography.
 
 **Usage Example:**
 ```dart
 Container(
   color: AppTheme.primaryBlue,
-  child: Text('EduNest', style: TextStyle(color: AppTheme.textInverse)),
+  child: Text('EduNest', style: GoogleFonts.poppins(
+    color: AppTheme.textInverse,
+    fontWeight: FontWeight.w600,
+  )),
 )
 ```
 
 **Learning Tips:**
 - Keep models in sync with backend schema.
 - Use a theme file for easy global style changes.
+- Implement proper data validation in models.
+- Use Google Fonts for consistent typography across platforms.
+
+---
+
+## 10. **New Feature Screens (Desktop)**
+
+### Assignment Marks Screens
+
+#### AssignmentSubjectsScreen
+**Purpose:** Display subjects with assignment grades for students.
+**Main Widgets:** `Scaffold`, `ListView`, `Card`, `CustomAppBar`, `DesktopSidebar`
+**Key Features:**
+- Subject-wise grade organization
+- Assignment count per subject
+- Performance overview cards
+- Class-wise filtering
+**Service Calls:** `AssignmentMarksService.getAllAssignmentMarks()`, `AssignmentMarksService.getClassSubjectInfo()`
+**Learning Tips:** Use data aggregation for performance metrics. Implement proper loading states.
+
+#### SubjectAssignmentMarksScreen
+**Purpose:** Detailed assignment grades for specific subjects.
+**Main Widgets:** `DataTable`, `Chart`, `StatCard`
+**Key Features:**
+- Individual assignment scores
+- Grade history and trends
+- Performance analytics
+- Export functionality
+
+### Subject Feedback Screens
+
+#### SubjectFeedbackListScreen
+**Purpose:** List subjects available for feedback submission.
+**Main Widgets:** `ListView`, `SubjectCard`, `StatusIndicator`
+**Key Features:**
+- Active campaign indicators
+- Feedback completion status
+- Subject-wise organization
+**Service Calls:** `SubjectFeedbackService.getActiveCampaigns()`
+
+#### FeedbackFormScreen
+**Purpose:** Submit anonymous feedback for subjects.
+**Main Widgets:** `Form`, `RatingBar`, `TextFormField`
+**Key Features:**
+- 5-point rating scale
+- Anonymous submission
+- Comment fields
+- Campaign-specific questions
+
+### Practice Test Enhancement Screens
+
+#### AssignedTestCardScreen
+**Purpose:** Display professor-assigned tests.
+**Main Widgets:** `Card`, `CountdownTimer`, `StatusBadge`
+**Key Features:**
+- Test deadlines and status
+- Access controls
+- Completion tracking
+**Service Calls:** `AssignedMCQSupabaseService.fetchAssignedTests()`
+
+**Learning Tips:**
+- Implement proper access controls for assigned tests
+- Use countdown timers for deadline awareness
+- Track completion status accurately
 
 ---
 

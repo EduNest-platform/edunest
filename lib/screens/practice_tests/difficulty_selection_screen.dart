@@ -5,6 +5,7 @@ import '../../models/subject.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/app_text.dart';
 import 'mcq_test_screen.dart';
+import '../../services/supabase_service.dart';
 
 class DifficultySelectionScreen extends StatefulWidget {
   final Subject subject;
@@ -21,18 +22,19 @@ class DifficultySelectionScreen extends StatefulWidget {
       _DifficultySelectionScreenState();
 }
 
+
 class _DifficultySelectionScreenState extends State<DifficultySelectionScreen> {
-  String? selectedDifficulty;
+  String? selectedPracticeMode;
   bool isProctored = false;
 
-  Widget _buildDifficultyCard({
+  Widget _buildPracticeModeCard({
     required String title,
     required String description,
     required Color color,
     required IconData icon,
-    required String difficulty,
+    required String practiceMode,
   }) {
-    final isSelected = selectedDifficulty == difficulty;
+    final isSelected = selectedPracticeMode == practiceMode;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 17),
@@ -57,7 +59,7 @@ class _DifficultySelectionScreenState extends State<DifficultySelectionScreen> {
           borderRadius: BorderRadius.circular(17),
           onTap: () {
             setState(() {
-              selectedDifficulty = difficulty;
+              selectedPracticeMode = practiceMode;
             });
             _showQuestionCountPicker(context);
           },
@@ -185,11 +187,11 @@ class _DifficultySelectionScreenState extends State<DifficultySelectionScreen> {
                     ),
                     const SizedBox(height: 24),
                     // Question Count Buttons
-                    _questionCountButton(context, 5, isWide),
-                    const SizedBox(height: 10),
                     _questionCountButton(context, 10, isWide),
                     const SizedBox(height: 10),
                     _questionCountButton(context, 15, isWide),
+                    const SizedBox(height: 10),
+                    _questionCountButton(context, 20, isWide),
                     const SizedBox(height: 18),
                     // Cancel Button
                     SizedBox(
@@ -227,7 +229,7 @@ class _DifficultySelectionScreenState extends State<DifficultySelectionScreen> {
               (context) => MCQTestScreen(
                 subject: widget.subject,
                 chapter: widget.chapter,
-                difficulty: selectedDifficulty!,
+                practiceMode: selectedPracticeMode!,
                 questionCount: selected,
                 isProctored: isProctored,
               ),
@@ -267,7 +269,7 @@ class _DifficultySelectionScreenState extends State<DifficultySelectionScreen> {
     return Scaffold(
       backgroundColor: AppTheme.backgroundLight,
       appBar: CustomAppBar(
-        title: 'Difficulty',
+        title: 'Practice Mode',
         subtitle: '${widget.subject.name} - ${widget.chapter['name']}',
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_rounded),
@@ -288,7 +290,7 @@ class _DifficultySelectionScreenState extends State<DifficultySelectionScreen> {
                 children: [
                   // Header
                   AppText(
-                    'Choose Difficulty',
+                    'Choose Practice Mode',
                     style: GoogleFonts.poppins(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
@@ -298,7 +300,7 @@ class _DifficultySelectionScreenState extends State<DifficultySelectionScreen> {
                   ),
                   const SizedBox(height: 8),
                   AppText(
-                    'Select the difficulty level for your practice test',
+                    'Select your learning goal for this practice test',
                     style: GoogleFonts.poppins(
                       fontSize: 15,
                       color: Colors.grey.shade600,
@@ -306,37 +308,36 @@ class _DifficultySelectionScreenState extends State<DifficultySelectionScreen> {
                     maxLines: 2,
                   ),
                   const SizedBox(height: 24),
-                  // Difficulty Options
+                  // Practice Mode Options
                   Expanded(
                     child: SingleChildScrollView(
                       child: Column(
                         children: [
-                          // Easy Difficulty
-                          _buildDifficultyCard(
-                            title: 'Easy',
+                          // Academic Mode
+                          _buildPracticeModeCard(
+                            title: 'Academic Mode',
                             description:
-                                'Basic concepts and fundamental questions. Perfect for beginners.',
-                            color: AppTheme.success,
-                            icon: Icons.star_rounded,
-                            difficulty: 'beginner',
-                          ),
-                          // Medium Difficulty
-                          _buildDifficultyCard(
-                            title: 'Medium',
-                            description:
-                                'Moderate complexity with mixed question types. Good for practice.',
-                            color: AppTheme.warning,
+                                'University exam preparation with core syllabus concepts. Perfect for semester exams.',
+                            color: AppTheme.primaryBlue,
                             icon: Icons.school_rounded,
-                            difficulty: 'intermediate',
+                            practiceMode: 'academic',
                           ),
-                          // Hard Difficulty
-                          _buildDifficultyCard(
-                            title: 'Hard',
+                          // Competitive Exam Mode
+                          _buildPracticeModeCard(
+                            title: 'Competitive Exam Mode',
+                            description: 'Competitive exam preparation for GATE and other exams.',
+                            color: AppTheme.warning,
+                            icon: Icons.emoji_events_rounded,
+                            practiceMode: 'competitive',
+                          ),
+                          // Career Prep Mode
+                          _buildPracticeModeCard(
+                            title: 'Career Prep Mode',
                             description:
-                                'Advanced concepts and challenging questions. For experts.',
-                            color: AppTheme.error,
-                            icon: Icons.military_tech_rounded,
-                            difficulty: 'advanced',
+                                'Interview preparation and practical applications. Ready for job interviews.',
+                            color: AppTheme.success,
+                            icon: Icons.work_rounded,
+                            practiceMode: 'career',
                           ),
                           // More vertical space before proctoring section on desktop
                           if (isWide)

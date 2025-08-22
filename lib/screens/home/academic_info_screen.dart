@@ -3,16 +3,18 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../theme/app_theme.dart';
 import 'Syllabus & Timetable/syllabus_viewer_screen.dart';
 import 'Syllabus & Timetable/timetable_viewer_screen.dart';
-import '../../services/subjects_service.dart';
-import '../../models/subject.dart';
+import '../../services/user_profile_service.dart';
+import '../../models/user_profile.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../services/network_service.dart';
 import 'package:flutter/foundation.dart';
 import '../../widgets/desktop_sidebar.dart';
+import 'Assignment marks/assignment_subjects_screen.dart';
+import 'subject_feedback/subject_feedback_list_screen.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AcademicInfoScreen extends StatefulWidget {
-  final String subjectId;
-  const AcademicInfoScreen({super.key, required this.subjectId});
+  const AcademicInfoScreen({super.key});
 
   @override
   State<AcademicInfoScreen> createState() => _AcademicInfoScreenState();
@@ -20,7 +22,7 @@ class AcademicInfoScreen extends StatefulWidget {
 
 class _AcademicInfoScreenState extends State<AcademicInfoScreen>
     with NetworkAwareMixin {
-  Future<Subject?>? _subjectFuture;
+  String? _semesterId;
   bool _hasNetworkError = false;
   bool _isLoading = true;
   final NetworkService _networkService = NetworkService();
@@ -28,10 +30,10 @@ class _AcademicInfoScreenState extends State<AcademicInfoScreen>
   @override
   void initState() {
     super.initState();
-    _loadSubjectData();
+    _loadUserProfile();
   }
 
-  Future<void> _loadSubjectData() async {
+  Future<void> _loadUserProfile() async {
     setState(() {
       _isLoading = true;
       _hasNetworkError = false;
@@ -43,21 +45,29 @@ class _AcademicInfoScreenState extends State<AcademicInfoScreen>
     if (!networkStatus) {
       setState(() {
         _hasNetworkError = true;
-        _subjectFuture = null;
         _isLoading = false;
       });
       return;
     }
 
-    setState(() {
-      _hasNetworkError = false;
-      _subjectFuture = SubjectsService.getSubjectById(widget.subjectId);
-    });
-
-    // Wait for the future to complete and update loading state
     try {
-      final subject = await _subjectFuture!;
-      if (mounted) {
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user != null) {
+        final userProfile = await UserProfileService.getCurrentUserProfile();
+        if (userProfile != null && mounted) {
+          // Get semester ID based on user's academic path
+          final semesterId = await _getSemesterIdFromProfile(userProfile);
+          setState(() {
+            _semesterId = semesterId;
+            _hasNetworkError = false;
+            _isLoading = false;
+          });
+        } else {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+      } else {
         setState(() {
           _isLoading = false;
         });
@@ -65,9 +75,49 @@ class _AcademicInfoScreenState extends State<AcademicInfoScreen>
     } catch (e) {
       if (mounted) {
         setState(() {
+          _hasNetworkError = true;
           _isLoading = false;
         });
       }
+    }
+  }
+
+  Future<String?> _getSemesterIdFromProfile(UserProfile profile) async {
+    try {
+      if (profile.college == null || profile.branch == null || profile.semester == null) {
+        return null;
+      }
+
+      // First get college ID
+      final collegeResponse = await Supabase.instance.client
+          .from('colleges')
+          .select('id')
+          .eq('name', profile.college!)
+          .single();
+
+      final collegeId = collegeResponse['id'] as String;
+
+      // Then get branch ID
+      final branchResponse = await Supabase.instance.client
+          .from('branches')
+          .select('id')
+          .eq('name', profile.branch!)
+          .eq('college_id', collegeId)
+          .single();
+
+      final branchId = branchResponse['id'] as String;
+
+      // Finally get semester ID
+      final semesterResponse = await Supabase.instance.client
+          .from('semesters')
+          .select('id')
+          .eq('name', profile.semester!)
+          .eq('branch_id', branchId)
+          .single();
+
+      return semesterResponse['id'] as String?;
+    } catch (e) {
+      return null;
     }
   }
 
@@ -76,11 +126,10 @@ class _AcademicInfoScreenState extends State<AcademicInfoScreen>
     final networkStatus = await _networkService.isConnected();
 
     if (networkStatus) {
-      _loadSubjectData();
+      _loadUserProfile();
     } else {
       setState(() {
         _hasNetworkError = true;
-        _subjectFuture = null;
       });
     }
   }
@@ -127,196 +176,261 @@ class _AcademicInfoScreenState extends State<AcademicInfoScreen>
                             actions: [
                               IconButton(
                                 icon: const Icon(Icons.refresh_rounded),
-                                onPressed: _loadSubjectData,
+                                onPressed: _loadUserProfile,
                               ),
                             ],
                           ),
                           Expanded(
-                            child:
-                                _isLoading || _subjectFuture == null
-                                    ? const Center(
-                                      child: CircularProgressIndicator(),
-                                    )
-                                    : FutureBuilder<Subject?>(
-                                      future: _subjectFuture!,
-                                      builder: (context, snapshot) {
-                                        if (snapshot.connectionState ==
-                                            ConnectionState.waiting) {
-                                          return const Center(
-                                            child: CircularProgressIndicator(),
-                                          );
-                                        }
-
-                                        if (snapshot.hasError) {
-                                          return Center(
-                                            child: buildNetworkErrorWidget(
-                                              title: '📚 Error Loading Subject',
-                                              message:
-                                                  'Failed to load subject information. Please try again.',
-                                              customEmoji: '⚠️',
-                                              onRetry: _loadSubjectData,
-                                            ),
-                                          );
-                                        }
-
-                                        if (!snapshot.hasData ||
-                                            snapshot.data == null) {
-                                          return Center(
-                                            child: buildNetworkErrorWidget(
-                                              title: '📚 Subject Not Found',
-                                              message:
-                                                  'The requested subject could not be found. Please check your connection and try again.',
-                                              customEmoji: '🔍',
-                                              onRetry: _loadSubjectData,
-                                            ),
-                                          );
-                                        }
-
-                                        final subject = snapshot.data!;
-                                        final semesterId = subject.semesterId;
-                                        return Center(
-                                          child: ConstrainedBox(
-                                            constraints: const BoxConstraints(
-                                              maxWidth: 900,
-                                            ),
-                                            child: Padding(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    horizontal: 32,
-                                                    vertical: 32,
-                                                  ),
-                                              child: Column(
+                            child: _isLoading
+                                ? const Center(
+                                  child: CircularProgressIndicator(),
+                                )
+                                : Center(
+                                  child: ConstrainedBox(
+                                    constraints: const BoxConstraints(
+                                      maxWidth: 1200,
+                                    ),
+                                    child: Padding(
+                                      padding:
+                                          const EdgeInsets.symmetric(
+                                            horizontal: 32,
+                                            vertical: 32,
+                                          ),
+                                      child: Column(
                                                 crossAxisAlignment:
                                                     CrossAxisAlignment.center,
                                                 children: [
                                                   // Remove header and subtitle for Android/iOS
                                                   Container(
                                                     padding:
-                                                        const EdgeInsets.all(
-                                                          32,
+                                                        EdgeInsets.all(
+                                                          isWide ? 40 : 24,
                                                         ),
                                                     decoration: BoxDecoration(
-                                                      color: Colors.white,
+                                                      gradient: LinearGradient(
+                                                        begin: Alignment.topLeft,
+                                                        end: Alignment.bottomRight,
+                                                        colors: [
+                                                          Colors.white,
+                                                          Colors.grey.shade50,
+                                                        ],
+                                                      ),
                                                       borderRadius:
                                                           BorderRadius.circular(
                                                             24,
                                                           ),
                                                       boxShadow: [
                                                         BoxShadow(
-                                                          color: Colors.black
-                                                              .withValues(
-                                                                alpha: 0.06,
-                                                              ),
-                                                          blurRadius: 18,
-                                                          offset: const Offset(
-                                                            0,
-                                                            8,
-                                                          ),
+                                                          color: Colors.black.withOpacity(0.08),
+                                                          blurRadius: 20,
+                                                          offset: const Offset(0, 6),
+                                                          spreadRadius: 0,
+                                                        ),
+                                                        BoxShadow(
+                                                          color: Colors.black.withOpacity(0.04),
+                                                          blurRadius: 8,
+                                                          offset: const Offset(0, 3),
+                                                          spreadRadius: 0,
                                                         ),
                                                       ],
+                                                      border: Border.all(
+                                                        color: Colors.grey.shade200,
+                                                        width: 0.5,
+                                                      ),
                                                     ),
                                                     child:
                                                         isWide
-                                                            ? Row(
-                                                              mainAxisAlignment:
-                                                                  MainAxisAlignment
-                                                                      .center,
+                                                            ? Column(
                                                               children: [
-                                                                Expanded(
+                                                                // First row with Assignment Marks card
+                                                                SizedBox(
+                                                                  width: double.infinity,
                                                                   child: _AcademicInfoCard(
                                                                     icon:
                                                                         Icons
-                                                                            .menu_book_rounded,
+                                                                            .assignment_turned_in_rounded,
                                                                     title:
-                                                                        'Syllabus',
+                                                                        'Assignment Marks',
                                                                     subtitle:
-                                                                        'Check your semester syllabus',
+                                                                        'View your assignment scores',
                                                                     color:
                                                                         AppTheme
-                                                                            .primaryBlue,
-                                                                    onTap:
-                                                                        semesterId !=
-                                                                                null
-                                                                            ? () {
-                                                                              Navigator.push(
+                                                                            .assignmentsIcon,
+                                                                    onTap: () {
+                                                                      Navigator.push(
+                                                                        context,
+                                                                        MaterialPageRoute(
+                                                                          builder:
+                                                                              (
                                                                                 context,
-                                                                                MaterialPageRoute(
-                                                                                  builder:
-                                                                                      (
-                                                                                        context,
-                                                                                      ) => SyllabusViewerScreen(
-                                                                                        semesterId:
-                                                                                            semesterId,
-                                                                                      ),
-                                                                                ),
-                                                                              );
-                                                                            }
-                                                                            : () {
-                                                                              ScaffoldMessenger.of(
-                                                                                context,
-                                                                              ).showSnackBar(
-                                                                                const SnackBar(
-                                                                                  content: Text(
-                                                                                    'Syllabus not available for your academic path yet.',
-                                                                                  ),
-                                                                                  backgroundColor:
-                                                                                      Colors.orange,
-                                                                                ),
-                                                                              );
-                                                                            },
+                                                                              ) => const AssignmentSubjectsScreen(),
+                                                                        ),
+                                                                      );
+                                                                    },
                                                                   ),
                                                                 ),
-                                                                const SizedBox(
-                                                                  width: 48,
-                                                                ),
-                                                                Expanded(
+                                                                const SizedBox(height: 24),
+                                                                // Second row with Class Feedback
+                                                                SizedBox(
+                                                                  width: double.infinity,
                                                                   child: _AcademicInfoCard(
-                                                                    icon:
-                                                                        Icons
-                                                                            .schedule_rounded,
-                                                                    title:
-                                                                        'Timetable',
-                                                                    subtitle:
-                                                                        'View your class schedule',
-                                                                    color:
-                                                                        AppTheme
-                                                                            .primaryLight,
-                                                                    onTap:
-                                                                        semesterId !=
-                                                                                null
-                                                                            ? () {
-                                                                              Navigator.push(
-                                                                                context,
-                                                                                MaterialPageRoute(
-                                                                                  builder:
-                                                                                      (
-                                                                                        context,
-                                                                                      ) => TimetableViewerScreen(
-                                                                                        semesterId:
-                                                                                            semesterId,
-                                                                                      ),
-                                                                                ),
-                                                                              );
-                                                                            }
-                                                                            : () {
-                                                                              ScaffoldMessenger.of(
-                                                                                context,
-                                                                              ).showSnackBar(
-                                                                                const SnackBar(
-                                                                                  content: Text(
-                                                                                    'Timetable not available for your academic path yet.',
-                                                                                  ),
-                                                                                  backgroundColor:
-                                                                                      Colors.orange,
-                                                                                ),
-                                                                              );
-                                                                            },
+                                                                    icon: Icons.feedback_rounded,
+                                                                    title: 'Class Feedback',
+                                                                    subtitle: 'Give feedback for your subjects',
+                                                                    color: AppTheme.accentOrange,
+                                                                    onTap: () {
+                                                                      Navigator.push(
+                                                                        context,
+                                                                        MaterialPageRoute(
+                                                                          builder: (context) => const SubjectFeedbackListScreen(),
+                                                                        ),
+                                                                      );
+                                                                    },
                                                                   ),
+                                                                ),
+                                                                const SizedBox(height: 24),
+                                                                // Third row with Syllabus and Timetable
+                                                                Row(
+                                                                  children: [
+                                                                    Expanded(
+                                                                      child: _AcademicInfoCard(
+                                                                        icon:
+                                                                            Icons
+                                                                                .menu_book_rounded,
+                                                                        title:
+                                                                            'Syllabus',
+                                                                        subtitle:
+                                                                            'Check your semester syllabus',
+                                                                        color:
+                                                                            AppTheme
+                                                                                .primaryBlue,
+                                                                        onTap:
+                                                                            _semesterId !=
+                                                                                    null
+                                                                                ? () {
+                                                                                  Navigator.push(
+                                                                                    context,
+                                                                                    MaterialPageRoute(
+                                                                                      builder:
+                                                                                          (
+                                                                                            context,
+                                                                                          ) => SyllabusViewerScreen(
+                                                                                            semesterId:
+                                                                                                _semesterId!,
+                                                                                          ),
+                                                                                    ),
+                                                                                  );
+                                                                                }
+                                                                                : () {
+                                                                                  ScaffoldMessenger.of(
+                                                                                    context,
+                                                                                  ).showSnackBar(
+                                                                                    const SnackBar(
+                                                                                      content: Text(
+                                                                                        'Syllabus not available for your academic path yet.',
+                                                                                      ),
+                                                                                      backgroundColor:
+                                                                                          Colors.orange,
+                                                                                    ),
+                                                                                  );
+                                                                                },
+                                                                      ),
+                                                                    ),
+                                                                    const SizedBox(
+                                                                      width: 24,
+                                                                    ),
+                                                                    Expanded(
+                                                                      child: _AcademicInfoCard(
+                                                                        icon:
+                                                                            Icons
+                                                                                .access_time_rounded,
+                                                                        title:
+                                                                            'Timetable',
+                                                                        subtitle:
+                                                                            'View your class schedule',
+                                                                        color:
+                                                                            AppTheme
+                                                                                .primaryLight,
+                                                                        onTap:
+                                                                            _semesterId !=
+                                                                                    null
+                                                                                ? () {
+                                                                                  Navigator.push(
+                                                                                    context,
+                                                                                    MaterialPageRoute(
+                                                                                      builder:
+                                                                                          (
+                                                                                            context,
+                                                                                          ) => TimetableViewerScreen(
+                                                                                            semesterId:
+                                                                                                _semesterId!,
+                                                                                          ),
+                                                                                    ),
+                                                                                  );
+                                                                                }
+                                                                                : () {
+                                                                                  ScaffoldMessenger.of(
+                                                                                    context,
+                                                                                  ).showSnackBar(
+                                                                                    const SnackBar(
+                                                                                      content: Text(
+                                                                                        'Timetable not available for your academic path yet.',
+                                                                                      ),
+                                                                                    ),
+                                                                                  );
+                                                                                },
+                                                                      ),
+                                                                    ),
+                                                                  ],
                                                                 ),
                                                               ],
                                                             )
                                                             : Column(
                                                               children: [
+                                                                // Assignment Marks - moved to top for mobile
+                                                                _AcademicInfoCard(
+                                                                  icon:
+                                                                      Icons
+                                                                          .assignment_turned_in_rounded,
+                                                                  title:
+                                                                      'Assignment Marks',
+                                                                  subtitle:
+                                                                      'View your assignment scores',
+                                                                  color:
+                                                                      AppTheme
+                                                                          .assignmentsIcon,
+                                                                  onTap: () {
+                                                                    Navigator.push(
+                                                                      context,
+                                                                      MaterialPageRoute(
+                                                                        builder:
+                                                                            (
+                                                                              context,
+                                                                            ) => const AssignmentSubjectsScreen(),
+                                                                      ),
+                                                                    );
+                                                                  },
+                                                                ),
+                                                                const SizedBox(
+                                                                  height: 20,
+                                                                ),
+                                                                _AcademicInfoCard(
+                                                                  icon: Icons.feedback_rounded,
+                                                                  title: 'Class Feedback',
+                                                                  subtitle: 'Give feedback for your subjects',
+                                                                  color: AppTheme.accentOrange,
+                                                                  onTap: () {
+                                                                    Navigator.push(
+                                                                      context,
+                                                                      MaterialPageRoute(
+                                                                        builder: (context) => const SubjectFeedbackListScreen(),
+                                                                      ),
+                                                                    );
+                                                                  },
+                                                                ),
+                                                                const SizedBox(
+                                                                  height: 20,
+                                                                ),
                                                                 _AcademicInfoCard(
                                                                   icon:
                                                                       Icons
@@ -329,7 +443,7 @@ class _AcademicInfoScreenState extends State<AcademicInfoScreen>
                                                                       AppTheme
                                                                           .primaryBlue,
                                                                   onTap:
-                                                                      semesterId !=
+                                                                      _semesterId !=
                                                                               null
                                                                           ? () {
                                                                             Navigator.push(
@@ -340,7 +454,7 @@ class _AcademicInfoScreenState extends State<AcademicInfoScreen>
                                                                                       context,
                                                                                     ) => SyllabusViewerScreen(
                                                                                       semesterId:
-                                                                                          semesterId,
+                                                                                          _semesterId!,
                                                                                     ),
                                                                               ),
                                                                             );
@@ -360,21 +474,21 @@ class _AcademicInfoScreenState extends State<AcademicInfoScreen>
                                                                           },
                                                                 ),
                                                                 const SizedBox(
-                                                                  height: 28,
+                                                                  height: 20,
                                                                 ),
                                                                 _AcademicInfoCard(
                                                                   icon:
                                                                       Icons
-                                                                          .schedule_rounded,
+                                                                          .access_time_rounded,
                                                                   title:
                                                                       'Timetable',
                                                                   subtitle:
                                                                       'View your class schedule',
                                                                   color:
                                                                       AppTheme
-                                                                          .primaryLight,
+                                                                          .accentOrange,
                                                                   onTap:
-                                                                      semesterId !=
+                                                                      _semesterId !=
                                                                               null
                                                                           ? () {
                                                                             Navigator.push(
@@ -385,7 +499,7 @@ class _AcademicInfoScreenState extends State<AcademicInfoScreen>
                                                                                       context,
                                                                                     ) => TimetableViewerScreen(
                                                                                       semesterId:
-                                                                                          semesterId,
+                                                                                          _semesterId!,
                                                                                     ),
                                                                               ),
                                                                             );
@@ -411,9 +525,7 @@ class _AcademicInfoScreenState extends State<AcademicInfoScreen>
                                               ),
                                             ),
                                           ),
-                                        );
-                                      },
-                                    ),
+                                        ),
                           ),
                         ],
                       ),
@@ -421,307 +533,179 @@ class _AcademicInfoScreenState extends State<AcademicInfoScreen>
           ],
         ),
       );
-    }
-    return Scaffold(
-      backgroundColor: Colors.grey.shade50,
-      body:
-          _hasNetworkError
-              ? buildNetworkErrorWidget(
-                title: '📡 No Internet Connection',
-                message:
-                    'Unable to load academic information. Please connect to the internet and try again.',
-                customEmoji: '📚',
-                onRetry: _retryWithNetworkCheck,
-              )
-              : Column(
-                children: [
-                  CustomAppBar(
-                    title: 'Academic Info',
-                    subtitle: 'Syllabus and Timetable',
-                    leading: IconButton(
-                      icon: const Icon(
-                        Icons.arrow_back_ios_new_rounded,
-                        size: 20,
+    } else {
+      return Scaffold(
+        backgroundColor: Colors.grey.shade50,
+        body:
+            _hasNetworkError
+                ? buildNetworkErrorWidget(
+                  title: '📡 No Internet Connection',
+                  message:
+                      'Unable to load academic information. Please connect to the internet and try again.',
+                  customEmoji: '📚',
+                  onRetry: _retryWithNetworkCheck,
+                )
+                : Column(
+                  children: [
+                    CustomAppBar(
+                      title: 'Academic Info',
+                      subtitle: 'Syllabus and Timetable',
+                      leading: IconButton(
+                        icon: const Icon(
+                          Icons.arrow_back_ios_new_rounded,
+                          size: 20,
+                        ),
+                        onPressed: () => Navigator.of(context).maybePop(),
                       ),
-                      onPressed: () => Navigator.of(context).maybePop(),
+                      actions: [
+                        IconButton(
+                          icon: const Icon(Icons.refresh_rounded),
+                          onPressed: _loadUserProfile,
+                        ),
+                      ],
                     ),
-                    actions: [
-                      IconButton(
-                        icon: const Icon(Icons.refresh_rounded),
-                        onPressed: _loadSubjectData,
-                      ),
-                    ],
-                  ),
-                  Expanded(
-                    child:
-                        _isLoading || _subjectFuture == null
-                            ? const Center(child: CircularProgressIndicator())
-                            : FutureBuilder<Subject?>(
-                              future: _subjectFuture!,
-                              builder: (context, snapshot) {
-                                if (snapshot.connectionState ==
-                                    ConnectionState.waiting) {
-                                  return const Center(
-                                    child: CircularProgressIndicator(),
-                                  );
-                                }
-
-                                if (snapshot.hasError) {
-                                  return Center(
-                                    child: buildNetworkErrorWidget(
-                                      title: '📚 Error Loading Subject',
-                                      message:
-                                          'Failed to load subject information. Please try again.',
-                                      customEmoji: '⚠️',
-                                      onRetry: _loadSubjectData,
-                                    ),
-                                  );
-                                }
-
-                                if (!snapshot.hasData ||
-                                    snapshot.data == null) {
-                                  return Center(
-                                    child: buildNetworkErrorWidget(
-                                      title: '📚 Subject Not Found',
-                                      message:
-                                          'The requested subject could not be found. Please check your connection and try again.',
-                                      customEmoji: '🔍',
-                                      onRetry: _loadSubjectData,
-                                    ),
-                                  );
-                                }
-
-                                final subject = snapshot.data!;
-                                final semesterId = subject.semesterId;
-                                return Center(
-                                  child: ConstrainedBox(
-                                    constraints: const BoxConstraints(
-                                      maxWidth: 900,
-                                    ),
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 32,
-                                        vertical: 32,
-                                      ),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.center,
-                                        children: [
-                                          // Remove header and subtitle for Android/iOS
-                                          Container(
-                                            padding: const EdgeInsets.all(32),
-                                            decoration: BoxDecoration(
-                                              color: Colors.white,
-                                              borderRadius:
-                                                  BorderRadius.circular(24),
-                                              boxShadow: [
-                                                BoxShadow(
-                                                  color: Colors.black
-                                                      .withValues(alpha: 0.06),
-                                                  blurRadius: 18,
-                                                  offset: const Offset(0, 8),
-                                                ),
-                                              ],
-                                            ),
-                                            child:
-                                                isWide
-                                                    ? Row(
-                                                      mainAxisAlignment:
-                                                          MainAxisAlignment
-                                                              .center,
-                                                      children: [
-                                                        Expanded(
-                                                          child: _AcademicInfoCard(
-                                                            icon:
-                                                                Icons
-                                                                    .menu_book_rounded,
-                                                            title: 'Syllabus',
-                                                            subtitle:
-                                                                'Check your semester syllabus',
-                                                            color:
-                                                                AppTheme
-                                                                    .primaryBlue,
-                                                            onTap:
-                                                                semesterId !=
-                                                                        null
-                                                                    ? () {
-                                                                      Navigator.push(
-                                                                        context,
-                                                                        MaterialPageRoute(
-                                                                          builder:
-                                                                              (
-                                                                                context,
-                                                                              ) => SyllabusViewerScreen(
-                                                                                semesterId:
-                                                                                    semesterId,
-                                                                              ),
-                                                                        ),
-                                                                      );
-                                                                    }
-                                                                    : () {
-                                                                      ScaffoldMessenger.of(
-                                                                        context,
-                                                                      ).showSnackBar(
-                                                                        const SnackBar(
-                                                                          content: Text(
-                                                                            'Syllabus not available for your academic path yet.',
-                                                                          ),
-                                                                          backgroundColor:
-                                                                              Colors.orange,
-                                                                        ),
-                                                                      );
-                                                                    },
+                    Expanded(
+                      child: _isLoading
+                          ? const Center(child: CircularProgressIndicator())
+                          : Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 16,
+                          ),
+                          child: Column(
+                            crossAxisAlignment:
+                                CrossAxisAlignment.center,
+                            children: [
+                              _AcademicInfoCard(
+                                icon:
+                                    Icons
+                                        .menu_book_rounded,
+                                title: 'Syllabus',
+                                subtitle:
+                                    'Check your semester syllabus',
+                                color:
+                                    AppTheme
+                                        .primaryBlue,
+                                onTap:
+                                    _semesterId != null
+                                        ? () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                                      builder:
+                                                          (
+                                                            context,
+                                                          ) => SyllabusViewerScreen(
+                                                            semesterId:
+                                                                _semesterId!,
                                                           ),
-                                                        ),
-                                                        const SizedBox(
-                                                          width: 48,
-                                                        ),
-                                                        Expanded(
-                                                          child: _AcademicInfoCard(
-                                                            icon:
-                                                                Icons
-                                                                    .schedule_rounded,
-                                                            title: 'Timetable',
-                                                            subtitle:
-                                                                'View your class schedule',
-                                                            color:
-                                                                AppTheme
-                                                                    .primaryLight,
-                                                            onTap:
-                                                                semesterId !=
-                                                                        null
-                                                                    ? () {
-                                                                      Navigator.push(
-                                                                        context,
-                                                                        MaterialPageRoute(
-                                                                          builder:
-                                                                              (
-                                                                                context,
-                                                                              ) => TimetableViewerScreen(
-                                                                                semesterId:
-                                                                                    semesterId,
-                                                                              ),
-                                                                        ),
-                                                                      );
-                                                                    }
-                                                                    : () {
-                                                                      ScaffoldMessenger.of(
-                                                                        context,
-                                                                      ).showSnackBar(
-                                                                        const SnackBar(
-                                                                          content: Text(
-                                                                            'Timetable not available for your academic path yet.',
-                                                                          ),
-                                                                          backgroundColor:
-                                                                              Colors.orange,
-                                                                        ),
-                                                                      );
-                                                                    },
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    )
-                                                    : Column(
-                                                      children: [
-                                                        _AcademicInfoCard(
-                                                          icon:
-                                                              Icons
-                                                                  .menu_book_rounded,
-                                                          title: 'Syllabus',
-                                                          subtitle:
-                                                              'Check your semester syllabus',
-                                                          color:
-                                                              AppTheme
-                                                                  .primaryBlue,
-                                                          onTap:
-                                                              semesterId != null
-                                                                  ? () {
-                                                                    Navigator.push(
-                                                                      context,
-                                                                      MaterialPageRoute(
-                                                                        builder:
-                                                                            (
-                                                                              context,
-                                                                            ) => SyllabusViewerScreen(
-                                                                              semesterId:
-                                                                                  semesterId,
-                                                                            ),
-                                                                      ),
-                                                                    );
-                                                                  }
-                                                                  : () {
-                                                                    ScaffoldMessenger.of(
-                                                                      context,
-                                                                    ).showSnackBar(
-                                                                      const SnackBar(
-                                                                        content:
-                                                                            Text(
-                                                                              'Syllabus not available for your academic path yet.',
-                                                                            ),
-                                                                        backgroundColor:
-                                                                            Colors.orange,
-                                                                      ),
-                                                                    );
-                                                                  },
-                                                        ),
-                                                        const SizedBox(
-                                                          height: 28,
-                                                        ),
-                                                        _AcademicInfoCard(
-                                                          icon:
-                                                              Icons
-                                                                  .schedule_rounded,
-                                                          title: 'Timetable',
-                                                          subtitle:
-                                                              'View your class schedule',
-                                                          color:
-                                                              AppTheme
-                                                                  .primaryLight,
-                                                          onTap:
-                                                              semesterId != null
-                                                                  ? () {
-                                                                    Navigator.push(
-                                                                      context,
-                                                                      MaterialPageRoute(
-                                                                        builder:
-                                                                            (
-                                                                              context,
-                                                                            ) => TimetableViewerScreen(
-                                                                              semesterId:
-                                                                                  semesterId,
-                                                                            ),
-                                                                      ),
-                                                                    );
-                                                                  }
-                                                                  : () {
-                                                                    ScaffoldMessenger.of(
-                                                                      context,
-                                                                    ).showSnackBar(
-                                                                      const SnackBar(
-                                                                        content:
-                                                                            Text(
-                                                                              'Timetable not available for your academic path yet.',
-                                                                            ),
-                                                                        backgroundColor:
-                                                                            Colors.orange,
-                                                                      ),
-                                                                    );
-                                                                  },
-                                                        ),
-                                                      ],
                                                     ),
-                                          ),
-                                        ],
+                                                  );
+                                                }
+                                                : () {
+                                                  ScaffoldMessenger.of(
+                                                    context,
+                                                  ).showSnackBar(
+                                                    const SnackBar(
+                                                      content:
+                                                          Text(
+                                                            'Syllabus not available for your academic path yet.',
+                                                          ),
+                                                      backgroundColor:
+                                                          Colors.orange,
+                                                    ),
+                                                  );
+                                                },
                                       ),
-                                    ),
+                                      const SizedBox(
+                                        height: 16,
+                                      ),
+                                      _AcademicInfoCard(
+                                        icon:
+                                            Icons
+                                                .schedule_rounded,
+                                        title: 'Timetable',
+                                        subtitle:
+                                            'View your class schedule',
+                                        color:
+                                            AppTheme
+                                                .primaryLight,
+                                        onTap:
+                                            _semesterId != null
+                                                ? () {
+                                                  Navigator.push(
+                                                    context,
+                                                    MaterialPageRoute(
+                                                      builder:
+                                                          (
+                                                            context,
+                                                          ) => TimetableViewerScreen(
+                                                            semesterId:
+                                                                _semesterId!,
+                                                          ),
+                                                    ),
+                                                  );
+                                                }
+                                                : () {
+                                                  ScaffoldMessenger.of(
+                                                    context,
+                                                  ).showSnackBar(
+                                                    const SnackBar(
+                                                      content:
+                                                          Text(
+                                                            'Timetable not available for your academic path yet.',
+                                                          ),
+                                                      backgroundColor:
+                                                          Colors.orange,
+                                                    ),
+                                                  );
+                                                },
+                                      ),
+                                      const SizedBox(
+                                        height: 16,
+                                      ),
+                                      _AcademicInfoCard(
+                                        icon: Icons
+                                            .assignment_turned_in_rounded,
+                                        title: 'Assignment Marks',
+                                        subtitle:
+                                            'View your assignment scores',
+                                        color: AppTheme.assignmentsIcon,
+                                        onTap: () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) =>
+                                                  const AssignmentSubjectsScreen(),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                      const SizedBox(
+                                        height: 16,
+                                      ),
+                                      _AcademicInfoCard(
+                                        icon: Icons.feedback_rounded,
+                                        title: 'Class Feedback',
+                                        subtitle: 'Give feedback for your subjects',
+                                        color: AppTheme.accentOrange,
+                                        onTap: () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) => const SubjectFeedbackListScreen(),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ],
                                   ),
-                                );
-                              },
-                            ),
-                  ),
-                ],
-              ),
-    );
+                                ),
+                    ),
+                  ],
+                ),
+      );
+    }
   }
 }
 
@@ -741,34 +725,66 @@ class _AcademicInfoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDesktop = MediaQuery.of(context).size.width > 900;
+    
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: BorderRadius.circular(20),
+      splashColor: color.withOpacity(0.1),
+      highlightColor: color.withOpacity(0.05),
       child: Container(
-        padding: const EdgeInsets.all(22),
+        padding: EdgeInsets.all(isDesktop ? 32 : 24),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(18),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.white,
+              Colors.grey.shade50,
+            ],
+          ),
+          borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: color.withValues(alpha: 0.08),
-              blurRadius: 14,
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 16,
               offset: const Offset(0, 4),
+              spreadRadius: 0,
+            ),
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+              spreadRadius: 0,
             ),
           ],
-          border: Border.all(color: color.withValues(alpha: 0.13), width: 1.2),
+          border: Border.all(
+            color: color.withOpacity(0.15), 
+            width: 1,
+          ),
         ),
         child: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(14),
+              padding: EdgeInsets.all(isDesktop ? 20 : 16),
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.13),
-                borderRadius: BorderRadius.circular(12),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    color.withOpacity(0.15),
+                    color.withOpacity(0.08),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: color.withOpacity(0.2),
+                  width: 1,
+                ),
               ),
-              child: Icon(icon, color: color, size: 28),
+              child: Icon(icon, color: color, size: isDesktop ? 36 : 32),
             ),
-            const SizedBox(width: 22),
+            SizedBox(width: isDesktop ? 24 : 20),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -776,24 +792,37 @@ class _AcademicInfoCard extends StatelessWidget {
                   Text(
                     title,
                     style: GoogleFonts.poppins(
-                      fontSize: 18,
+                      fontSize: isDesktop ? 20 : 18,
                       fontWeight: FontWeight.w600,
                       color: Colors.black87,
+                      height: 1.2,
                     ),
                   ),
-                  const SizedBox(height: 5),
+                  SizedBox(height: isDesktop ? 8 : 6),
                   Text(
                     subtitle,
                     style: GoogleFonts.poppins(
-                      fontSize: 13,
+                      fontSize: isDesktop ? 15 : 14,
                       color: Colors.grey.shade600,
+                      height: 1.3,
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(width: 12),
-            Icon(Icons.arrow_forward_ios_rounded, color: color, size: 22),
+            SizedBox(width: isDesktop ? 20 : 16),
+            Container(
+              padding: EdgeInsets.all(isDesktop ? 10 : 8),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                Icons.arrow_forward_ios_rounded, 
+                color: color, 
+                size: isDesktop ? 20 : 18,
+              ),
+            ),
           ],
         ),
       ),

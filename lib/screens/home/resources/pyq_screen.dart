@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../models/subject.dart';
 import '../../../services/files_service.dart';
+import '../../../services/cached_file_resource_service.dart';
+import '../../../widgets/cached_file_list_widget.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../widgets/app_text.dart';
 import '../../common/pdf_viewer_screen.dart';
@@ -627,57 +629,57 @@ class _PYQScreenState extends State<PYQScreen> {
         _buildSearchBar(),
         _buildFilterChips(),
         const SizedBox(height: 8),
-        _filteredPYQs.isEmpty
-            ? SizedBox(
-              height: 300,
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.quiz_outlined,
-                      size: 64,
-                      color: Colors.grey.shade400,
+        Expanded(
+          child: CachedFileListWidget(
+            subjectId: widget.subject.id,
+            fileType: FileResourceType.pyq,
+            itemBuilder: (file) => _buildPYQCard(file),
+            onFileTap: _openFile,
+            onError: (error) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: AppText('Error: $error'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            },
+            emptyWidget: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.quiz_outlined,
+                    size: 64,
+                    color: Colors.grey.shade400,
+                  ),
+                  const SizedBox(height: 16),
+                  AppText(
+                    'No PYQs found',
+                    style: GoogleFonts.poppins(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey.shade600,
                     ),
-                    const SizedBox(height: 16),
-                    AppText(
-                      'No PYQs found',
-                      style: GoogleFonts.poppins(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.grey.shade600,
-                      ),
+                  ),
+                  const SizedBox(height: 8),
+                  AppText(
+                    'Pull to refresh or check back later',
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      color: Colors.grey.shade500,
                     ),
-                    const SizedBox(height: 8),
-                    AppText(
-                      'Try adjusting your filters',
-                      style: GoogleFonts.poppins(
-                        fontSize: 14,
-                        color: Colors.grey.shade500,
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            )
-            : isDesktop
-            ? GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                mainAxisSpacing: 20,
-                crossAxisSpacing: 20,
-                childAspectRatio: 1.8,
-              ),
-              itemCount: _filteredPYQs.length,
-              itemBuilder:
-                  (context, index) => _buildPYQCard(_filteredPYQs[index]),
-            )
-            : Column(
-              children: _filteredPYQs.map((pyq) => _buildPYQCard(pyq)).toList(),
             ),
+            padding: EdgeInsets.symmetric(
+              horizontal: isDesktop ? 24 : 0,
+              vertical: 8,
+            ),
+          ),
+        ),
         const SizedBox(height: 20),
       ],
     );

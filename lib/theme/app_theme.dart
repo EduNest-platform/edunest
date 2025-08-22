@@ -59,14 +59,14 @@ class AppTheme {
 
   // Resource Type Colors
   static const Color assignmentsIcon = Color(
-    0xFFFFA726,
-  ); // Orange for assignments icon
+    0xFF10B981,
+  ); // Green for assignments icon
   static const Color assignmentsTagBg = Color(
-    0xFFFFECB3,
-  ); // Light orange for assignments tag background
+    0xFFECFDF5,
+  ); // Light green for assignments tag background
   static const Color assignmentsTagText = Color(
-    0xFFFB8C00,
-  ); // Deep orange for assignments tag text
+    0xFF059669,
+  ); // Deep green for assignments tag text
 
   static const Color codeIcon = Color(0xFF26C6DA); // Cyan for code icon
   static const Color codeTagBg = Color(

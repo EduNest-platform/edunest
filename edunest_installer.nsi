@@ -1,5 +1,5 @@
 ; NSIS Script for EduNest
-; Last Updated: August 1, 2025
+; Last Updated: August 20, 2025
 
 !define APP_NAME "EduNest"
 !define APP_VERSION "1.0.0"
@@ -17,25 +17,18 @@ OutFile "EduNestInstaller.exe"
 InstallDir "$PROGRAMFILES64\${APP_NAME}"
 InstallDirRegKey HKLM "${UNINSTALL_KEY}" "InstallLocation"
 RequestExecutionLevel admin
-ManifestDPIAware true ; Ensures sharp text and UI on high-resolution screens
+ManifestDPIAware true
 
 ;--------------------------------
 ; 3. Modern UI Configuration
 ;--------------------------------
 
 !include "MUI2.nsh"
-
-; --- Set a modern, clear font ---
 !define MUI_FONT "Segoe UI"
-
-; --- Installer Icon ---
 !define MUI_ICON "assets\images\edunest-desktop.ico"
 !define MUI_UNICON "assets\images\edunest-desktop.ico"
-
-; --- Wizard Image (Welcome and Finished pages) ---
 !define MUI_WELCOMEFINISHPAGE_BITMAP "assets\images\edunest_anime.bmp"
 
-; --- Pages ---
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_COMPONENTS
 !insertmacro MUI_PAGE_DIRECTORY
@@ -43,11 +36,9 @@ ManifestDPIAware true ; Ensures sharp text and UI on high-resolution screens
 !define MUI_FINISHPAGE_RUN "$INSTDIR\${APP_EXE}"
 !insertmacro MUI_PAGE_FINISH
 
-; --- Uninstaller Pages ---
 !insertmacro MUI_UNPAGE_CONFIRM
 !insertmacro MUI_UNPAGE_INSTFILES
 
-; --- Language ---
 !insertmacro MUI_LANGUAGE "English"
 
 ;--------------------------------
@@ -55,17 +46,15 @@ ManifestDPIAware true ; Ensures sharp text and UI on high-resolution screens
 ;--------------------------------
 
 Section "EduNest (Required)" SectionApp
-  SectionIn RO ; Read-only section, cannot be unchecked
+  SectionIn RO
 
   SetOutPath $INSTDIR
-
-  ; Install all application files
   File /r "build\windows\x64\runner\Release\*.*"
 
   ; Store installation folder
   WriteRegStr HKLM "${UNINSTALL_KEY}" "InstallLocation" "$INSTDIR"
 
-  ; Create uninstaller
+  ; Create uninstaller information
   WriteUninstaller "$INSTDIR\uninstall.exe"
   WriteRegStr HKLM "${UNINSTALL_KEY}" "DisplayName" "${APP_NAME}"
   WriteRegStr HKLM "${UNINSTALL_KEY}" "DisplayIcon" "$INSTDIR\${APP_EXE}"
@@ -75,6 +64,12 @@ Section "EduNest (Required)" SectionApp
   WriteRegStr HKLM "${UNINSTALL_KEY}" "UninstallString" '"$INSTDIR\uninstall.exe"'
   WriteRegDWORD HKLM "${UNINSTALL_KEY}" "NoModify" 1
   WriteRegDWORD HKLM "${UNINSTALL_KEY}" "NoRepair" 1
+
+  ; --- NEW: Register the URL Protocol for deep linking ---
+  WriteRegStr HKCR "io.supabase.edunest" "" "URL:EduNest Protocol"
+  WriteRegStr HKCR "io.supabase.edunest" "URL Protocol" ""
+  WriteRegStr HKCR "io.supabase.edunest\shell\open\command" "" '"$INSTDIR\${APP_EXE}" "%1"'
+
 SectionEnd
 
 Section "Start Menu Shortcut" SectionStartMenu
@@ -115,6 +110,9 @@ Section "Uninstall"
   ; Remove installation directory
   RmDir /r "$INSTDIR"
 
-  ; Remove registry keys
+  ; --- NEW: Remove the URL Protocol registry key ---
+  DeleteRegKey HKCR "io.supabase.edunest"
+
+  ; Remove main uninstaller registry key
   DeleteRegKey HKLM "${UNINSTALL_KEY}"
 SectionEnd

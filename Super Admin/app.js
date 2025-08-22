@@ -238,10 +238,18 @@ async function loadSemesters() {
 
 // Collapsible, interactive hierarchy view
 async function loadHierarchy() {
+  const view = document.getElementById('hierarchyView');
+  
+  // Safety check - only run if hierarchyView exists (on dashboard page)
+  if (!view) {
+    console.log('hierarchyView not found - skipping hierarchy load');
+    return;
+  }
+  
   const { data: colleges } = await window.supabaseClient.from('colleges').select();
   const { data: branches } = await window.supabaseClient.from('branches').select();
   const { data: semesters } = await window.supabaseClient.from('semesters').select();
-  const view = document.getElementById('hierarchyView');
+  
   view.innerHTML = '';
   if (!colleges || colleges.length === 0) {
     view.innerHTML = '<div style="color:#64748b;">No colleges found.</div>';

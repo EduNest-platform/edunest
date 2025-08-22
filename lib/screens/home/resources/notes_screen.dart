@@ -3,6 +3,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../theme/app_theme.dart';
 import '../../../models/subject.dart';
 import '../../../services/files_service.dart';
+import '../../../services/cached_file_resource_service.dart';
+import '../../../widgets/cached_file_list_widget.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/services.dart';
 import 'dart:async';
@@ -142,39 +144,9 @@ class _NotesScreenState extends State<NotesScreen>
   }
 
   Future<void> _loadNotes() async {
-    // await startOperationTrace('notes_data_loading');
-
-    try {
-      setState(() {
-        _isLoading = true;
-      });
-
-      final notes = await FilesService.getFiles(widget.subject.id, 'notes');
-
-      setState(() {
-        _allNotes = notes;
-        _notes = notes;
-        _isLoading = false;
-      });
-
-      // Start animations after data is loaded
-      _fadeController.forward();
-      _slideController.forward();
-      // await stopOperationTrace('notes_data_loading');
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: AppText('Failed to load notes: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-      // await stopOperationTrace('notes_data_loading');
-    }
+    // Start animations immediately for better UX
+    _fadeController.forward();
+    _slideController.forward();
   }
 
   void _filterNotes() {
@@ -983,65 +955,58 @@ class _NotesScreenState extends State<NotesScreen>
         _buildSearchAndSort(),
         const SizedBox(height: 20),
         Expanded(
-          child:
-              _sortedNotes.isEmpty
-                  ? FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.description_outlined,
-                            size: 64,
-                            color: Colors.grey.shade400,
-                          ),
-                          const SizedBox(height: 16),
-                          AppText(
-                            'No notes found',
-                            style: GoogleFonts.poppins(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          AppText(
-                            'Try adjusting your search',
-                            style: GoogleFonts.poppins(
-                              fontSize: 14,
-                              color: Colors.grey.shade500,
-                            ),
-                          ),
-                        ],
+          child: CachedFileListWidget(
+            subjectId: widget.subject.id,
+            fileType: FileResourceType.notes,
+            itemBuilder: (file) => _buildNoteCard(file, 0),
+            onFileTap: _openFile,
+            onError: (error) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: AppText('Error: $error'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            },
+            emptyWidget: FadeTransition(
+              opacity: _fadeAnimation,
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.description_outlined,
+                      size: 64,
+                      color: Colors.grey.shade400,
+                    ),
+                    const SizedBox(height: 16),
+                    AppText(
+                      'No notes found',
+                      style: GoogleFonts.poppins(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey.shade600,
                       ),
                     ),
-                  )
-                  : isDesktop
-                  ? GridView.builder(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 8,
+                    const SizedBox(height: 8),
+                    AppText(
+                      'Pull to refresh or check back later',
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        color: Colors.grey.shade500,
+                      ),
                     ),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          mainAxisSpacing: 20,
-                          crossAxisSpacing: 20,
-                          childAspectRatio: 2.2,
-                        ),
-                    itemCount: _sortedNotes.length,
-                    itemBuilder:
-                        (context, index) =>
-                            _buildNoteCard(_sortedNotes[index], index),
-                  )
-                  : ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    itemCount: _sortedNotes.length,
-                    itemBuilder: (context, index) {
-                      return _buildNoteCard(_sortedNotes[index], index);
-                    },
-                  ),
+                  ],
+                ),
+              ),
+            ),
+            padding: EdgeInsets.symmetric(
+              horizontal: isDesktop ? 24 : 20,
+              vertical: 8,
+            ),
+          ),
         ),
       ],
     );

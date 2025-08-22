@@ -10,11 +10,11 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>EduNest Super Admin Dashboard</title>
-  <link rel="stylesheet" href="style.css?v=1.2">
-  <link rel="stylesheet" href="mobile-nav.css?v=1.2">
-  <link rel="stylesheet" href="drilldown.css?v=1.2">
+  <link rel="stylesheet" href="style.css?v=1.3">
+  <link rel="stylesheet" href="mobile-nav.css?v=1.3">
+  <link rel="stylesheet" href="drilldown.css?v=1.3">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-  <script src="supabaseClient.js?v=1.2"></script>
+  <script src="supabaseClient.js?v=1.3"></script>
 </head>
 <body>
   <div class="main-bg"></div>
@@ -46,6 +46,10 @@
           <span class="mobile-nav-icon">🏗️</span>
           Hierarchy
         </a>
+        <a href="feedback_campaigns.html" class="mobile-nav-item">
+          <span class="mobile-nav-icon">💬</span>
+          Feedback Campaigns
+        </a>
         <a href="ai-config.html" class="mobile-nav-item">
           <span class="mobile-nav-icon">🤖</span>
           AI Config
@@ -61,6 +65,14 @@
         <a href="communities.html" class="mobile-nav-item">
           <span class="mobile-nav-icon">🌐</span>
           Manage Communities
+        </a>
+        <a href="class_rosters.html" class="mobile-nav-item">
+          <span class="mobile-nav-icon">📚</span>
+          Class Rosters
+        </a>
+        <a href="system_monitoring.html" class="mobile-nav-item">
+          <span class="mobile-nav-icon">�</span>
+          System Monitor
         </a>
         <a href="user_change_password.html" class="mobile-nav-item">
           <span class="mobile-nav-icon">🔒</span>
@@ -83,10 +95,13 @@
       <nav class="sidebar-nav">
         <button class="nav-btn active" onclick="showOverview()"><span class="nav-icon">📊</span> Overview</button>
         <button class="nav-btn" onclick="window.location.href='colleges.html'"><span class="nav-icon">🏗️</span> Hierarchy</button>
+        <button class="nav-btn" onclick="window.location.href='feedback_campaigns.html'"><span class="nav-icon">💬</span> Feedback Campaigns</button>
         <button class="nav-btn" onclick="window.location.href='ai-config.html'"><span class="nav-icon">🤖</span> AI Config</button>
         <button class="nav-btn" onclick="window.location.href='question_entry.html'"><span class="nav-icon">📝</span> Manual Question Entry</button>
         <button class="nav-btn" onclick="window.location.href='assigned_tests.html'"><span class="nav-icon">📊</span> Assigned Tests</button>
         <button class="nav-btn" onclick="window.location.href='communities.html'"><span class="nav-icon">🌐</span> Manage Communities</button>
+        <button class="nav-btn" onclick="window.location.href='class_rosters.html'"><span class="nav-icon">📚</span> Class Rosters</button>
+        <button class="nav-btn" onclick="window.location.href='system_monitoring.html'"><span class="nav-icon">📈</span> System Monitor</button>
         <button class="nav-btn" onclick="window.location.href='user_change_password.html'"><span class="nav-icon">🔒</span> Change User Password</button>
       </nav>
       <div class="sidebar-footer">
@@ -118,6 +133,10 @@
               <span class="action-icon">🏗️</span>
               Manage Hierarchy
             </button>
+            <button class="action-btn secondary" onclick="window.location.href='feedback_campaigns.html'">
+              <span class="action-icon">💬</span>
+              Feedback Campaigns
+            </button>
             <button class="action-btn secondary" onclick="window.location.href='colleges.html'">
               <span class="action-icon">🏫</span>
               Add New College
@@ -129,6 +148,14 @@
             <button class="action-btn" onclick="window.location.href='assigned_tests.html'">
               <span class="action-icon">📊</span>
               View Assigned Tests
+            </button>
+            <button class="action-btn" onclick="window.location.href='system_monitoring.html'">
+              <span class="action-icon">📈</span>
+              System Monitor
+            </button>
+            <button class="action-btn" onclick="window.location.href='class_rosters.html'">
+              <span class="action-icon">📚</span>
+              Manage Class Rosters
             </button>
           </div>
         </div>

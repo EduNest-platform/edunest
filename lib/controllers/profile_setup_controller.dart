@@ -10,6 +10,9 @@ class ProfileSetupController extends ChangeNotifier {
   String? selectedCollegeId;
   String? selectedBranchId;
   String? selectedSemesterId;
+  
+  // Roll number controller
+  final rollNumberController = TextEditingController();
 
   bool _isLoading = false;
   String? _errorMessage;
@@ -141,6 +144,24 @@ class ProfileSetupController extends ChangeNotifier {
         return false;
       }
 
+      // Validate roll number uniqueness within same academic context
+      final rollNumber = rollNumberController.text.trim();
+      if (rollNumber.isNotEmpty) {
+        final isDuplicate = await UserProfileService.checkStudentIdExistsInSameContext(
+          studentId: rollNumber,
+          college: getSelectedCollegeName(),
+          branch: getSelectedBranchName(),
+          semester: getSelectedSemesterName(),
+          excludeUserId: user.id, // Exclude current user
+        );
+        
+        if (isDuplicate) {
+          setError('Roll number "$rollNumber" is already taken by another student in the same college, branch, and semester');
+          setLoading(false);
+          return false;
+        }
+      }
+
       // First, get the current profile to preserve existing data
       final currentProfile = await UserProfileService.getCurrentUserProfile();
 
@@ -156,6 +177,7 @@ class ProfileSetupController extends ChangeNotifier {
         'email':
             currentProfile?.email ??
             user.email, // Preserve existing email or get from auth
+        'student_id': rollNumber, // Save roll number as student_id
         'college': getSelectedCollegeName(),
         'branch': getSelectedBranchName(),
         'semester': getSelectedSemesterName(), // Save semester name as text
@@ -163,6 +185,17 @@ class ProfileSetupController extends ChangeNotifier {
       };
 
       final success = await UserProfileService.updateProfile(profileData);
+      
+      // Auto-link to existing class roster entries if they exist
+      if (success && rollNumber.isNotEmpty) {
+        await _autoLinkToExistingRosterEntries(
+          userId: user.id,
+          rollNumber: rollNumber,
+          fullName: userName ?? '',
+          email: currentProfile?.email ?? user.email ?? '',
+        );
+      }
+      
       setLoading(false);
       return success;
     } catch (e) {
@@ -173,13 +206,59 @@ class ProfileSetupController extends ChangeNotifier {
   }
 
   void disposeControllers() {
-    // No controllers to dispose since we removed personal info fields
+    rollNumberController.dispose();
+  }
+
+  /// Auto-link student to existing class roster entries when they complete profile setup
+  Future<void> _autoLinkToExistingRosterEntries({
+    required String userId,
+    required String rollNumber,
+    required String fullName,
+    required String email,
+  }) async {
+    try {
+      // Find existing class roster entries with this roll number but no profile ID
+      final response = await Supabase.instance.client
+          .from('class_rosters')
+          .select('id, class_id, student_name, student_email')
+          .eq('roll_number', rollNumber)
+          .isFilter('student_profile_id', null);
+
+      final existingEntries = response as List;
+      
+      if (existingEntries.isEmpty) {
+        print('No existing roster entries found for roll number: $rollNumber');
+        return;
+      }
+
+      // Update all matching entries to link them to the user's profile
+      await Supabase.instance.client
+          .from('class_rosters')
+          .update({
+            'student_profile_id': userId,
+            'is_verified': true,
+            'student_name': fullName.isNotEmpty ? fullName : null,
+            'student_email': email.isNotEmpty ? email : null,
+          })
+          .eq('roll_number', rollNumber)
+          .isFilter('student_profile_id', null);
+
+      print('Auto-linked ${existingEntries.length} roster entries for roll number: $rollNumber');
+    } catch (e) {
+      print('Error auto-linking to existing roster entries: $e');
+      // Don't throw error - this is a background operation
+    }
   }
 
   Future<void> loadExistingAcademicPath() async {
     try {
       final profile = await UserProfileService.getCurrentUserProfile();
       if (profile != null) {
+        // Load existing roll number
+        if (profile.studentId != null) {
+          rollNumberController.text = profile.studentId!;
+        }
+        
         // Load colleges first
         await fetchColleges();
 

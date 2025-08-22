@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Feedback Campaigns - EduNest Super Admin</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="master-professional.css">
+    <link rel="stylesheet" href="feedback_campaigns.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-left">
+                <h1><i class="fas fa-comments"></i> Feedback Campaigns</h1>
+                <p>Create and manage student feedback campaigns</p>
+            </div>
+            <div class="header-right">
+                <button class="btn-secondary" onclick="window.location.href='dashboard.html'">
+                    <i class="fas fa-arrow-left"></i> Back to Dashboard
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Create Campaign Section -->
+            <div class="card">
+                <div class="card-header">
+                    <h2><i class="fas fa-plus-circle"></i> Create New Campaign</h2>
+                </div>
+                <div class="card-body">
+                    <form id="campaignForm">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="campaignTitle">Campaign Title</label>
+                                <input type="text" id="campaignTitle" placeholder="e.g., Mid-Semester Feedback 2025" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="semesterSelect">Target Semester</label>
+                                <select id="semesterSelect" required>
+                                    <option value="">Select Semester</option>
+                                    <option value="1st Semester">1st Semester</option>
+                                    <option value="2nd Semester">2nd Semester</option>
+                                    <option value="3rd Semester">3rd Semester</option>
+                                    <option value="4th Semester">4th Semester</option>
+                                    <option value="5th Semester">5th Semester</option>
+                                    <option value="6th Semester">6th Semester</option>
+                                    <option value="7th Semester">7th Semester</option>
+                                    <option value="8th Semester">8th Semester</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="startDate">Start Date</label>
+                                <input type="date" id="startDate" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="endDate">End Date</label>
+                                <input type="date" id="endDate" required>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="campaignDescription">Description</label>
+                            <textarea id="campaignDescription" placeholder="Brief description of this feedback campaign" rows="3"></textarea>
+                        </div>
+
+                        <!-- Questions Section -->
+                        <div class="questions-section">
+                            <h3><i class="fas fa-question-circle"></i> Feedback Questions (5-Point Scale)</h3>
+                            <div id="questionsList">
+                                <!-- Default questions will be added here -->
+                            </div>
+                            <button type="button" class="btn-outline" onclick="addQuestion()">
+                                <i class="fas fa-plus"></i> Add Question
+                            </button>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="button" class="btn-secondary" onclick="saveCampaign('draft')">
+                                <i class="fas fa-save"></i> Save as Draft
+                            </button>
+                            <button type="button" class="btn-primary" onclick="saveCampaign('active')">
+                                <i class="fas fa-rocket"></i> Create & Activate
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Existing Campaigns -->
+            <div class="card">
+                <div class="card-header">
+                    <h2><i class="fas fa-list"></i> Existing Campaigns</h2>
+                    <button class="btn-outline" onclick="loadCampaigns()">
+                        <i class="fas fa-refresh"></i> Refresh
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div id="campaignsList">
+                        <!-- Campaigns will be loaded here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Message Display -->
+        <div id="messageDisplay" class="message-display hidden"></div>
+
+        <!-- Loading Overlay -->
+        <div id="loadingOverlay" class="loading-overlay hidden">
+            <div class="loading-content">
+                <div class="spinner"></div>
+                <p id="loadingText">Processing...</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="supabaseClient.js"></script>
+    <script src="feedback_campaigns.js"></script>
+</body>
+</html>

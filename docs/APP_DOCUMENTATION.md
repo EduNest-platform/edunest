@@ -6,13 +6,14 @@ EduNest is a comprehensive educational mobile application built with Flutter tha
 ## App Architecture
 
 ### Technology Stack
-- **Framework:** Flutter 3.x
-- **Language:** Dart
+- **Framework:** Flutter 3.16.0+
+- **Language:** Dart 3.2.0+
 - **Backend:** Supabase (PostgreSQL + Real-time)
-- **Authentication:** Supabase Auth
+- **Authentication:** Supabase Auth (JWT)
 - **Storage:** Supabase Storage + Google Drive
-- **AI Services:** Hugging Face API
-- **State Management:** GetX Controllers
+- **AI Services:** Google Gemini API
+- **State Management:** Provider pattern
+- **UI:** Material Design 3 with Google Fonts
 
 ### Project Structure
 ```
@@ -48,23 +49,56 @@ lib/
 - **Syllabus:** Course outlines and objectives
 - **Timetables:** Class schedules
 
-### 4. Practice Tests
-- **MCQ Tests:** Multiple choice questions
-- **Difficulty Levels:** Easy, Medium, Hard
-- **Topic-based:** Subject-specific questions
-- **AI-Generated:** Dynamic question creation
-- **Results Tracking:** Performance analytics
+### 4. Practice Tests & Assessment System
+- **Three Practice Modes:** Academic, Competitive Exam, and Career Prep modes
+- **Smart Mode Detection:** Automatically shows "GATE Prep Mode" for GATE topics, "Competitive Exam Mode" for others
+- **Multiple Question Counts:** Choose from 10, 15, or 20 questions per test
+- **AI-Generated:** Dynamic question creation with bulk generation (60 questions across all modes)
+- **Assigned Tests:** Professor-assigned protected tests with time limits and restricted access
+- **Proctored Testing:** App monitoring prevents switching during protected tests
+- **Auto-Submit Security:** Tests automatically submit if user leaves the app during proctoring
+- **Results Tracking:** Performance analytics and completion status tracking
 
-### 5. Attendance Tracking
-- **Daily Logging:** Mark attendance for subjects
-- **Visual Calendar:** Monthly attendance view
-- **Statistics:** Attendance percentage
-- **Export:** Attendance reports
+### 5. Attendance Management System
+- **Smart Daily Tracking:** Visual calendar with attendance marking
+- **75% Target Calculator:** Real-time calculation of required classes
+- **Professor Dashboard:** Complete class roster management
+- **Bulk Operations:** Mark all present/absent with one click
+- **CSV/Excel Import:** Upload class rosters from spreadsheets
+- **Analytics Dashboard:** Comprehensive attendance trends and statistics
+- **Student Verification:** Track verified vs unverified students
+- **Date-wise Reports:** Historical attendance data with filtering
+- **Export Functionality:** Download attendance reports in multiple formats
+- **Professor-Managed Mode:** Students can track their own attendance or let professors manage it
 
 ### 6. AI-Powered Features
-- **Question Generation:** AI creates MCQs from topics
-- **Content Analysis:** Intelligent content processing
-- **Personalized Learning:** Adaptive difficulty
+- **Question Generation:** AI creates MCQs from study materials using Google Gemini API
+- **Bulk Generation:** Create 20 questions for all 3 modes (60 total) with one click
+- **Content Analysis:** Intelligent content processing and topic detection
+- **Dynamic Mode Detection:** Automatically detects GATE vs non-GATE topics for competitive mode
+- **Personalized Learning:** Adaptive difficulty and mode suggestions
+
+### 7. Assignment Marks System
+- **Complete Grade Tracking:** Comprehensive assignment score management
+- **Subject-wise Organization:** Grades organized by subjects and classes
+- **Performance Analytics:** Historical grade trends and academic progress insights
+- **Class Integration:** Seamless integration with class rosters
+- **Export Functionality:** Download grade reports for institutional records
+
+### 8. Subject Feedback System
+- **Feedback Campaigns:** Structured feedback collection for subjects and professors
+- **Anonymous Responses:** Students can provide honest feedback without revealing identity
+- **5-Point Rating Scale:** Standard rating system for Teaching Quality, Course Content, Professor Knowledge, Interaction, and Overall Satisfaction
+- **Campaign Management:** Time-bound feedback campaigns with target audiences
+- **Real-time Analytics:** Comprehensive feedback analytics with subject-wise comparisons
+- **Export Reports:** Download feedback data for institutional analysis
+
+### 9. Performance Optimization & System Monitoring
+- **Exam Mode Optimization:** Automatic resource optimization when multiple students take tests
+- **Real-time Monitoring:** System health tracking with memory, CPU, and network metrics
+- **Adaptive Caching:** Smart caching strategies that adjust based on usage patterns
+- **Load Balancing:** Dynamic resource allocation during peak usage periods
+- **Performance Dashboard:** Administrative monitoring with alerts and insights
 
 ## Screen Documentation
 
@@ -164,14 +198,15 @@ lib/
 #### Assignments Screen (`assignments_screen.dart`)
 - **Purpose:** Homework and project access
 - **Features:**
-  - Assignment list
-  - Due date tracking
-  - Submission status
-  - File downloads
+  - Assignment list with due date tracking
+  - Submission status and progress tracking
+  - File downloads and offline access
+  - Search and filter functionality
+  - Grade display and performance metrics
 - **Organization:**
-  - By subject
-  - By due date
-  - By completion status
+  - By subject and class
+  - By due date and priority
+  - By completion status and grades
 
 #### Lab Manuals Screen (`lab_manuals_screen.dart`)
 - **Purpose:** Laboratory instructions
@@ -181,32 +216,86 @@ lib/
   - Safety guidelines
   - Equipment lists
 
+### Assignment Marks Screens
+
+#### Assignment Subjects Screen (`assignment_subjects_screen.dart`)
+- **Purpose:** View assignment grades by subject
+- **Features:**
+  - Subject-wise grade organization
+  - Assignment count per subject
+  - Performance overview
+  - Class-wise grade filtering
+- **Navigation:**
+  - Subject selection for detailed grades
+  - Integration with academic info
+
+#### Subject Assignment Marks Screen (`subject_assignment_marks_screen.dart`)
+- **Purpose:** Detailed assignment grades for specific subjects
+- **Features:**
+  - Individual assignment scores
+  - Grade history and trends
+  - Performance analytics
+  - Export functionality
+
+### Subject Feedback Screens
+
+#### Subject Feedback List Screen (`subject_feedback_list_screen.dart`)
+- **Purpose:** List subjects available for feedback
+- **Features:**
+  - Subject selection for feedback
+  - Active campaign indicators
+  - Feedback completion status
+  - Subject-wise organization
+
+#### Feedback Form Screen (`feedback_form_screen.dart`)
+- **Purpose:** Submit feedback for specific subjects
+- **Features:**
+  - 5-point rating scale questions
+  - Anonymous submission option
+  - Comment fields for detailed feedback
+  - Campaign-specific questions
+- **Validation:**
+  - Required rating validation
+  - Comment length limits
+  - Submission confirmation
+
 ### Practice Test Screens
 
 #### Practice Tests Screen (`practice_tests_screen.dart`)
 - **Purpose:** Test selection and management
 - **Features:**
-  - Available tests list
-  - Difficulty selection
-  - Progress tracking
-  - Test history
+  - Available tests list with three practice modes
+  - Assigned tests section with professor-managed tests
+  - Difficulty selection and question count options
+  - Progress tracking and completion status
+  - Test history and performance analytics
 - **Network Handling:**
   - Full-page network error overlay
   - Retry functionality
   - Loading states
 
-#### MCQ Test Screen (`mcq_test_screen.dart`)
-- **Purpose:** Take practice tests
+#### Assigned Test Card Screen (`assigned_test_card_screen.dart`)
+- **Purpose:** Display and manage assigned tests
 - **Features:**
-  - Question navigation
-  - Timer functionality
-  - Answer selection
-  - Progress tracking
+  - Professor-assigned test list
+  - Test status and deadlines
+  - Completion tracking
+  - Access controls and restrictions
+
+#### MCQ Test Screen (`mcq_test_screen.dart`)
+- **Purpose:** Take practice and assigned tests
+- **Features:**
+  - Question navigation with progress tracking
+  - Timer functionality for assigned tests
+  - Answer selection and review
+  - Proctoring features for assigned tests
+  - Auto-submit security for protected tests
 - **UI Elements:**
-  - Question display
+  - Question display with mode indicators
   - Multiple choice options
   - Navigation buttons
-  - Timer display
+  - Timer display for assigned tests
+  - Proctoring warnings and alerts
 
 #### Test Results Screen (`test_results_screen.dart`)
 - **Purpose:** View test performance
@@ -322,12 +411,65 @@ lib/
   - Configuration validation
 
 #### Hybrid AI Service (`hybrid_ai_service.dart`)
-- **Purpose:** AI-powered question generation
+- **Purpose:** AI-powered question generation using Google Gemini
 - **Features:**
-  - Question creation
-  - Content analysis
-  - Difficulty adjustment
-  - Quality control
+  - Question creation across three practice modes
+  - Bulk generation (60 questions with one click)
+  - Content analysis and topic detection
+  - Dynamic GATE vs non-GATE mode detection
+  - Quality control and validation
+
+### Assessment Services
+#### Test Results Service (`test_results_service.dart`)
+- **Purpose:** Test performance and results management
+- **Features:**
+  - Test completion tracking
+  - Performance analytics
+  - Historical data storage
+  - Progress calculations
+
+#### Assigned MCQ Supabase Service (`assigned_mcq_supabase_service.dart`)
+- **Purpose:** Manage professor-assigned tests
+- **Features:**
+  - Assigned test retrieval
+  - Access control validation
+  - Completion status tracking
+  - Proctoring support
+
+### Grade Management Services
+#### Assignment Marks Service (`assignment_marks_service.dart`)
+- **Purpose:** Assignment grade management
+- **Features:**
+  - Grade data retrieval
+  - Subject-wise organization
+  - Performance calculations
+  - Class integration
+
+### Feedback Services
+#### Subject Feedback Service (`subject_feedback_service.dart`)
+- **Purpose:** Feedback campaign and response management
+- **Features:**
+  - Campaign retrieval
+  - Anonymous feedback submission
+  - Response validation
+  - Analytics data preparation
+
+### Performance Services
+#### Exam Optimization Service (`exam_optimization_service.dart`)
+- **Purpose:** System optimization during high-load periods
+- **Features:**
+  - Exam mode activation/deactivation
+  - Resource allocation optimization
+  - Performance monitoring
+  - Load balancing
+
+#### Monitoring Integration Helper (`monitoring_integration_helper.dart`)
+- **Purpose:** System health and performance tracking
+- **Features:**
+  - Real-time metrics collection
+  - Performance alerts
+  - Usage analytics
+  - System health reporting
 
 ## State Management
 
@@ -427,9 +569,26 @@ class AttendanceRecord {
   final String id;
   final String userId;
   final String subjectId;
+  final String subjectName;
   final DateTime date;
-  final String status;
+  final String status; // 'present' or 'absent'
   final DateTime createdAt;
+}
+```
+
+### Assignment Mark
+```dart
+class AssignmentMark {
+  final String id;
+  final String studentId;
+  final String assignmentId;
+  final String assignmentName;
+  final double marks;
+  final double maxMarks;
+  final String subjectId;
+  final String subjectName;
+  final DateTime submissionDate;
+  final String? feedback;
 }
 ```
 
