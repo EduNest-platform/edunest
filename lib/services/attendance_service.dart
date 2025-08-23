@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/attendance_record.dart';
 import 'user_profile_service.dart';
+import 'free_plan_optimizer_service.dart';
 
 class AttendanceService {
   final supabase = Supabase.instance.client;
@@ -204,9 +205,15 @@ class AttendanceService {
         // Update existing record
         final recordId = existingRecords[0]['id'];
 
-        await supabase.from('attendance').update({
-          'status': status,
-        }).eq('id', recordId);
+        // OPTIMIZED: Use FreePlanOptimizerService for attendance updates
+        await FreePlanOptimizerService.optimizedDatabaseOperation(
+          'update_attendance_record',
+          () => supabase.from('attendance').update({
+            'status': status,
+          }).eq('id', recordId),
+          useCache: false, // Don't cache write operations
+          priority: 2, // Medium priority for attendance updates
+        );
         return recordId;
       } else {
         // Create new record
@@ -221,7 +228,13 @@ class AttendanceService {
           'class_number': classNumber ?? 1,
         };
         
-        final response = await supabase.from('attendance').insert(insertData).select();
+        // OPTIMIZED: Use FreePlanOptimizerService for attendance inserts
+        final response = await FreePlanOptimizerService.optimizedDatabaseOperation(
+          'insert_attendance_record',
+          () => supabase.from('attendance').insert(insertData).select(),
+          useCache: false, // Don't cache write operations
+          priority: 2, // Medium priority for attendance inserts
+        );
         
         return (response as List).isNotEmpty ? response[0]['id'] : null;
       }

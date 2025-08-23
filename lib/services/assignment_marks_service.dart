@@ -2,40 +2,47 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/assignment_mark.dart';
 import 'supabase_service.dart';
 import 'user_profile_service.dart';
+import 'free_plan_optimizer_service.dart';
 
 class AssignmentMarksService {
   static final SupabaseClient _client = SupabaseService.client;
 
   /// Get all assignment marks for the current student
   static Future<List<AssignmentMark>> getStudentAssignmentMarks() async {
-    try {
-      final user = SupabaseService.currentUser;
-      if (user == null) {
-        throw Exception('User not authenticated');
-      }
+    return FreePlanOptimizerService.optimizedDatabaseOperation(
+      'get_student_assignment_marks',
+      () async {
+        try {
+          final user = SupabaseService.currentUser;
+          if (user == null) {
+            throw Exception('User not authenticated');
+          }
 
-      // Get student's email and user ID for multiple lookup methods
-      final studentEmail = user.email;
-      final userId = user.id;
-      
-      if (studentEmail == null) {
-        throw Exception('Student email not found');
-      }
+          // Get student's email and user ID for multiple lookup methods
+          final studentEmail = user.email;
+          final userId = user.id;
+          
+          if (studentEmail == null) {
+            throw Exception('Student email not found');
+          }
 
-      // Try to find assignment marks using both email AND user ID
-      // This handles cases where student_email might be empty but student_id is set during linking
-      final response = await _client
-          .from('class_assignment_marks')
-          .select('*')
-          .or('student_email.eq.$studentEmail,student_id.eq.$userId')
-          .order('graded_at', ascending: false);
+          // Try to find assignment marks using both email AND user ID
+          // This handles cases where student_email might be empty but student_id is set during linking
+          final response = await _client
+              .from('class_assignment_marks')
+              .select('*')
+              .or('student_email.eq.$studentEmail,student_id.eq.$userId')
+              .order('graded_at', ascending: false);
 
-      return (response as List)
-          .map((json) => AssignmentMark.fromJson(json))
-          .toList();
-    } catch (e) {
-      throw Exception('Failed to fetch assignment marks: $e');
-    }
+          return (response as List)
+              .map((json) => AssignmentMark.fromJson(json))
+              .toList();
+        } catch (e) {
+          throw Exception('Failed to fetch assignment marks: $e');
+        }
+      },
+      cacheDuration: const Duration(minutes: 5), // Cache assignment marks
+    );
   }
 
   /// Get assignment marks grouped by assignment name

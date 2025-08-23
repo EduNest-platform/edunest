@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/error_message_service.dart';
+import 'free_plan_optimizer_service.dart';
 
 class FileResource {
   final String id;
@@ -126,40 +127,52 @@ class FilesService {
     String subjectId,
     String fileType,
   ) async {
-    try {
-      final response = await _supabase
-          .from('files')
-          .select()
-          .eq('subject_id', subjectId)
-          .eq('file_type', fileType)
-          .order('created_at', ascending: false);
+    return FreePlanOptimizerService.optimizedDatabaseOperation(
+      'get_files_${subjectId}_$fileType',
+      () async {
+        try {
+          final response = await _supabase
+              .from('files')
+              .select()
+              .eq('subject_id', subjectId)
+              .eq('file_type', fileType)
+              .order('created_at', ascending: false);
 
-      return (response as List)
-          .map((file) => FileResource.fromJson(file))
-          .toList();
-    } catch (e) {
-      return [];
-    }
+          return (response as List)
+              .map((file) => FileResource.fromJson(file))
+              .toList();
+        } catch (e) {
+          return <FileResource>[];
+        }
+      },
+      cacheDuration: const Duration(minutes: 10), // Cache file lists
+    );
   }
 
   /// Get file statistics for a subject
   static Future<Map<String, int>> getFileStats(String subjectId) async {
-    try {
-      final response = await _supabase
-          .from('files')
-          .select('file_type')
-          .eq('subject_id', subjectId);
+    return FreePlanOptimizerService.optimizedDatabaseOperation(
+      'get_file_stats_$subjectId',
+      () async {
+        try {
+          final response = await _supabase
+              .from('files')
+              .select('file_type')
+              .eq('subject_id', subjectId);
 
-      final Map<String, int> stats = {};
-      for (final file in response as List) {
-        final fileType = file['file_type'];
-        stats[fileType] = (stats[fileType] ?? 0) + 1;
-      }
+          final Map<String, int> stats = {};
+          for (final file in response as List) {
+            final fileType = file['file_type'];
+            stats[fileType] = (stats[fileType] ?? 0) + 1;
+          }
 
-      return stats;
-    } catch (e) {
-      return {};
-    }
+          return stats;
+        } catch (e) {
+          return <String, int>{};
+        }
+      },
+      cacheDuration: const Duration(minutes: 10), // Cache file stats
+    );
   }
 
   /// Upload a file

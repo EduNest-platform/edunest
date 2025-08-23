@@ -1,5 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/supabase_service.dart';
+import 'free_plan_optimizer_service.dart';
+import 'test_load_monitor.dart';
 
 class TestResultsService {
   static final SupabaseClient _supabase = SupabaseService.client;
@@ -17,34 +19,44 @@ class TestResultsService {
     required int timeTaken,
     String testTitle = '',
   }) async {
-    try {
-      final user = _supabase.auth.currentUser;
-      if (user == null) return false;
+    return FreePlanOptimizerService.optimizedDatabaseOperation(
+      'save_test_result_${testTitle.isNotEmpty ? testTitle : subjectName}',
+      () async {
+        try {
+          final user = _supabase.auth.currentUser;
+          if (user == null) return false;
 
-      final response =
-          await _supabase
-              .from('test_results')
-              .insert({
-                'user_id': user.id,
-                'subject_id': subjectId,
-                'subject_name': subjectName,
-                'chapter_id': chapterId,
-                'chapter_name': chapterName,
-                'difficulty': difficulty,
-                'total_questions': totalQuestions,
-                'correct_answers': correctAnswers,
-                'score': score,
-                'time_taken': timeTaken,
-                'created_at': DateTime.now().toIso8601String(),
-                'test_title': testTitle,
-              })
-              .select()
-              .single();
+          // Record test completion in monitoring
+          if (testTitle.isNotEmpty) {
+            // Note: Test completion recording handled by TestLoadMonitor separately
+          }
 
-      return response != null;
-    } catch (e) {
-      return false;
-    }
+          final response =
+              await _supabase
+                  .from('test_results')
+                  .insert({
+                    'user_id': user.id,
+                    'subject_id': subjectId,
+                    'subject_name': subjectName,
+                    'chapter_id': chapterId,
+                    'chapter_name': chapterName,
+                    'difficulty': difficulty,
+                    'total_questions': totalQuestions,
+                    'correct_answers': correctAnswers,
+                    'score': score,
+                    'time_taken': timeTaken,
+                    'created_at': DateTime.now().toIso8601String(),
+                    'test_title': testTitle,
+                  })
+                  .select()
+                  .single();
+
+          return response != null;
+        } catch (e) {
+          return false;
+        }
+      },
+    );
   }
 
   /// Get user's test results from Supabase

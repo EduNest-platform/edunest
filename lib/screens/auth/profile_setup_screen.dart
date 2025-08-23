@@ -312,11 +312,16 @@ class _ProfileSetupScreenBodyState extends State<_ProfileSetupScreenBody>
                           topRight: Radius.circular(32),
                         ),
                       ),
-                      child: SingleChildScrollView(
-                        padding: cardPadding,
-                        child: Form(
-                          key: _formKey,
-                          child: Column(
+                      child: GestureDetector(
+                        onTap: () {
+                          // Remove focus when tapping outside
+                          FocusScope.of(context).unfocus();
+                        },
+                        child: SingleChildScrollView(
+                          padding: cardPadding,
+                          child: Form(
+                            key: _formKey,
+                            child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               // Welcome Text
@@ -416,6 +421,7 @@ class _ProfileSetupScreenBodyState extends State<_ProfileSetupScreenBody>
                                 ),
                                 child: TextFormField(
                                   controller: controller.rollNumberController,
+                                  autofocus: false, // Explicitly disable autofocus
                                   decoration: InputDecoration(
                                     labelText: 'Roll Number',
                                     hintText: 'Enter your roll number',
@@ -457,7 +463,13 @@ class _ProfileSetupScreenBodyState extends State<_ProfileSetupScreenBody>
                                     return null;
                                   },
                                   onChanged: (value) {
-                                    // Field will trigger rebuild automatically
+                                    // Trigger rebuild to update button state
+                                    setState(() {});
+                                  },
+                                  textInputAction: TextInputAction.done, // Add done action
+                                  onFieldSubmitted: (value) {
+                                    // Remove focus when done
+                                    FocusScope.of(context).unfocus();
                                   },
                                 ),
                               ),
@@ -633,6 +645,9 @@ class _ProfileSetupScreenBodyState extends State<_ProfileSetupScreenBody>
                                               )
                                           ? null
                                           : () async {
+                                            // Remove focus from any text fields
+                                            FocusScope.of(context).unfocus();
+                                            
                                             if (_formKey.currentState!
                                                 .validate()) {
                                               final success =
@@ -644,6 +659,16 @@ class _ProfileSetupScreenBodyState extends State<_ProfileSetupScreenBody>
                                                 Navigator.pushReplacementNamed(
                                                   context,
                                                   '/home',
+                                                );
+                                              } else if (mounted) {
+                                                // Show error if save failed
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  SnackBar(
+                                                    content: Text(
+                                                      controller.errorMessage ?? 'Failed to save academic path. Please try again.',
+                                                    ),
+                                                    backgroundColor: Colors.red,
+                                                  ),
                                                 );
                                               }
                                             }
@@ -703,6 +728,7 @@ class _ProfileSetupScreenBodyState extends State<_ProfileSetupScreenBody>
                               ),
                               const SizedBox(height: 20),
                             ],
+                            ),
                           ),
                         ),
                       ),

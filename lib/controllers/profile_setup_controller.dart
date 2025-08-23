@@ -102,6 +102,12 @@ class ProfileSetupController extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Method to trigger UI updates when roll number changes
+  void updateRollNumber(String value) {
+    rollNumberController.text = value;
+    notifyListeners();
+  }
+
   // Get selected college name
   String getSelectedCollegeName() {
     if (selectedCollegeId == null) return '';
@@ -144,8 +150,15 @@ class ProfileSetupController extends ChangeNotifier {
         return false;
       }
 
-      // Validate roll number uniqueness within same academic context
+      // Debug: Check if all required fields are filled
       final rollNumber = rollNumberController.text.trim();
+      if (selectedCollegeId == null || selectedBranchId == null || selectedSemesterId == null || rollNumber.isEmpty) {
+        setError('Please fill in all required fields');
+        setLoading(false);
+        return false;
+      }
+
+      // Validate roll number uniqueness within same academic context
       if (rollNumber.isNotEmpty) {
         final isDuplicate = await UserProfileService.checkStudentIdExistsInSameContext(
           studentId: rollNumber,
@@ -199,7 +212,7 @@ class ProfileSetupController extends ChangeNotifier {
       setLoading(false);
       return success;
     } catch (e) {
-      setError('Failed to save academic path');
+      setError('Failed to save academic path: ${e.toString()}');
       setLoading(false);
       return false;
     }

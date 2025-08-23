@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'free_plan_optimizer_service.dart';
 
 class HybridAIService {
   static final SupabaseClient _supabase = Supabase.instance.client;
@@ -13,19 +14,24 @@ class HybridAIService {
     required String difficulty,
     int limit = 20,
   }) async {
-    try {
-      final response = await _supabase
-          .from('questions')
-          .select()
-          .eq('subject', subject)
-          .eq('chapter', chapter)
-          .eq('difficulty', difficulty)
-          .limit(limit);
-      return List<Map<String, dynamic>>.from(response);
-          return [];
-    } catch (e) {
-      return [];
-    }
+    return FreePlanOptimizerService.optimizedDatabaseOperation(
+      'fetch_ai_questions_${subject}_${chapter}_$difficulty',
+      () async {
+        try {
+          final response = await _supabase
+              .from('questions')
+              .select()
+              .eq('subject', subject)
+              .eq('chapter', chapter)
+              .eq('difficulty', difficulty)
+              .limit(limit);
+          return List<Map<String, dynamic>>.from(response);
+        } catch (e) {
+          return <Map<String, dynamic>>[];
+        }
+      },
+      cacheDuration: const Duration(minutes: 30), // Cache AI questions longer
+    );
   }
 
   /// Cache management (optional, for offline/fast access)

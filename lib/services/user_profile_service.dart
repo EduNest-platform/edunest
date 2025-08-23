@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/error_message_service.dart';
+import 'free_plan_optimizer_service.dart';
 
 class UserProfileService {
   static Future<UserProfile?> getCurrentUserProfile() async {
@@ -12,12 +13,16 @@ class UserProfileService {
       final user = SupabaseService.client.auth.currentUser;
       if (user == null) return null;
 
-      final response =
-          await SupabaseService.client
-              .from('profiles')
-              .select()
-              .eq('id', user.id)
-              .single();
+      // OPTIMIZED: Use FreePlanOptimizerService for database operations
+      final response = await FreePlanOptimizerService.optimizedDatabaseOperation(
+        'get_current_user_profile',
+        () => SupabaseService.client
+            .from('profiles')
+            .select()
+            .eq('id', user.id)
+            .single(),
+        cacheDuration: const Duration(minutes: 5), // Cache profile for 5 minutes
+      );
 
       return UserProfile.fromJson(response);
     } catch (e) {
@@ -46,9 +51,15 @@ class UserProfileService {
       final user = SupabaseService.client.auth.currentUser;
       if (user == null) return false;
 
-      await SupabaseService.client
-          .from('profiles')
-          .upsert(profileData, onConflict: 'id');
+      // OPTIMIZED: Use FreePlanOptimizerService for database operations
+      await FreePlanOptimizerService.optimizedDatabaseOperation(
+        'update_user_profile',
+        () => SupabaseService.client
+            .from('profiles')
+            .upsert(profileData, onConflict: 'id'),
+        useCache: false, // Don't cache write operations
+        priority: 2, // Medium priority for profile updates
+      );
 
       return true;
     } catch (e) {

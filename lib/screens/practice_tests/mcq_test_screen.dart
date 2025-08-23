@@ -10,6 +10,8 @@ import '../../services/supabase_service.dart';
 import '../../services/network_service.dart';
 import '../../services/assigned_mcq_supabase_service.dart';
 import '../../services/error_message_service.dart';
+import '../../services/test_load_monitor.dart';
+import '../../services/exam_optimization_service.dart';
 // import '../../mixins/performance_mixin.dart';
 import 'package:window_manager/window_manager.dart';
 import '../../services/android_proctoring_service.dart';
@@ -269,6 +271,19 @@ class _MCQTestScreenState extends State<MCQTestScreen>
     super.initState();
     // startScreenMonitoring('mcq_test_screen');
 
+    // PERFORMANCE: Start test load monitoring for assigned tests
+    if (isAssignedTest && widget.assignedTest != null) {
+      final testTitle = widget.assignedTest!['test_name'] ?? widget.assignedTest!['title'] ?? '';
+      if (testTitle.isNotEmpty) {
+        TestLoadMonitor.startMonitoring(testTitle, 50); // Assume max 50 students
+        final userId = SupabaseService.currentUser?.id ?? 'anonymous';
+        TestLoadMonitor.recordStudentJoin(testTitle, userId);
+        
+        // EXAM OPTIMIZATION: Activate exam mode for assigned tests
+        ExamOptimizationService.activateExamMode(testTitle, 50);
+      }
+    }
+
     // Initialize Android proctoring if available
     if (isProctored && Platform.isAndroid) {
       _initializeAndroidProctoring();
@@ -302,6 +317,15 @@ class _MCQTestScreenState extends State<MCQTestScreen>
 
   @override
   void dispose() {
+    // PERFORMANCE: Stop test load monitoring for assigned tests
+    if (isAssignedTest && widget.assignedTest != null) {
+      final testTitle = widget.assignedTest!['test_name'] ?? widget.assignedTest!['title'] ?? '';
+      if (testTitle.isNotEmpty) {
+        final userId = SupabaseService.currentUser?.id ?? 'anonymous';
+        TestLoadMonitor.recordStudentLeave(testTitle, userId);
+      }
+    }
+
     if (isProctored) {
       WidgetsBinding.instance.removeObserver(this);
       if (!Platform.isAndroid) {
