@@ -1,0 +1,17 @@
+-- Midsem marks will use the same class_assignment_marks table
+-- No schema changes needed - we'll distinguish by assignment_name prefix
+-- 
+-- Midsem exams will be stored with names like "Midsem: Mid Semester Exam"
+-- Regular assignments will continue as before
+-- 
+-- This approach uses the existing table structure:
+-- - class_id: links to the class
+-- - assignment_name: will contain "Midsem: [exam name]" for midsem exams
+-- - assignment_description: optional description
+-- - max_marks: maximum marks for the exam
+-- - student_id, student_name, student_roll, student_email: student info
+-- - marks: actual marks obtained
+-- - graded_at, graded_by: grading metadata
+-- - subject_name: subject information
+--
+-- No database changes required - existing table structure is sufficient

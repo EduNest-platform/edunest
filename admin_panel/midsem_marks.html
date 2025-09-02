@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>Midsem Marks - EduNest Admin</title>
+  <link rel="stylesheet" href="style.css?v=1.2">
+  <link rel="stylesheet" href="mobile-nav.css?v=1.2">
+  <link rel="stylesheet" href="assignment_marks.css?v=1.0">
+  <style>
+    /* Fix sticky header for midsem marks table */
+    .marks-table thead {
+      position: sticky !important;
+      top: 0 !important;
+      z-index: 20 !important;
+    }
+    
+    .marks-table th {
+      position: sticky !important;
+      top: 0 !important;
+      z-index: 15 !important;
+    }
+    
+    .marks-table th.student-column {
+      position: sticky !important;
+      left: 0 !important;
+      top: 0 !important;
+      z-index: 25 !important;
+      background: linear-gradient(135deg, #1e293b 0%, #334155 50%, #475569 100%) !important;
+      border-right: 3px solid rgba(255, 255, 255, 0.3) !important;
+      box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1) !important;
+      text-align: left !important;
+      min-width: 280px !important;
+      padding: 0.4rem 0.6rem !important;
+      font-size: 1.1rem !important;
+      font-weight: 700 !important;
+      text-transform: uppercase !important;
+      letter-spacing: 0.1em !important;
+    }
+    
+    .marks-table td.student-cell {
+      position: sticky !important;
+      left: 0 !important;
+      z-index: 11 !important;
+      background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;
+      border-right: 2px solid #e2e8f0 !important;
+      box-shadow: 2px 0 4px rgba(0, 0, 0, 0.05) !important;
+      padding: 0.75rem !important;
+    }
+    
+    .marks-table tbody tr:hover td.student-cell {
+      background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%) !important;
+      box-shadow: 2px 0 12px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.08) !important;
+      transform: translateX(2px) !important;
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script src="supabaseClient.js?v=1.2"></script>
+  <script src="authManager.js?v=1.0"></script>
+  <script src="connectionMonitor.js?v=1.0"></script>
+  <script src="supabaseAdmin.js?v=1.2"></script>
+</head>
+<body>
+  <div class="main-bg"></div>
+  
+  <!-- Header -->
+  <header class="header" style="background: linear-gradient(120deg,#6366f1 0%,#60a5fa 50%,#a78bfa 100%); box-shadow: 0 4px 24px rgba(99,102,241,0.13); border-bottom-left-radius: 18px; border-bottom-right-radius: 18px; position: relative; z-index: 10;">
+    <div class="header-content">
+      <div class="appbar-top-row">
+        <div class="appbar-left">
+          <a href="dashboard.html" class="back-btn">🏠 Dashboard</a>
+        </div>
+        <div class="appbar-title-center">
+          <span class="page-title">Midsem Marks</span>
+        </div>
+        <div class="appbar-right">
+          <!-- Empty space for balance -->
+        </div>
+      </div>
+      <div class="class-context-card">
+        <span id="contextClass" class="context-line class-name">Loading Class...</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <div class="container">
+    <!-- Loading State -->
+    <div id="loadingState" class="loading-state">
+      <div class="spinner"></div>
+      <p>Loading students and midsem marks...</p>
+    </div>
+
+    <!-- Midsem Marks Section -->
+    <div id="midsemSection" class="section hidden">
+      <div class="section-header">
+        <h2>📝 Student Midsem Marks</h2>
+        <div class="header-buttons">
+          <button class="btn btn-secondary" onclick="showDeleteMidsemModal()" style="margin-right: 0.5rem;">
+            <span>🗑️ Delete Midsem</span>
+          </button>
+          <button id="addMidsemBtn" class="btn btn-primary" onclick="showAddMidsemModal()">
+            <span>+ Add Midsem</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Marks Table -->
+      <div class="marks-table-container">
+        <div class="marks-table-wrapper">
+          <table id="marksTable" class="marks-table">
+            <thead>
+              <tr>
+                <th class="student-column">Student Details</th>
+                <th id="noMidsemHeader" class="no-data">No Midsem Exams Created</th>
+                <!-- Midsem columns will be added dynamically -->
+              </tr>
+            </thead>
+            <tbody id="marksTableBody">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Save Button -->
+      <div class="save-section">
+        <button class="btn btn-primary save-all-btn" onclick="saveAllMarks()">
+          <span class="btn-icon">💾</span>
+          Save All Marks
+        </button>
+      </div>
+    </div>
+
+    <!-- No Data State -->
+    <div id="noDataState" class="no-data-state hidden">
+      <div class="no-data-icon">📝</div>
+      <h3>No Midsem Exams Yet</h3>
+      <p>Create your first midsem exam to start grading students.</p>
+      <button id="createFirstMidsemBtn" class="btn btn-primary">
+        + Add Midsem
+      </button>
+    </div>
+  </div>
+
+  <!-- Add Midsem Modal -->
+  <div id="midsemModal" class="modal-overlay" style="display: none;">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modalTitle">Add Midsem</h3>
+        <button class="modal-close" onclick="closeMidsemModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="midsemForm">
+          <div class="form-group">
+            <label for="examName">Midsem Name *</label>
+            <input type="text" id="examName" required placeholder="e.g., Mid Semester Exam">
+          </div>
+          <div class="form-group">
+            <label for="examDescription">Description</label>
+            <textarea id="examDescription" placeholder="Optional description"></textarea>
+          </div>
+          <div class="form-group">
+            <label for="maxMarks">Maximum Marks *</label>
+            <input type="number" id="maxMarks" required min="1" max="1000" placeholder="e.g., 50">
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeMidsemModal()">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="saveMidsemExam()">Save</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Message Display -->
+  <div id="messageDisplay" class="message-display"></div>
+
+  <script src="midsem_marks.js?v=1.0"></script>
+</body>
+</html>
