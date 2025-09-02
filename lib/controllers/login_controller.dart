@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../services/user_profile_service.dart';
+import '../services/fcm_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/supabase_service.dart';
 import 'dart:async';
@@ -45,6 +46,10 @@ class LoginController extends ChangeNotifier {
       if (response.user != null) {
         // Save session tokens for persistence
         await SupabaseService.saveSessionTokens();
+        
+        // Store FCM token now that user is authenticated
+        await FCMService().storePendingToken();
+        
         // Fetch user profile
         final profile = await UserProfileService.getCurrentUserProfile();
         final needsProfileSetup = profile == null || !profile.isComplete();

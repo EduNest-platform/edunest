@@ -132,10 +132,58 @@
             <div class="card">
                 <div class="card-header">
                     <h2><i class="fas fa-list"></i> Existing Campaigns</h2>
-                    <button class="btn-outline" onclick="loadCampaigns()">
-                        <i class="fas fa-refresh"></i> Refresh
-                    </button>
+                    <div class="header-actions">
+                        <button class="btn-outline" onclick="loadCampaigns()">
+                            <i class="fas fa-refresh"></i> Refresh
+                        </button>
+                    </div>
                 </div>
+                
+                <!-- Filters Section -->
+                <div class="card-filters">
+                    <div class="filter-row">
+                        <div class="filter-group">
+                            <label for="filterCollege">Filter by College:</label>
+                            <select id="filterCollege" onchange="applyCampaignFilters()">
+                                <option value="">All Colleges</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label for="filterSemester">Filter by Semester:</label>
+                            <select id="filterSemester" onchange="applyCampaignFilters()">
+                                <option value="">All Semesters</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label for="filterStatus">Filter by Status:</label>
+                            <select id="filterStatus" onchange="applyCampaignFilters()">
+                                <option value="">All Status</option>
+                                <option value="active">Active</option>
+                                <option value="draft">Draft</option>
+                                <option value="closed">Closed</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label for="sortBy">Sort by:</label>
+                            <select id="sortBy" onchange="applyCampaignFilters()">
+                                <option value="created_at_desc">Newest First</option>
+                                <option value="created_at_asc">Oldest First</option>
+                                <option value="title_asc">Title A-Z</option>
+                                <option value="title_desc">Title Z-A</option>
+                                <option value="college_asc">College A-Z</option>
+                                <option value="semester_asc">Semester</option>
+                                <option value="status_asc">Status</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="filter-actions">
+                        <button class="btn-outline btn-sm" onclick="clearCampaignFilters()">
+                            <i class="fas fa-times"></i> Clear Filters
+                        </button>
+                        <span id="campaignCount" class="campaign-count"></span>
+                    </div>
+                </div>
+                
                 <div class="card-body">
                     <div id="campaignsList">
                         <!-- Campaigns will be loaded here -->

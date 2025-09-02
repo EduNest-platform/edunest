@@ -1,88 +1,75 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/subject.dart';
-import 'free_plan_optimizer_service.dart';
 
 class SubjectsService {
   static final SupabaseClient _client = Supabase.instance.client;
 
   // Fetch all subjects with their related data
   static Future<List<Subject>> getAllSubjects() async {
-    return FreePlanOptimizerService.optimizedDatabaseOperation(
-      'get_all_subjects',
-      () async {
-        try {
-          // First, try to fetch real data from database
-          List<Subject> realSubjects = [];
-          try {
-            final response = await _client
-                .from('subjects')
-                .select('''
-                  *,
-                  semesters (
+    try {
+      // First, try to fetch real data from database
+      List<Subject> realSubjects = [];
+      try {
+        final response = await _client
+            .from('subjects')
+            .select('''
+              *,
+              semesters (
+                id,
+                name,
+                branches (
+                  id,
+                  name,
+                  colleges (
                     id,
-                    name,
-                    branches (
-                      id,
-                      name,
-                      colleges (
-                        id,
-                        name
-                      )
-                    )
+                    name
                   )
-                ''')
-                .order('name');
+                )
+              )
+            ''')
+            .order('name');
 
-            realSubjects =
-                (response as List).map((data) => Subject.fromJson(data)).toList();
-                } catch (e) {
-            // Continue with sample data if real data fails
-          }
+        realSubjects =
+            (response as List).map((data) => Subject.fromJson(data)).toList();
+            } catch (e) {
+        // Continue with sample data if real data fails
+      }
 
-          return realSubjects;
-        } catch (e) {
-          // Return empty list as fallback
-          return [];
-        }
-      },
-      cacheDuration: const Duration(minutes: 15), // Cache subjects for 15 minutes
-    );
+      return realSubjects;
+    } catch (e) {
+      // Return empty list as fallback
+      return [];
+    }
   }
 
   // Fetch subjects by semester - OPTIMIZED
   static Future<List<Subject>> getSubjectsBySemester(String semesterId) async {
-    return FreePlanOptimizerService.optimizedDatabaseOperation(
-      'get_subjects_by_semester_$semesterId',
-      () async {
-        try {
-          // Query directly with filter instead of fetching all
-          final response = await _client
-              .from('subjects')
-              .select('''
-                *,
-                semesters (
+    try {
+      // Query directly with filter instead of fetching all
+      final response = await _client
+          .from('subjects')
+          .select('''
+            *,
+            semesters (
+              id,
+              name,
+              branches (
+                id,
+                name,
+                colleges (
                   id,
-                  name,
-                  branches (
-                    id,
-                    name,
-                    colleges (
-                      id,
-                      name
-                    )
-                  )
+                  name
                 )
-              ''')
-              .eq('semester_id', semesterId)
-              .order('name');
+              )
+            )
+          ''')
+          .eq('semester_id', semesterId)
+          .order('name');
 
-          return (response as List).map((data) => Subject.fromJson(data)).toList();
-        } catch (e) {
-          return <Subject>[];
-        }
-      },
-      cacheDuration: const Duration(minutes: 10), // Cache subjects by semester
-    );
+      return (response as List).map((data) => Subject.fromJson(data)).toList();
+    } catch (e) {
+      return [];
+    }
   }
 
   // Search subjects by name or code

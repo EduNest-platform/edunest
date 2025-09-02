@@ -1,6 +1,9 @@
 // Feedback Campaigns Management - Super Admin
 let questions = [];
 let campaigns = [];
+let filteredCampaigns = [];
+let allColleges = [];
+let allSemesters = [];
 
 // Initialize the page
 document.addEventListener('DOMContentLoaded', function() {
@@ -74,11 +77,15 @@ function checkSuperAdminAuth() {
 // Initialize default feedback questions
 function initializeDefaultQuestions() {
     const defaultQuestions = [
-        'Teaching Quality and Clarity',
-        'Course Content and Organization', 
-        'Professor\'s Knowledge of Subject',
-        'Interaction and Availability',
-        'Overall Satisfaction'
+        'Has the Teacher covered entire Syllabus as prescribed by University/College/Board?',
+        'Has the Teacher covered relevant topics beyond syllabus',
+        'Effectiveness of Teacher in terms of: (a) Technical content/course content (b) Communication skills (c) Use of teaching aids',
+        'Pace on which contents were covered',
+        'Motivation and inspiration for students to learn',
+        'Support for the development of Students\' skill: (i) Practical demonstration (ii) Hands on training',
+        'Clarity of expectations of students',
+        'Feedback provided on Students\' progress',
+        'Willingness to offer help and advice to students'
     ];
     
     questions = defaultQuestions.map((text, index) => ({
@@ -156,6 +163,8 @@ async function loadCampaigns() {
         if (error) throw error;
         
         campaigns = data || [];
+        filteredCampaigns = [...campaigns];
+        populateFilterOptions();
         renderCampaigns();
         hideLoading();
         
@@ -169,8 +178,14 @@ async function loadCampaigns() {
 // Render campaigns list
 function renderCampaigns() {
     const campaignsList = document.getElementById('campaignsList');
+    const campaignCount = document.getElementById('campaignCount');
     
-    if (campaigns.length === 0) {
+    // Update count
+    if (campaignCount) {
+        campaignCount.textContent = `Showing ${filteredCampaigns.length} of ${campaigns.length} campaigns`;
+    }
+    
+    if (filteredCampaigns.length === 0) {
         campaignsList.innerHTML = `
             <div class="empty-state">
                 <i class="fas fa-comments"></i>
@@ -181,21 +196,33 @@ function renderCampaigns() {
         return;
     }
     
-    campaignsList.innerHTML = campaigns.map(campaign => {
+    campaignsList.innerHTML = filteredCampaigns.map(campaign => {
         const info = campaign.campaign_info;
-        const statusColor = info.status === 'active' ? 'success' : 
-                           info.status === 'draft' ? 'warning' : 'secondary';
+        
+        // Check if campaign has expired
+        const currentDate = new Date();
+        const endDate = new Date(info.dates.end);
+        const isExpired = endDate < currentDate;
+        
+        // Determine actual status (expired campaigns are always closed)
+        const actualStatus = isExpired ? 'closed' : info.status;
+        const statusColor = actualStatus === 'active' ? 'success' : 
+                           actualStatus === 'draft' ? 'warning' : 'secondary';
         
         return `
             <div class="campaign-card">
                 <div class="campaign-header">
                     <h3>${info.title}</h3>
-                    <span class="status-badge status-${statusColor}">${info.status.toUpperCase()}</span>
+                    <span class="status-badge status-${statusColor}">${actualStatus.toUpperCase()}</span>
                 </div>
                 <div class="campaign-details">
                     <div class="detail-item">
+                        <i class="fas fa-university"></i>
+                        <span>${info.hierarchy?.collegeName || 'N/A'}</span>
+                    </div>
+                    <div class="detail-item">
                         <i class="fas fa-graduation-cap"></i>
-                        <span>${info.semester}</span>
+                        <span>${info.hierarchy?.semesterName || info.semester || 'N/A'}</span>
                     </div>
                     <div class="detail-item">
                         <i class="fas fa-calendar"></i>
@@ -208,12 +235,12 @@ function renderCampaigns() {
                 </div>
                 ${info.description ? `<p class="campaign-description">${info.description}</p>` : ''}
                 <div class="campaign-actions">
-                    ${info.status === 'draft' ? 
+                    ${actualStatus === 'draft' ? 
                         `<button class="btn-primary btn-sm" onclick="activateCampaign('${campaign.id}')">
                             <i class="fas fa-rocket"></i> Activate
                         </button>` : ''
                     }
-                    ${info.status === 'active' ? 
+                    ${actualStatus === 'active' ? 
                         `<button class="btn-secondary btn-sm" onclick="deactivateCampaign('${campaign.id}')">
                             <i class="fas fa-pause"></i> Deactivate
                         </button>` : ''
@@ -298,17 +325,34 @@ async function deleteCampaign(campaignId) {
     }
     
     try {
-        showLoading('Deleting campaign...');
+        showLoading('Deleting campaign and responses...');
         
-        const { error } = await window.supabaseClient
+        // First, delete all responses associated with this campaign
+        console.log('Deleting responses for campaign:', campaignId);
+        const { error: responseError } = await window.supabaseClient
+            .from('feedback_data')
+            .delete()
+            .eq('type', 'response')
+            .contains('response_info', { campaign_id: campaignId });
+        
+        if (responseError) {
+            console.error('Error deleting responses:', responseError);
+            // Continue with campaign deletion even if response deletion fails
+        } else {
+            console.log('Responses deleted successfully');
+        }
+        
+        // Then delete the campaign itself
+        console.log('Deleting campaign:', campaignId);
+        const { error: campaignError } = await window.supabaseClient
             .from('feedback_data')
             .delete()
             .eq('id', campaignId);
         
-        if (error) throw error;
+        if (campaignError) throw campaignError;
         
         hideLoading();
-        showMsg('messageDisplay', 'Campaign deleted successfully!', false);
+        showMsg('messageDisplay', 'Campaign and all responses deleted successfully!', false);
         loadCampaigns();
         
     } catch (error) {
@@ -385,6 +429,110 @@ function closeModal() {
     if (modal) {
         modal.remove();
     }
+}
+
+// Populate filter options based on existing campaigns
+function populateFilterOptions() {
+    // Extract unique colleges and semesters
+    allColleges = [...new Set(campaigns.map(c => c.campaign_info.hierarchy?.collegeName).filter(Boolean))].sort();
+    allSemesters = [...new Set(campaigns.map(c => c.campaign_info.hierarchy?.semesterName || c.campaign_info.semester).filter(Boolean))].sort();
+    
+    // Populate college filter
+    const collegeSelect = document.getElementById('filterCollege');
+    if (collegeSelect) {
+        collegeSelect.innerHTML = '<option value="">All Colleges</option>';
+        allColleges.forEach(college => {
+            const option = document.createElement('option');
+            option.value = college;
+            option.textContent = college;
+            collegeSelect.appendChild(option);
+        });
+    }
+    
+    // Populate semester filter
+    const semesterSelect = document.getElementById('filterSemester');
+    if (semesterSelect) {
+        semesterSelect.innerHTML = '<option value="">All Semesters</option>';
+        allSemesters.forEach(semester => {
+            const option = document.createElement('option');
+            option.value = semester;
+            option.textContent = semester;
+            semesterSelect.appendChild(option);
+        });
+    }
+}
+
+// Apply filters and sorting to campaigns
+function applyCampaignFilters() {
+    const collegeFilter = document.getElementById('filterCollege')?.value || '';
+    const semesterFilter = document.getElementById('filterSemester')?.value || '';
+    const statusFilter = document.getElementById('filterStatus')?.value || '';
+    const sortBy = document.getElementById('sortBy')?.value || 'created_at_desc';
+    
+    // Filter campaigns
+    filteredCampaigns = campaigns.filter(campaign => {
+        const info = campaign.campaign_info;
+        
+        // College filter
+        if (collegeFilter && info.hierarchy?.collegeName !== collegeFilter) {
+            return false;
+        }
+        
+        // Semester filter
+        const campaignSemester = info.hierarchy?.semesterName || info.semester;
+        if (semesterFilter && campaignSemester !== semesterFilter) {
+            return false;
+        }
+        
+        // Status filter
+        if (statusFilter && info.status !== statusFilter) {
+            return false;
+        }
+        
+        return true;
+    });
+    
+    // Sort campaigns
+    filteredCampaigns.sort((a, b) => {
+        const infoA = a.campaign_info;
+        const infoB = b.campaign_info;
+        
+        switch (sortBy) {
+            case 'created_at_asc':
+                return new Date(infoA.created_at) - new Date(infoB.created_at);
+            case 'created_at_desc':
+                return new Date(infoB.created_at) - new Date(infoA.created_at);
+            case 'title_asc':
+                return infoA.title.localeCompare(infoB.title);
+            case 'title_desc':
+                return infoB.title.localeCompare(infoA.title);
+            case 'college_asc':
+                const collegeA = infoA.hierarchy?.collegeName || '';
+                const collegeB = infoB.hierarchy?.collegeName || '';
+                return collegeA.localeCompare(collegeB);
+            case 'semester_asc':
+                const semesterA = infoA.hierarchy?.semesterName || infoA.semester || '';
+                const semesterB = infoB.hierarchy?.semesterName || infoB.semester || '';
+                return semesterA.localeCompare(semesterB);
+            case 'status_asc':
+                return infoA.status.localeCompare(infoB.status);
+            default:
+                return new Date(infoB.created_at) - new Date(infoA.created_at);
+        }
+    });
+    
+    renderCampaigns();
+}
+
+// Clear all filters
+function clearCampaignFilters() {
+    document.getElementById('filterCollege').value = '';
+    document.getElementById('filterSemester').value = '';
+    document.getElementById('filterStatus').value = '';
+    document.getElementById('sortBy').value = 'created_at_desc';
+    
+    filteredCampaigns = [...campaigns];
+    renderCampaigns();
 }
 
 // New Two-Step Flow Functions
@@ -609,6 +757,7 @@ async function saveCampaign(status) {
             campaign_info: {
                 title: title,
                 description: description,
+                semester: window.selectedHierarchy.semesterName,
                 hierarchy: {
                     collegeId: window.selectedHierarchy.collegeId,
                     collegeName: window.selectedHierarchy.collegeName,

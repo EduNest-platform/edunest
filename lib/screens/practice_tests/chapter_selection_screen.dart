@@ -79,7 +79,7 @@ class _ChapterSelectionScreenState extends State<ChapterSelectionScreen> {
       });
     } catch (e) {
       final message = ErrorMessageService.getFriendlyMessage(e);
-      if (mounted) {
+      if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(message), backgroundColor: Colors.red),
         );

@@ -1,7 +1,11 @@
-// Student Management System
-let currentUser = null;
+// Student Management System with Duplicate Detection
+let currentUser = null; // Global variables
 let selectedClass = null;
 let students = [];
+let previewStudents = [];
+let selectedFile = null;
+let duplicateStudents = [];
+let rollNumberHistory = new Map(); // Track roll number changes
 let positionModeEnabled = false;
 
 // Initialize the student management system
@@ -48,7 +52,7 @@ async function loadUserInfo() {
       supabaseClient: !!window.supabaseClient 
     });
     
-    const { data: { user } } = await window.supabaseAdmin.auth.getUser();
+    const user = await window.authManager.getCurrentUser();
     console.log('Student Management - User data:', user);
     
     if (!user) {
@@ -68,11 +72,19 @@ async function loadUserInfo() {
 async function loadClassFromURL() {
   const urlParams = new URLSearchParams(window.location.search);
   const classId = urlParams.get('classId');
+  const subject = urlParams.get('subject');
   
-  console.log('Student Management - Loading class from URL:', { classId, currentUser: currentUser?.email });
+  console.log('🔍 DEBUG: Student Management - Loading class from URL:', { 
+    classId, 
+    subject, 
+    currentUser: currentUser?.email,
+    fullURL: window.location.href,
+    allParams: Object.fromEntries(urlParams.entries())
+  });
   
   if (!classId) {
-    console.log('Student Management - No classId found in URL');
+    console.error('🔍 DEBUG: No classId found in URL parameters');
+    console.log('🔍 DEBUG: Available URL parameters:', Object.fromEntries(urlParams.entries()));
     showMsg('messageDisplay', 'No class selected. Redirecting...', true);
     setTimeout(() => {
       window.location.href = 'attendance.html';
@@ -81,6 +93,7 @@ async function loadClassFromURL() {
   }
   
   try {
+    console.log('🔍 DEBUG: Starting class data fetch for classId:', classId);
     showLoading('Loading class information...');
     
     // Get class details
@@ -91,9 +104,15 @@ async function loadClassFromURL() {
       .eq('professor_email', currentUser.email)
       .single();
     
-    if (error) throw error;
+    console.log('🔍 DEBUG: Database query result:', { classData, error, currentUserEmail: currentUser.email });
+    
+    if (error) {
+      console.error('🔍 DEBUG: Database error:', error);
+      throw error;
+    }
     
     if (!classData) {
+      console.error('🔍 DEBUG: No class data returned from database');
       throw new Error('Class not found or access denied.');
     }
     
@@ -108,13 +127,24 @@ async function loadClassFromURL() {
       professorEmail: classData.professor_email
     };
     
+    console.log('🔍 DEBUG: Successfully loaded class:', selectedClass);
+    
     updateClassHeader();
     hideLoading();
     
   } catch (error) {
-    console.error('Student Management - Error loading class:', error);
+    console.error('🔍 DEBUG: Error loading class:', error);
+    console.log('🔍 DEBUG: Error details:', {
+      message: error.message,
+      classId,
+      currentUser: currentUser?.email,
+      supabaseClient: !!window.supabaseClient
+    });
     showMsg('messageDisplay', 'Error loading class: ' + error.message, true);
     hideLoading();
+    
+    // Don't redirect immediately on error, let user see what happened
+    console.log('🔍 DEBUG: Not redirecting due to error - user can see what went wrong');
   }
 }
 
@@ -146,7 +176,7 @@ function updateClassHeader() {
   }
 }
 
-// Load students for the class
+// Load students for the class with duplicate detection
 async function loadStudents() {
   if (!selectedClass) return;
   
@@ -158,30 +188,25 @@ async function loadStudents() {
       .select('*')
       .eq('class_id', selectedClass.id)
       .order('roll_number');
-
+    
     if (error) throw error;
-
+    
     students = studentsData || [];
     
-    // Sort students by roll number (handle formats like 401/23, 402/23)
-    students.sort((a, b) => {
-      const rollA = a.roll_number.toString();
-      const rollB = b.roll_number.toString();
-      
-      // Extract numeric parts for proper sorting
-      const numA = parseInt(rollA.replace(/\D/g, '')) || 0;
-      const numB = parseInt(rollB.replace(/\D/g, '')) || 0;
-      
-      return numA - numB;
-    });
+    // Detect and handle duplicates
+    await detectDuplicateStudents();
+    
+    // Auto-link student profiles silently in background
+    await autoLinkUnlinkedStudents();
     
     renderStudentsTable();
     updateStudentStats();
-    
-    // Automatically attempt to link unlinked students
-    await autoLinkUnlinkedStudents();
-    
     hideLoading();
+    
+    // Show duplicate warning if found
+    if (duplicateStudents.length > 0) {
+      showDuplicateWarning();
+    }
     
   } catch (error) {
     console.error('Error loading students:', error);
@@ -195,7 +220,7 @@ function renderStudentsTable() {
   const tableBody = document.getElementById('studentsTableBody');
   if (!tableBody) return;
 
-  const colspanCount = positionModeEnabled ? 7 : 6;
+  const colspanCount = positionModeEnabled ? 8 : 7;
   
   if (students.length === 0) {
     tableBody.innerHTML = `
@@ -227,7 +252,9 @@ function renderStudentsTable() {
       <td><strong>${student.roll_number}</strong></td>
       <td>
         <div class="student-info">
-          <div class="student-name">${student.student_name}</div>
+          <div class="student-name" id="name_${student.id}" onclick="editStudentName('${student.id}')" style="cursor: pointer; padding: 4px; border-radius: 4px;" onmouseover="this.style.backgroundColor='#f3f4f6'" onmouseout="this.style.backgroundColor='transparent'">
+            ${student.student_name} ✏️
+          </div>
           ${student.student_email ? `<div class="student-email">${student.student_email}</div>` : ''}
         </div>
       </td>
@@ -248,7 +275,12 @@ function renderStudentsTable() {
         }
       </td>
       <td>
-        <button class="action-btn action-btn-danger" onclick="removeStudent('${student.id}')">
+        <button class="action-btn action-btn-primary" onclick="editStudentName('${student.id}')" style="margin-right: 0.5rem;">
+          ✏️ Edit
+        </button>
+      </td>
+      <td>
+        <button class="action-btn action-btn-danger" onclick="removeStudentFromClass('${student.id}', '${student.roll_number}', '${student.student_name}')">
           🗑️ Remove
         </button>
       </td>
@@ -370,11 +402,6 @@ function updateUploadArea(fileName) {
     }, 100);
   }
 }
-
-// Store the selected file globally to prevent loss during DOM updates
-let selectedFile = null;
-let extractedStudents = [];
-let extractionErrors = [];
 
 // Upload CSV file
 async function uploadCSV() {
@@ -652,14 +679,41 @@ async function addStudent(event) {
   }
 }
 
-// Remove student
-async function removeStudent(studentId) {
-  if (!confirm('Are you sure you want to remove this student from the class roster?')) {
+// Remove student from current class with enhanced context
+async function removeStudentFromClass(studentId, rollNumber, studentName) {
+  // Check if student exists in other classes
+  const { data: otherClasses, error: checkError } = await window.supabaseClient
+    .from('class_rosters')
+    .select(`
+      id,
+      professor_classes!inner(
+        id,
+        subject_name,
+        class_name,
+        professor_email
+      )
+    `)
+    .eq('roll_number', rollNumber)
+    .neq('id', studentId);
+  
+  let confirmMessage = `Remove ${studentName} (${rollNumber}) from this class?\n\n`;
+  
+  if (otherClasses && otherClasses.length > 0) {
+    confirmMessage += `⚠️ Note: This student is also enrolled in ${otherClasses.length} other class(es):\n`;
+    otherClasses.forEach(cls => {
+      confirmMessage += `• ${cls.professor_classes.subject_name} (${cls.professor_classes.class_name})\n`;
+    });
+    confirmMessage += `\nRemoving from this class will NOT affect their enrollment in other classes.`;
+  } else {
+    confirmMessage += `This will completely remove the student from the system.`;
+  }
+  
+  if (!confirm(confirmMessage)) {
     return;
   }
   
   try {
-    showLoading('Removing student...');
+    showLoading('Removing student from class...');
     
     const { error } = await window.supabaseClient
       .from('class_rosters')
@@ -668,7 +722,11 @@ async function removeStudent(studentId) {
     
     if (error) throw error;
     
-    showMsg('messageDisplay', 'Student removed successfully!', false);
+    const message = otherClasses && otherClasses.length > 0 
+      ? `${studentName} removed from this class. They remain enrolled in ${otherClasses.length} other class(es).`
+      : `${studentName} removed from the system completely.`;
+    
+    showMsg('messageDisplay', message, false);
     
     // Reload students list
     await loadStudents();
@@ -679,6 +737,14 @@ async function removeStudent(studentId) {
     console.error('Error removing student:', error);
     showMsg('messageDisplay', 'Error removing student: ' + error.message, true);
     hideLoading();
+  }
+}
+
+// Legacy function for backward compatibility
+async function removeStudent(studentId) {
+  const student = students.find(s => s.id === studentId);
+  if (student) {
+    await removeStudentFromClass(studentId, student.roll_number, student.student_name);
   }
 }
 
@@ -754,15 +820,15 @@ async function linkStudentProfile(studentId, rollNumber) {
       return;
     }
     
-    // Update class_rosters with the profile ID
+    // Update class_rosters with the profile ID (preserve existing name, only update email if not set)
+    const currentStudent = students.find(s => s.id === studentId);
     const { error: updateError } = await window.supabaseClient
       .from('class_rosters')
       .update({ 
         student_profile_id: profileData.id,
         is_verified: true,
-        // Update name and email if they exist in profile
-        student_name: profileData.full_name || students.find(s => s.id === studentId)?.student_name,
-        student_email: profileData.email || students.find(s => s.id === studentId)?.student_email
+        // Only update email if it's not already set in class roster
+        student_email: currentStudent?.student_email || profileData.email
       })
       .eq('id', studentId);
     
@@ -835,14 +901,14 @@ async function attemptAutoLinkSingleStudent(student) {
       return false; // No matching profile found
     }
     
-    // Update class_rosters with the profile ID
+    // Update class_rosters with the profile ID (preserve existing name, only update email if not set)
     const { error: updateError } = await window.supabaseClient
       .from('class_rosters')
       .update({ 
         student_profile_id: profileData.id,
         is_verified: true,
-        student_name: profileData.full_name || student.student_name,
-        student_email: profileData.email || student.student_email
+        // Only update email if it's not already set in class roster
+        student_email: student.student_email || profileData.email
       })
       .eq('id', student.id);
     
@@ -860,7 +926,7 @@ async function attemptAutoLinkSingleStudent(student) {
   }
 }
 
-// Automatically link unlinked students (runs silently in background)
+// Automatically link unlinked students using batch operations (runs silently in background)
 async function autoLinkUnlinkedStudents() {
   const unlinkedStudents = students.filter(student => !student.student_profile_id);
   
@@ -868,69 +934,93 @@ async function autoLinkUnlinkedStudents() {
     return; // No students to link
   }
   
-  console.log(`Auto-linking ${unlinkedStudents.length} unlinked students...`);
-  
+  console.log(`Auto-linking ${unlinkedStudents.length} unlinked students using batch operations...`);
   let linkedCount = 0;
   
-  for (const student of unlinkedStudents) {
-    try {
-      // Search for user profile with matching student_id (roll number)
-      const { data: profileData, error: profileError } = await window.supabaseClient
-        .from('profiles')
-        .select('id, full_name, email, student_id')
-        .eq('student_id', student.roll_number)
-        .single();
-      
-      if (profileError && profileError.code !== 'PGRST116') {
-        console.warn(`Auto-link: Error searching for ${student.roll_number}:`, profileError);
-        continue;
-      }
-      
-      if (!profileData) {
-        continue; // No matching profile found
-      }
-      
-      // Update class_rosters with the profile ID
-      const { error: updateError } = await window.supabaseClient
-        .from('class_rosters')
-        .update({ 
-          student_profile_id: profileData.id,
-          is_verified: true,
-          student_name: profileData.full_name || student.student_name,
-          student_email: profileData.email || student.student_email
-        })
-        .eq('id', student.id);
-      
-      if (updateError) {
-        console.warn(`Auto-link: Error updating ${student.roll_number}:`, updateError);
-        continue;
-      }
-      
-      // Update the local student object
-      const studentIndex = students.findIndex(s => s.id === student.id);
-      if (studentIndex !== -1) {
-        students[studentIndex].student_profile_id = profileData.id;
-        students[studentIndex].is_verified = true;
-        students[studentIndex].student_name = profileData.full_name || student.student_name;
-        students[studentIndex].student_email = profileData.email || student.student_email;
-      }
-      
-      linkedCount++;
-      
-    } catch (error) {
-      console.warn(`Auto-link: Error processing ${student.roll_number}:`, error);
+  try {
+    // OPTIMIZED: Batch fetch all profiles by student_id (roll numbers)
+    const rollNumbers = unlinkedStudents.map(s => s.roll_number);
+    
+    const { data: profilesData, error: profileError } = await window.supabaseClient
+      .from('profiles')
+      .select('id, full_name, email, student_id')
+      .in('student_id', rollNumbers);
+    
+    if (profileError) {
+      console.warn('Auto-link batch: Error fetching profiles:', profileError);
+      return;
     }
-  }
-  
-  if (linkedCount > 0) {
-    console.log(`Auto-linked ${linkedCount} students successfully`);
     
-    // Update the UI to reflect the changes
-    renderStudentsTable();
-    updateStudentStats();
+    if (!profilesData || profilesData.length === 0) {
+      console.log('Auto-link batch: No matching profiles found');
+      return;
+    }
     
-    // Show a subtle notification
-    showMsg('messageDisplay', `🔗 Automatically linked ${linkedCount} student${linkedCount > 1 ? 's' : ''} to their app profiles!`, false);
+    // Create a map for quick lookup
+    const profileMap = new Map();
+    profilesData.forEach(profile => {
+      profileMap.set(profile.student_id, profile);
+    });
+    
+    // Prepare batch updates
+    const updatePromises = [];
+    const localUpdates = [];
+    
+    for (const student of unlinkedStudents) {
+      const profileData = profileMap.get(student.roll_number);
+      if (profileData) {
+        // Prepare database update
+        const updatePromise = window.supabaseClient
+          .from('class_rosters')
+          .update({ 
+            student_profile_id: profileData.id,
+            is_verified: true,
+            student_email: student.student_email || profileData.email
+          })
+          .eq('id', student.id);
+        
+        updatePromises.push(updatePromise);
+        
+        // Prepare local update
+        localUpdates.push({
+          studentIndex: students.findIndex(s => s.id === student.id),
+          profileId: profileData.id,
+          email: student.student_email || profileData.email
+        });
+      }
+    }
+    
+    // Execute all updates in parallel
+    const results = await Promise.allSettled(updatePromises);
+    
+    // Apply successful local updates
+    results.forEach((result, index) => {
+      if (result.status === 'fulfilled' && !result.value.error) {
+        const localUpdate = localUpdates[index];
+        if (localUpdate.studentIndex !== -1) {
+          students[localUpdate.studentIndex].student_profile_id = localUpdate.profileId;
+          students[localUpdate.studentIndex].is_verified = true;
+          students[localUpdate.studentIndex].student_email = localUpdate.email;
+          linkedCount++;
+        }
+      } else {
+        console.warn('Auto-link batch: Update failed:', result.reason || result.value?.error);
+      }
+    });
+    
+    console.log(`Auto-link batch: Successfully linked ${linkedCount} students using batch operations`);
+    
+    if (linkedCount > 0) {
+      // Update the UI to reflect the changes
+      renderStudentsTable();
+      updateStudentStats();
+      
+      // Show a subtle notification
+      showMsg('messageDisplay', `🔗 Automatically linked ${linkedCount} student${linkedCount > 1 ? 's' : ''} to their app profiles!`, false);
+    }
+    
+  } catch (error) {
+    console.warn('Auto-link batch: Error in batch processing:', error);
   }
 }
 
@@ -1435,4 +1525,360 @@ function showLoading(text = 'Loading...') {
 function hideLoading() {
   const overlay = document.getElementById('loadingOverlay');
   if (overlay) overlay.classList.add('hidden');
+}
+
+// Detect duplicate students
+async function detectDuplicateStudents() {
+  duplicateStudents = [];
+  const rollNumberGroups = {};
+  const nameGroups = {};
+  const emailGroups = {};
+  
+  // Group students by roll number, name, and email
+  students.forEach(student => {
+    // Group by roll number
+    if (!rollNumberGroups[student.roll_number]) {
+      rollNumberGroups[student.roll_number] = [];
+    }
+    rollNumberGroups[student.roll_number].push(student);
+    
+    // Group by name (case insensitive)
+    const normalizedName = student.student_name.toLowerCase().trim();
+    if (!nameGroups[normalizedName]) {
+      nameGroups[normalizedName] = [];
+    }
+    nameGroups[normalizedName].push(student);
+    
+    // Group by email if exists
+    if (student.student_email) {
+      const normalizedEmail = student.student_email.toLowerCase().trim();
+      if (!emailGroups[normalizedEmail]) {
+        emailGroups[normalizedEmail] = [];
+      }
+      emailGroups[normalizedEmail].push(student);
+    }
+  });
+  
+  // Find duplicates
+  Object.values(rollNumberGroups).forEach(group => {
+    if (group.length > 1) {
+      duplicateStudents.push(...group.map(s => ({ ...s, duplicateType: 'roll_number' })));
+    }
+  });
+  
+  Object.values(nameGroups).forEach(group => {
+    if (group.length > 1) {
+      group.forEach(student => {
+        if (!duplicateStudents.find(d => d.id === student.id)) {
+          duplicateStudents.push({ ...student, duplicateType: 'name' });
+        }
+      });
+    }
+  });
+  
+  Object.values(emailGroups).forEach(group => {
+    if (group.length > 1) {
+      group.forEach(student => {
+        if (!duplicateStudents.find(d => d.id === student.id)) {
+          duplicateStudents.push({ ...student, duplicateType: 'email' });
+        }
+      });
+    }
+  });
+  
+  console.log('Duplicate students detected:', duplicateStudents.length);
+}
+
+// Show duplicate warning
+function showDuplicateWarning() {
+  const warningHtml = `
+    <div style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 1rem; margin: 1rem 0;">
+      <h3 style="color: #92400e; margin: 0 0 0.5rem 0;">⚠️ Duplicate Students Detected</h3>
+      <p style="color: #92400e; margin: 0 0 1rem 0;">
+        Found ${duplicateStudents.length} students with duplicate information. This may cause login issues.
+      </p>
+      <button class="btn btn-primary" onclick="showDuplicateManager()" style="margin-right: 0.5rem;">
+        🔧 Manage Duplicates
+      </button>
+      <button class="btn btn-secondary" onclick="hideDuplicateWarning()">
+        ✕ Dismiss
+      </button>
+    </div>
+  `;
+  
+  const container = document.querySelector('.container');
+  const existingWarning = container.querySelector('.duplicate-warning');
+  if (existingWarning) {
+    existingWarning.remove();
+  }
+  
+  const warningDiv = document.createElement('div');
+  warningDiv.className = 'duplicate-warning';
+  warningDiv.innerHTML = warningHtml;
+  container.insertBefore(warningDiv, container.firstChild);
+}
+
+// Hide duplicate warning
+function hideDuplicateWarning() {
+  const warning = document.querySelector('.duplicate-warning');
+  if (warning) {
+    warning.remove();
+  }
+}
+
+// Group duplicates by roll number
+function groupDuplicatesByRollNumber() {
+  const groups = {};
+  duplicateStudents.forEach(student => {
+    if (!groups[student.roll_number]) {
+      groups[student.roll_number] = [];
+    }
+    groups[student.roll_number].push(student);
+  });
+  return groups;
+}
+
+// Show duplicate manager modal
+function showDuplicateManager() {
+  const duplicateGroups = groupDuplicatesByRollNumber();
+  
+  let modalHtml = `
+    <div class="modal-overlay" id="duplicateModal">
+      <div class="modal-container" style="max-width: 1200px;">
+        <div class="modal-header">
+          <h2>🔧 Duplicate Student Manager</h2>
+          <button class="modal-close" onclick="closeDuplicateManager()">✕</button>
+        </div>
+        <div class="modal-content">
+          <div class="preview-stats">
+            <div class="stat-item">
+              <span class="stat-label">Duplicate Groups:</span>
+              <span class="stat-value">${Object.keys(duplicateGroups).length}</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Affected Students:</span>
+              <span class="stat-value">${duplicateStudents.length}</span>
+            </div>
+          </div>
+          
+          <div class="preview-table-container">
+            <table class="preview-table">
+              <thead>
+                <tr>
+                  <th>Roll Number</th>
+                  <th>Student Name</th>
+                  <th>Email</th>
+                  <th>Profile Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+  `;
+  
+  Object.entries(duplicateGroups).forEach(([rollNumber, group]) => {
+    group.forEach((student, index) => {
+      const isFirst = index === 0;
+      const rowClass = isFirst ? 'style="background: #fef3c7;"' : '';
+      
+      modalHtml += `
+        <tr ${rowClass}>
+          <td><strong>${student.roll_number}</strong></td>
+          <td>${student.student_name}</td>
+          <td>${student.student_email || 'Not provided'}</td>
+          <td>
+            <span class="status-badge ${student.student_profile_id ? 'linked' : 'unlinked'}">
+              ${student.student_profile_id ? '✓ Linked' : '⚠ Unlinked'}
+            </span>
+          </td>
+          <td>
+            <button class="action-btn action-btn-primary" onclick="editDuplicateStudent('${student.id}')">
+              ✏️ Edit
+            </button>
+            <button class="action-btn action-btn-danger" onclick="deleteDuplicateStudent('${student.id}')">
+              🗑️ Delete
+            </button>
+          </td>
+        </tr>
+      `;
+    });
+  });
+  
+  modalHtml += `
+              </tbody>
+            </table>
+          </div>
+          
+          <div class="modal-actions">
+            <button class="btn btn-secondary" onclick="closeDuplicateManager()">
+              Cancel
+            </button>
+            <button class="btn btn-primary" onclick="autoResolveDuplicates()">
+              🤖 Auto-Resolve
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+}
+
+// Close duplicate manager
+function closeDuplicateManager() {
+  const modal = document.getElementById('duplicateModal');
+  if (modal) {
+    modal.remove();
+  }
+}
+
+// Edit duplicate student
+function editDuplicateStudent(studentId) {
+  const student = students.find(s => s.id === studentId);
+  if (!student) return;
+  
+  const newRollNumber = prompt('Enter new roll number:', student.roll_number);
+  if (!newRollNumber || newRollNumber === student.roll_number) return;
+  
+  // Validate roll number format
+  if (!validateRollNumber(newRollNumber)) {
+    alert('Invalid roll number format. Please use formats like: 2021001, 21CSE001, 441/23');
+    return;
+  }
+  
+  // Check if new roll number already exists
+  const existingStudent = students.find(s => s.roll_number === newRollNumber && s.id !== studentId);
+  if (existingStudent) {
+    alert('A student with this roll number already exists.');
+    return;
+  }
+  
+  updateStudentRollNumber(studentId, newRollNumber);
+}
+
+// Delete duplicate student
+function deleteDuplicateStudent(studentId) {
+  if (!confirm('Are you sure you want to delete this duplicate student entry?')) {
+    return;
+  }
+  
+  removeStudent(studentId);
+}
+
+// Auto-resolve duplicates
+function autoResolveDuplicates() {
+  if (!confirm('Auto-resolve will keep the first entry for each duplicate group and remove others. Continue?')) {
+    return;
+  }
+  
+  const duplicateGroups = groupDuplicatesByRollNumber();
+  let resolvedCount = 0;
+  
+  Object.values(duplicateGroups).forEach(group => {
+    if (group.length > 1) {
+      // Keep the first student (usually the one added first)
+      const toKeep = group[0];
+      const toRemove = group.slice(1);
+      
+      toRemove.forEach(student => {
+        removeStudent(student.id);
+        resolvedCount++;
+      });
+    }
+  });
+  
+  alert(`Auto-resolved ${resolvedCount} duplicate entries.`);
+  closeDuplicateManager();
+  loadStudents(); // Refresh the list
+}
+
+// Validate roll number format
+function validateRollNumber(rollNumber) {
+  if (!rollNumber || rollNumber.trim() === '') return false;
+  
+  const patterns = [
+    /^\d{4,7}$/, // Simple numeric: 2021001
+    /^\d{2}[A-Z]{2,3}\d{3}$/, // Format like: 21CSE001
+    /^\d{3,4}\/\d{2}$/, // Format like: 441/23
+    /^[A-Z]{2,3}\d{2,4}$/, // Format like: CSE2021
+    /^\d{2}[A-Z]\d{3}$/ // Format like: 21A001
+  ];
+  
+  return patterns.some(pattern => pattern.test(rollNumber.trim()));
+}
+
+// Edit student name inline
+async function editStudentName(studentId) {
+  const student = students.find(s => s.id === studentId);
+  if (!student) return;
+  
+  const newName = prompt('Edit student name:', student.student_name);
+  if (!newName || newName.trim() === '' || newName === student.student_name) {
+    return;
+  }
+  
+  try {
+    showLoading('Updating student name...');
+    
+    // Update in database - preserve existing name as per memory guidance
+    const { error } = await window.supabaseClient
+      .from('class_rosters')
+      .update({ student_name: newName.trim() })
+      .eq('id', studentId);
+    
+    if (error) throw error;
+    
+    showMsg('messageDisplay', `Student name updated from "${student.student_name}" to "${newName.trim()}"`, false);
+    
+    // Reload students list
+    await loadStudents();
+    
+    hideLoading();
+    
+  } catch (error) {
+    console.error('Error updating student name:', error);
+    showMsg('messageDisplay', 'Error updating student name: ' + error.message, true);
+    hideLoading();
+  }
+}
+
+// Update student roll number
+async function updateStudentRollNumber(studentId, newRollNumber) {
+  try {
+    showLoading('Updating roll number...');
+    
+    const student = students.find(s => s.id === studentId);
+    const oldRollNumber = student.roll_number;
+    
+    // Update in database
+    const { error } = await window.supabaseClient
+      .from('class_rosters')
+      .update({ roll_number: newRollNumber })
+      .eq('id', studentId);
+    
+    if (error) throw error;
+    
+    // Track roll number change history
+    if (!rollNumberHistory.has(studentId)) {
+      rollNumberHistory.set(studentId, []);
+    }
+    rollNumberHistory.get(studentId).push({
+      from: oldRollNumber,
+      to: newRollNumber,
+      timestamp: new Date().toISOString(),
+      reason: 'Duplicate resolution'
+    });
+    
+    showMsg('messageDisplay', `Roll number updated from ${oldRollNumber} to ${newRollNumber}`, false);
+    
+    // Reload students and re-detect duplicates
+    await loadStudents();
+    
+    hideLoading();
+    
+  } catch (error) {
+    console.error('Error updating roll number:', error);
+    showMsg('messageDisplay', 'Error updating roll number: ' + error.message, true);
+    hideLoading();
+  }
 }

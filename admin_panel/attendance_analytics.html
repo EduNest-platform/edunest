@@ -460,6 +460,25 @@
     </div>
 
     <div class="container">
+        <!-- Analytics Controls -->
+        <div class="analytics-section">
+            <h2 class="section-title">📊 Analytics Controls</h2>
+            <div class="download-section">
+                <button class="btn btn-primary" onclick="showTodayAnalytics()">
+                    📅 Today's Attendance
+                </button>
+                <button class="btn btn-primary" onclick="showYesterdayAnalytics()">
+                    📆 Yesterday's Attendance
+                </button>
+                <button class="btn btn-primary" onclick="showDateRangeModal()">
+                    📊 Date Range Analytics
+                </button>
+                <button class="btn btn-success" onclick="refreshCache()">
+                    🔄 Refresh Data
+                </button>
+            </div>
+        </div>
+
         <!-- Download Options -->
         <div class="analytics-section">
             <h2 class="section-title">📥 Download Reports</h2>
@@ -502,6 +521,29 @@
         </div>
     </div>
 
+    <!-- Date Range Modal -->
+    <div id="dateRangeModal" class="loading-overlay hidden">
+        <div class="loading-spinner" style="max-width: 400px; width: 90%;">
+            <h3 style="margin-top: 0;">📊 Select Date Range</h3>
+            <div style="margin: 1rem 0;">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">From Date:</label>
+                <input type="date" id="fromDate" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+            <div style="margin: 1rem 0;">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">To Date:</label>
+                <input type="date" id="toDate" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+            <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                <button class="btn btn-primary" onclick="loadDateRangeAnalytics()" style="flex: 1;">
+                    📊 Load Analytics
+                </button>
+                <button class="btn" onclick="hideDateRangeModal()" style="flex: 1; background: #6b7280; color: white;">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Message Display -->
     <div id="messageDisplay" class="message-display hidden"></div>
 
@@ -515,8 +557,11 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
     <script src="supabaseClient.js?v=1.2"></script>
+    <script src="authManager.js?v=1.0"></script>
+    <script src="connectionMonitor.js?v=1.0"></script>
     <script src="login.js"></script>
     <script src="supabaseAdmin.js"></script>
+    <script src="cache_manager.js?v=1.0"></script>
     <script src="attendance_analytics.js?v=1.1"></script>
 </body>
 

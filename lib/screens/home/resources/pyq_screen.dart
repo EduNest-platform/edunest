@@ -739,18 +739,17 @@ class _PYQScreenState extends State<PYQScreen> {
       body: GestureDetector(
         behavior: HitTestBehavior.translucent,
         onTap: () => FocusScope.of(context).unfocus(),
-        child: Align(
-          alignment: Alignment.topCenter,
-          child: Container(
-            constraints:
-                isDesktop ? BoxConstraints(maxWidth: maxContentWidth) : null,
-            padding:
-                isDesktop
-                    ? const EdgeInsets.symmetric(vertical: 24)
-                    : EdgeInsets.zero,
-            child: SingleChildScrollView(child: content),
-          ),
-        ),
+        child: isDesktop
+            ? Center(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: maxContentWidth),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 24),
+                    child: content,
+                  ),
+                ),
+              )
+            : content,
       ),
     );
   }

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../services/error_message_service.dart';
+import '../../services/auth_service.dart';
 import '../../widgets/desktop_sidebar.dart';
 import '../../widgets/custom_app_bar.dart';
 import 'package:flutter/foundation.dart';
@@ -14,7 +14,7 @@ class ChangePasswordScreen extends StatefulWidget {
 
 class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
+  final _currentPasswordController = TextEditingController();
   final _newPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   bool _loading = false;
@@ -23,13 +23,10 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   @override
   void initState() {
     super.initState();
-    final user = Supabase.instance.client.auth.currentUser;
-    _emailController.text = user?.email ?? '';
   }
 
   Future<void> _changePassword() async {
     try {
-      final email = _emailController.text.trim();
       final newPassword = _newPasswordController.text;
       final confirmPassword = _confirmPasswordController.text;
       if (newPassword != confirmPassword) {
@@ -39,13 +36,13 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
         });
         return;
       }
-      final response = await Supabase.instance.client.auth.updateUser(
-        UserAttributes(password: newPassword),
+      final success = await AuthService.changePassword(
+        _currentPasswordController.text,
+        _newPasswordController.text,
       );
-      setState(() {
-        _loading = false;
-      });
-      if (response.user != null) {
+
+      if (success) {
+        // Show success dialog
         if (context.mounted) {
           showDialog(
             context: context,
@@ -128,11 +125,10 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
       }
     } catch (e) {
       final message = ErrorMessageService.getFriendlyMessage(e);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message), backgroundColor: Colors.red),
-        );
-      }
+      setState(() {
+        _loading = false;
+        _message = message;
+      });
     }
   }
 
@@ -186,7 +182,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Enter your email and new password below.',
+                    'Enter your current password and new password below.',
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: Colors.black54,
                     ),
@@ -194,24 +190,18 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                   ),
                   const SizedBox(height: 28),
                   TextFormField(
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    readOnly: true,
+                    controller: _currentPasswordController,
+                    obscureText: true,
                     decoration: InputDecoration(
-                      prefixIcon: const Icon(Icons.email_outlined),
-                      labelText: 'Email',
+                      prefixIcon: const Icon(Icons.lock_outline),
+                      labelText: 'Current Password',
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return 'Please enter your email';
-                      }
-                      if (!RegExp(
-                        r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
-                      ).hasMatch(value)) {
-                        return 'Enter a valid email';
+                        return 'Please enter your current password';
                       }
                       return null;
                     },

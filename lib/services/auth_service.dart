@@ -2,6 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'user_profile_service.dart';
 import 'rate_limiter_service.dart';
 import 'session_tracking_service.dart';
+import 'user_load_tracker.dart';
 import 'dart:developer' as developer;
 import 'supabase_service.dart';
 
@@ -31,6 +32,9 @@ class AuthService {
 
       // Record login session and history
       await SessionTrackingService.recordLoginSession();
+      
+      // User tracking is now handled automatically by app lifecycle
+      // No manual increment needed here to prevent duplicates
 
       return response;
     } catch (e) {
@@ -78,6 +82,9 @@ class AuthService {
   }
 
   static Future<void> signOut() async {
+    // User tracking is now handled automatically by app lifecycle
+    // No manual decrement needed here to prevent duplicates
+    
     // Clear session tracking data
     await SessionTrackingService.clearAllSessionData();
     await _auth.signOut();
@@ -138,6 +145,44 @@ class AuthService {
     }
 
     await _auth.resetPasswordForEmail(email);
+  }
+
+  static Future<bool> changePassword(String currentPassword, String newPassword) async {
+    try {
+      // Validate new password strength
+      if (!_isPasswordStrong(newPassword)) {
+        throw AuthException(
+          'Password must be at least 8 characters long and contain uppercase, lowercase, number, and special character.',
+        );
+      }
+
+      final user = currentUser;
+      if (user == null) {
+        throw AuthException('No user is currently logged in.');
+      }
+
+      // Verify current password by attempting to sign in
+      final email = user.email;
+      if (email == null) {
+        throw AuthException('User email not found.');
+      }
+
+      // Test current password
+      try {
+        await _auth.signInWithPassword(email: email, password: currentPassword);
+      } catch (e) {
+        throw AuthException('Current password is incorrect.');
+      }
+
+      // Update password
+      await _auth.updateUser(UserAttributes(password: newPassword));
+      return true;
+    } catch (e) {
+      if (e is AuthException) {
+        rethrow;
+      }
+      throw AuthException('Failed to change password: ${e.toString()}');
+    }
   }
 
   /// Check if a user exists by email (for account linking scenarios)

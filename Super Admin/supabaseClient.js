@@ -4,14 +4,30 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 
 let initializationAttempts = 0;
 const maxAttempts = 10;
+let isInitialized = false;
 
-// Initialize Supabase client after library is loaded
+// Initialize Supabase client after library is loaded (singleton pattern)
 function initializeSupabase() {
+  // Prevent multiple initializations
+  if (isInitialized || window.supabaseClient) {
+    console.log('Supabase client already initialized, skipping...');
+    return;
+  }
+
   try {
     if (typeof window.supabase !== 'undefined') {
+      // Use unique storage key to prevent conflicts
+      const storageKey = `supabase.super-admin.${Date.now()}`;
+      
       window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-        auth: { storageKey: 'supabase.storage' }
+        auth: { 
+          storageKey: storageKey,
+          autoRefreshToken: true,
+          persistSession: true
+        }
       });
+      
+      isInitialized = true;
       console.log('Supabase client initialized successfully');
       
       // Test connection after initialization
@@ -79,23 +95,25 @@ function updateConnectionStatus(connected) {
   }
 }
 
-// Initialize when DOM is ready and when window loads
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initializeSupabase);
-} else {
-  initializeSupabase();
-}
-
-// Also initialize on window load to ensure all scripts are loaded
-window.addEventListener('load', function() {
-  if (!window.supabaseClient) {
-    console.log('Attempting to initialize Supabase on window load...');
-    initializeSupabase();
+// Single initialization point to prevent multiple GoTrueClient instances
+(function() {
+  let initializationStarted = false;
+  
+  function startInitialization() {
+    if (initializationStarted) return;
+    initializationStarted = true;
+    
+    // Single initialization attempt
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initializeSupabase);
+    } else {
+      initializeSupabase();
+    }
   }
-});
-
-// Also try to initialize immediately
-setTimeout(initializeSupabase, 100);
+  
+  // Start initialization
+  startInitialization();
+})();
 
 // For compatibility with app.js
 const supabase = window.supabaseClient; 

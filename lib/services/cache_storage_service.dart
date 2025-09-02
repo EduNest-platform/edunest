@@ -3,7 +3,9 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:flutter/foundation.dart';
 import '../services/files_service.dart';
+import 'user_load_tracker.dart';
 
 class CacheEntry<T> {
   final T data;
@@ -133,7 +135,7 @@ class CacheStorageService {
     await _setDiskCache(key, entry);
   }
 
-  /// Set data in memory cache with size management
+  /// Set data in memory cache with smart size management
   void _setMemoryCache(String key, CacheEntry entry) {
     // Remove existing entry if present
     final existingEntry = _memoryCache[key];
@@ -141,13 +143,98 @@ class CacheStorageService {
       _currentMemorySize -= existingEntry.size;
     }
 
-    // Check if we need to evict entries
-    while (_currentMemorySize + entry.size > maxMemoryCacheSize && _memoryCache.isNotEmpty) {
-      _evictOldestMemoryEntry();
-    }
+    // 🚀 SMART CACHE MANAGEMENT based on user load
+    if (UserLoadTracker.isLowLoadMode) {
+      // Low load: Simple cache, no strict memory limits
+      _memoryCache[key] = entry;
+      _currentMemorySize += entry.size;
+      
+      // Simple cleanup every 100 entries
+      if (_memoryCache.length > 100) {
+        _simpleCleanup();
+      }
+    } else if (UserLoadTracker.isMediumLoadMode) {
+      // Medium load: Moderate memory management
+      _memoryCache[key] = entry;
+      _currentMemorySize += entry.size;
+      
+      // Non-blocking cleanup if needed
+      if (_currentMemorySize > maxMemoryCacheSize) {
+        Future.microtask(() => _smartEviction());
+      }
+    } else {
+      // High load: Full sophisticated memory management
+      // Check if we need to evict entries (but limit iterations)
+      int evictionAttempts = 0;
+      const maxEvictions = 10; // Prevent infinite loops
+      
+      while (_currentMemorySize + entry.size > maxMemoryCacheSize && 
+             _memoryCache.isNotEmpty && 
+             evictionAttempts < maxEvictions) {
+        _evictOldestMemoryEntry();
+        evictionAttempts++;
+      }
 
-    _memoryCache[key] = entry;
-    _currentMemorySize += entry.size;
+      _memoryCache[key] = entry;
+      _currentMemorySize += entry.size;
+    }
+  }
+  
+  /// Simple cleanup for low load mode
+  void _simpleCleanup() {
+    if (_memoryCache.length <= 100) return;
+    
+    // Remove oldest 20 entries
+    final oldKeys = _memoryCache.keys.take(20).toList();
+    for (final oldKey in oldKeys) {
+      final removedEntry = _memoryCache.remove(oldKey);
+      if (removedEntry != null) {
+        _currentMemorySize -= removedEntry.size;
+      }
+    }
+    
+    if (kDebugMode) {
+      print('🧹 Cache: Simple cleanup completed (${_memoryCache.length} entries remaining)');
+    }
+  }
+  
+  /// Smart eviction for medium load mode (non-blocking)
+  void _smartEviction() {
+    if (_memoryCache.isEmpty) return;
+    
+    // Remove expired entries first
+    final expiredKeys = <String>[];
+    for (final entry in _memoryCache.entries) {
+      if (entry.value.isExpired) {
+        expiredKeys.add(entry.key);
+      }
+    }
+    
+    for (final key in expiredKeys) {
+      final removedEntry = _memoryCache.remove(key);
+      if (removedEntry != null) {
+        _currentMemorySize -= removedEntry.size;
+      }
+    }
+    
+    // If still over limit, remove oldest entries
+    if (_currentMemorySize > maxMemoryCacheSize) {
+      final sortedEntries = _memoryCache.entries.toList()
+        ..sort((a, b) => a.value.timestamp.compareTo(b.value.timestamp));
+      
+      final toRemove = (sortedEntries.length * 0.2).round(); // Remove 20%
+      for (int i = 0; i < toRemove && i < sortedEntries.length; i++) {
+        final key = sortedEntries[i].key;
+        final removedEntry = _memoryCache.remove(key);
+        if (removedEntry != null) {
+          _currentMemorySize -= removedEntry.size;
+        }
+      }
+    }
+    
+    if (kDebugMode) {
+      print('🧹 Cache: Smart eviction completed (${_memoryCache.length} entries, ${(_currentMemorySize / 1024 / 1024).toStringAsFixed(1)}MB)');
+    }
   }
 
   /// Evict oldest entry from memory cache

@@ -94,12 +94,12 @@
             line-height: 1.2;
         }
 
-        .attendance-controls {
+        .controls-section {
             display: flex;
-            gap: 1rem;
+            align-items: center;
+            gap: 2rem;
             margin-bottom: 2rem;
             flex-wrap: wrap;
-            align-items: center;
         }
 
         .date-picker {
@@ -108,11 +108,36 @@
             gap: 0.5rem;
         }
 
+        .date-picker label {
+            font-weight: 500;
+            color: #374151;
+        }
+
         .date-picker input {
             padding: 0.5rem;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            font-size: 1rem;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+
+        .class-number-picker {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .class-number-picker label {
+            font-weight: 500;
+            color: #374151;
+        }
+
+        .class-number-picker select {
+            padding: 0.5rem;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            background: white;
+            cursor: pointer;
         }
 
         .bulk-actions {
@@ -535,24 +560,29 @@
     <div class="container">
 
         <!-- Attendance Controls -->
-        <div class="attendance-controls">
+        <div class="controls-section">
             <div class="date-picker">
-                <label for="attendanceDate">📅 Date:</label>
+                <label for="attendanceDate">📅 Select Date:</label>
                 <input type="date" id="attendanceDate" onchange="loadAttendanceData()">
             </div>
-
+            
+            <div class="class-number-picker">
+                <label for="classNumber">🕐 Class Number:</label>
+                <select id="classNumber" onchange="loadAttendanceData()">
+                    <option value="1">Class 1</option>
+                    <option value="2">Class 2</option>
+                    <option value="3">Class 3</option>
+                    <option value="4">Class 4</option>
+                    <option value="5">Class 5</option>
+                </select>
+            </div>
+            
             <div class="bulk-actions">
-                <button class="btn btn-info" onclick="openStudentManagement()">
-                    👥 Manage Students
+                <button onclick="markAllPresent()" class="btn btn-success">
+                    ✅ Mark All Present
                 </button>
-                <button class="btn btn-success" onclick="markAllPresent()">
-                    ✓ Mark All Present
-                </button>
-                <button class="btn btn-secondary" onclick="markAllAbsent()">
-                    ✗ Mark All Absent
-                </button>
-                <button class="btn btn-info" onclick="viewAnalytics()">
-                    📊 View Analytics
+                <button onclick="markAllAbsent()" class="btn btn-danger">
+                    ❌ Mark All Absent
                 </button>
             </div>
         </div>
@@ -614,7 +644,10 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-    <script src="supabaseClient.js?v=1.2"></script>
+  <script src="supabaseClient.js?v=1.2"></script>
+  <script src="authManager.js?v=1.0"></script>
+  <script src="connectionMonitor.js?v=1.0"></script>
+    <script src="admin_cache.js"></script>
     <script src="login.js"></script>
     <script src="supabaseAdmin.js"></script>
     <script src="attendance_tracker.js?v=2.1"></script>

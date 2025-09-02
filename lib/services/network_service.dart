@@ -17,6 +17,17 @@ class NetworkService {
       return false;
     }
   }
+
+  /// Check if Supabase endpoints are reachable
+  Future<bool> isSupabaseReachable() async {
+    try {
+      // Try to resolve the Supabase hostname
+      final result = await InternetAddress.lookup('vpjzxhfrqyspcbgmwqjd.supabase.co');
+      return result.isNotEmpty && result[0].rawAddress.isNotEmpty;
+    } catch (_) {
+      return false;
+    }
+  }
 }
 
 /// Mixin for network-aware widgets

@@ -18,6 +18,7 @@ function initializeSupabaseAdmin() {
       }
     }
   } catch (error) {
+    // Silent error handling
   }
 }
 

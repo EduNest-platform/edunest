@@ -4,12 +4,15 @@ import 'package:url_launcher/url_launcher.dart';
 import 'dart:io';
 import '../../theme/app_theme.dart';
 import '../../services/error_message_service.dart';
+import '../../services/ad_service.dart';
 import 'package:flutter/foundation.dart';
 import '../../widgets/desktop_sidebar.dart';
 import '../../widgets/whats_new_dialog.dart';
 
 class AboutScreen extends StatelessWidget {
   const AboutScreen({super.key});
+  
+  static const String currentVersion = '1.1.0';
 
   Future<void> _launchURL(BuildContext context, String url) async {
     try {
@@ -60,10 +63,12 @@ class AboutScreen extends StatelessWidget {
         }
       }
     } catch (e) {
-      final message = ErrorMessageService.getFriendlyMessage(e);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message), backgroundColor: Colors.red),
-      );
+      if (context.mounted) {
+        final message = ErrorMessageService.getFriendlyMessage(e);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message), backgroundColor: Colors.red),
+        );
+      }
     }
   }
 
@@ -149,6 +154,135 @@ class AboutScreen extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildSupportMissionCard(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.red.shade50,
+            Colors.pink.shade50,
+          ],
+        ),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: Colors.red.shade200,
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.red.withValues(alpha: 0.1),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Colors.red, Colors.pink],
+                  ),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.favorite_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Support EduNest',
+                style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Help us keep EduNest free!\nEvery view helps cover server costs.',
+            style: GoogleFonts.poppins(
+              fontSize: 16,
+              color: Colors.grey.shade700,
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.blue[50],
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.blue[200]!),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, color: Colors.blue[700], size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Helps cover server costs! 💙',
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      color: Colors.black87,
+                      height: 1.3,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          Center(
+            child: Platform.isAndroid || Platform.isIOS
+                ? ElevatedButton.icon(
+                    onPressed: () => AdService.showSupportMissionDialog(context),
+                    icon: const Icon(Icons.play_circle_outline),
+                    label: const Text('Watch ad'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 2,
+                    ),
+                  )
+                : ElevatedButton.icon(
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Ads are only available on mobile devices'),
+                          backgroundColor: Colors.orange,
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.desktop_windows),
+                    label: const Text('Desktop Version'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.grey,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 2,
+                    ),
+                  ),
+          ),
+        ],
       ),
     );
   }
@@ -714,6 +848,10 @@ collaborative learning tools.''',
                           ),
                           const SizedBox(height: 40),
 
+                          // Support Mission Card
+                          _buildSupportMissionCard(context),
+                          const SizedBox(height: 40),
+
                           // Footer
                           Container(
                             padding: const EdgeInsets.all(24),
@@ -1127,6 +1265,10 @@ materials, attendance tracking, and collaborative learning tools.''',
                       ],
                     ),
                   ),
+                  const SizedBox(height: 40),
+
+                  // Support Mission Card
+                  _buildSupportMissionCard(context),
                   const SizedBox(height: 40),
 
                   // Footer

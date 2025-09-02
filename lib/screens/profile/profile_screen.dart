@@ -5,6 +5,7 @@ import '../../services/auth_service.dart';
 import '../../services/user_profile_service.dart';
 import '../../models/user_profile.dart';
 import '../auth/change_password_screen.dart';
+import '../auth/profile_setup_screen.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -12,6 +13,7 @@ import '../../widgets/app_text.dart';
 import 'personal_info_screen.dart';
 import '../../services/error_message_service.dart';
 import '../../widgets/desktop_sidebar.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -39,15 +41,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _isLoading = false;
       });
     } catch (e) {
-      final message = ErrorMessageService.getFriendlyMessage(e);
       if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        final message = ErrorMessageService.getFriendlyMessage(e);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(message), backgroundColor: Colors.red),
         );
       }
-      setState(() {
-        _isLoading = false;
-      });
     }
   }
 
@@ -128,16 +130,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
         }
       }
     } catch (e) {
-      final message = ErrorMessageService.getFriendlyMessage(e);
-      if (context.mounted) {
+      if (mounted) {
+        final message = ErrorMessageService.getFriendlyMessage(e);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(message), backgroundColor: Colors.red),
         );
       }
     } finally {
-      setState(() {
-        _isUploadingImage = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isUploadingImage = false;
+        });
+      }
     }
   }
 
@@ -207,7 +211,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
             width: double.infinity,
             child: OutlinedButton.icon(
               onPressed: () {
-                Navigator.pushReplacementNamed(context, '/profile-setup');
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ProfileSetupScreen(isEditingExisting: true),
+                  ),
+                );
               },
               icon: const Icon(Icons.edit_rounded),
               label: Text(
@@ -600,29 +609,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
         if (success) {
           // Show success message and navigate to login
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Account and all data deleted successfully'),
-              backgroundColor: Colors.green,
-            ),
-          );
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Account and all data deleted successfully'),
+                backgroundColor: Colors.green,
+              ),
+            );
 
-          // Navigate to login screen
-          Navigator.pushReplacementNamed(context, '/login');
+            // Navigate to login screen
+            Navigator.pushReplacementNamed(context, '/login');
+          }
         } else {
           // Show error message
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Failed to delete account. Please try again.'),
-              backgroundColor: Colors.red,
-            ),
-          );
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Failed to delete account. Please try again.'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
         }
       }
     } catch (e) {
-      final message = ErrorMessageService.getFriendlyMessage(e);
-      if (context.mounted) {
+      if (mounted) {
         Navigator.of(context).pop(); // Close loading dialog
+        final message = ErrorMessageService.getFriendlyMessage(e);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(message), backgroundColor: Colors.red),
         );

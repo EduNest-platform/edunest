@@ -31,8 +31,8 @@ class _NotesScreenState extends State<NotesScreen>
   String _searchQuery = '';
   String _sortBy = 'Date';
   bool _isLoading = false;
-  List<FileResource> _allNotes = [];
-  List<FileResource> _notes = [];
+  List<FileResource> _allNotes = <FileResource>[];
+  List<FileResource> _notes = <FileResource>[];
 
   // Animation controllers
   late AnimationController _fadeController;

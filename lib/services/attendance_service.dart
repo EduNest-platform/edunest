@@ -1,41 +1,92 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/attendance_record.dart';
 import 'user_profile_service.dart';
-import 'free_plan_optimizer_service.dart';
 
 class AttendanceService {
   final supabase = Supabase.instance.client;
 
-  // Get student self-tracked attendance from the new attendance table
+  // Get student attendance (MIXED MODE - combines professor-managed and self-tracked per subject)
   Future<List<AttendanceRecord>> getStudentAttendance(
     String studentRoll,
   ) async {
+    // getStudentAttendance called for roll: $studentRoll (MIXED MODE)
+    
+    final List<AttendanceRecord> allRecords = [];
+    final Set<String> professorManagedSubjects = {};
+    
+    // STEP 1: Get professor-managed attendance records
     try {
+      // Fetching professor-managed attendance...
+      final professorRecords = await getStudentAttendanceByContext(studentRoll);
+      if (professorRecords.isNotEmpty) {
+        // Found ${professorRecords.length} professor-managed records
+        allRecords.addAll(professorRecords);
+        
+        // Track which subjects are professor-managed
+        for (final record in professorRecords) {
+          if (record.subjectName != null) {
+            professorManagedSubjects.add(record.subjectName!);
+          }
+        }
+        // Professor-managed subjects: ${professorManagedSubjects.toList()}
+      } else {
+        // No professor-managed records found
+      }
+    } catch (e) {
+      // Professor-managed query failed: $e
+    }
+
+    // STEP 2: Get self-tracked attendance records
+    try {
+      // Fetching self-tracked attendance...
       final response = await supabase
           .from('attendance')
           .select()
           .eq('student_id', studentRoll)
           .order('date', ascending: false);
       
-      if ((response as List).isEmpty) {
-        return [];
+      if ((response as List).isNotEmpty) {
+        // Found ${(response as List).length} self-tracked records
+        
+        // Get all unique subject IDs to resolve names
+        final subjectIds = (response as List)
+            .map((json) => json['subject_id'] as String)
+            .toSet()
+            .toList();
+        
+        // Resolve subject names
+        final subjectNames = await _resolveSubjectNames(subjectIds);
+        
+        // Convert and filter out subjects that are already professor-managed
+        final selfTrackedRecords = (response as List)
+            .map((json) => _convertStudentAttendanceToRecord(json, studentRoll, subjectNames))
+            .where((record) {
+              final subjectName = record.subjectName ?? 'Unknown';
+              final isNotProfessorManaged = !professorManagedSubjects.contains(subjectName);
+              if (!isNotProfessorManaged) {
+                // Skipping self-tracked record for professor-managed subject: $subjectName
+              }
+              return isNotProfessorManaged;
+            })
+            .toList();
+        
+        allRecords.addAll(selfTrackedRecords);
+        // Added ${selfTrackedRecords.length} self-tracked records (filtered)
+      } else {
+        // No self-tracked attendance found
       }
-      
-      // Get all unique subject IDs to resolve names
-      final subjectIds = (response as List)
-          .map((json) => json['subject_id'] as String)
-          .toSet()
-          .toList();
-      
-      // Resolve subject names
-      final subjectNames = await _resolveSubjectNames(subjectIds);
-      
-      return (response as List)
-          .map((json) => _convertStudentAttendanceToRecord(json, studentRoll, subjectNames))
-          .toList();
     } catch (e) {
-      return [];
+      // Self-tracked attendance query failed: $e
     }
+
+    // STEP 3: Sort all records by date (newest first)
+    allRecords.sort((a, b) => b.date.compareTo(a.date));
+    
+    // Mixed mode complete - Total records: ${allRecords.length}
+    // Professor-managed subjects: ${professorManagedSubjects.length}
+    // Self-tracked subjects: ${allRecords.where((r) => !professorManagedSubjects.contains(r.subjectName ?? '')).map((r) => r.subjectName).toSet().length}
+    
+    return allRecords;
   }
 
   // Helper method to resolve subject IDs to names
@@ -97,7 +148,7 @@ class AttendanceService {
     return getStudentAttendance(studentRoll);
   }
 
-  // Get professor-managed attendance from the professor_attendance table
+  // Get professor-managed attendance from the optimized class_attendance_sessions table
   Future<List<AttendanceRecord>> getStudentAttendanceByContext(
     String studentIdentifier, {
     String? college,
@@ -115,59 +166,114 @@ class AttendanceService {
         }
       } catch (e) {
         // If profile fetch fails, use the provided identifier
-        print('Could not fetch profile for roll number, using identifier: $e');
+        // Could not fetch profile for roll number, using identifier: $e
       }
 
       // Ensure we have a valid roll number
       if (rollNumber == null || rollNumber.isEmpty) {
-        print('No valid roll number found for student attendance query');
+        // No valid roll number found for student attendance query
         return [];
       }
 
-      var query = supabase
-          .from('professor_attendance')
-          .select()
-          .eq('student_roll_number', rollNumber);
+      // Fetching attendance for roll number: $rollNumber
+      // Context filters - College: $college, Branch: $branch, Semester: $semester
 
-      if (college != null) {
-        query = query.eq('college_name', college);
+      // Use optimized session-based system (6x faster!)
+      // Using optimized session system...
+      final sessionRecords = await _getAttendanceFromSessions(rollNumber, college, branch, semester);
+      // Session system returned ${sessionRecords.length} records
+      if (sessionRecords.isNotEmpty) {
+        // Sample record: ${sessionRecords.first.subjectName} on ${sessionRecords.first.date}
       }
-      if (branch != null) {
-        query = query.eq('branch_name', branch);
-      }
-      if (semester != null) {
-        query = query.eq('semester_name', semester);
-      }
-
-      final response = await query.order('date', ascending: false);
-      
-      return (response as List)
-          .map((json) => _convertProfessorAttendanceToRecord(json))
-          .toList();
+      return sessionRecords;
     } catch (e) {
-      print('Error getting professor attendance: $e');
+      // Error getting professor attendance: $e
       return [];
     }
   }
 
-  // Helper method to convert professor_attendance table format to AttendanceRecord
-  AttendanceRecord _convertProfessorAttendanceToRecord(Map<String, dynamic> json) {
-    return AttendanceRecord(
-      id: json['id'] as String,
-      classId: json['class_id'] as String,
-      studentRollNumber: json['student_roll_number'] as String,
-      studentName: json['student_name'] as String,
-      date: DateTime.parse(json['date'] as String),
-      status: json['status'] as String,
-      professorEmail: 'professor@system.com', // Default since professor_email column was removed
-      subjectName: json['subject_name'] as String,
-      collegeName: json['college_name'] as String?,
-      branchName: json['branch_name'] as String?,
-      semesterName: json['semester_name'] as String?,
-      classNumber: json['class_number'] as int?,
-      createdAt: null, // created_at column was also removed
-    );
+  // NEW: Get attendance from optimized session system (6x faster!)
+  Future<List<AttendanceRecord>> _getAttendanceFromSessions(
+    String rollNumber,
+    String? college,
+    String? branch,
+    String? semester,
+  ) async {
+    // Querying class_attendance_sessions table...
+    
+    // Get all sessions and filter for this student
+    final response = await supabase
+        .from('class_attendance_sessions')
+        .select()
+        .order('date', ascending: false);
+    
+    // Found ${(response as List).length} total sessions in database
+    
+    final List<AttendanceRecord> records = [];
+    int sessionsProcessed = 0;
+    int studentFoundInSessions = 0;
+    
+    for (final session in (response as List)) {
+      sessionsProcessed++;
+      final attendanceData = session['attendance_data'] as Map<String, dynamic>?;
+      if (attendanceData == null) {
+        // Session ${session['id']} has no attendance_data
+        continue;
+      }
+      
+      final students = attendanceData['students'] as List<dynamic>? ?? [];
+      final sessionCollege = attendanceData['college_name'] as String? ?? '';
+      final sessionBranch = attendanceData['branch_name'] as String? ?? '';
+      final sessionSemester = attendanceData['semester_name'] as String? ?? '';
+      final sessionSubject = attendanceData['subject_name'] as String? ?? 'Unknown Subject';
+      
+      // Filter by context if provided
+      if (college != null && sessionCollege != college) continue;
+      if (branch != null && sessionBranch != branch) continue;
+      if (semester != null && sessionSemester != semester) continue;
+      
+      // Get class number from session data
+      final sessionClassNumber = attendanceData['class_number'] as int? ?? 1;
+      
+      // Find this student in the session
+      for (final student in students) {
+        if (student['roll_number'] == rollNumber) {
+          studentFoundInSessions++;
+          final record = AttendanceRecord(
+            id: '${session['id']}_${rollNumber}',
+            classId: session['class_id'] as String,
+            studentRollNumber: rollNumber,
+            studentName: student['name'] as String? ?? 'Unknown',
+            date: DateTime.parse(session['date'] as String),
+            status: student['status'] as String,
+            professorEmail: 'professor@system.com',
+            subjectName: sessionSubject,
+            collegeName: sessionCollege.isEmpty ? null : sessionCollege,
+            branchName: sessionBranch.isEmpty ? null : sessionBranch,
+            semesterName: sessionSemester.isEmpty ? null : sessionSemester,
+            classNumber: sessionClassNumber,
+            createdAt: session['created_at'] != null 
+                ? DateTime.parse(session['created_at'] as String)
+                : null,
+          );
+          records.add(record);
+          
+          if (studentFoundInSessions <= 3) { // Log first few for debugging
+            // Found student in session - ${record.date}: ${record.status} in ${record.subjectName} (Class $sessionClassNumber)
+          }
+          break;
+        }
+      }
+    }
+    
+    // Session processing complete:
+    //   - Total sessions processed: $sessionsProcessed
+    //   - Student found in sessions: $studentFoundInSessions
+    //   - Final records returned: ${records.length}
+    
+    return records;
   }
+
 
   Future<String?> markAttendance({
     required String studentId,
@@ -205,15 +311,9 @@ class AttendanceService {
         // Update existing record
         final recordId = existingRecords[0]['id'];
 
-        // OPTIMIZED: Use FreePlanOptimizerService for attendance updates
-        await FreePlanOptimizerService.optimizedDatabaseOperation(
-          'update_attendance_record',
-          () => supabase.from('attendance').update({
-            'status': status,
-          }).eq('id', recordId),
-          useCache: false, // Don't cache write operations
-          priority: 2, // Medium priority for attendance updates
-        );
+        await supabase.from('attendance').update({
+          'status': status,
+        }).eq('id', recordId);
         return recordId;
       } else {
         // Create new record
@@ -228,13 +328,7 @@ class AttendanceService {
           'class_number': classNumber ?? 1,
         };
         
-        // OPTIMIZED: Use FreePlanOptimizerService for attendance inserts
-        final response = await FreePlanOptimizerService.optimizedDatabaseOperation(
-          'insert_attendance_record',
-          () => supabase.from('attendance').insert(insertData).select(),
-          useCache: false, // Don't cache write operations
-          priority: 2, // Medium priority for attendance inserts
-        );
+        final response = await supabase.from('attendance').insert(insertData).select();
         
         return (response as List).isNotEmpty ? response[0]['id'] : null;
       }

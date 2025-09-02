@@ -379,7 +379,7 @@ class FileItemWidget extends StatelessWidget {
       width: 48,
       height: 48,
       decoration: BoxDecoration(
-        color: _getFileTypeColor().withOpacity(0.2),
+        color: _getFileTypeColor().withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Icon(

@@ -2,6 +2,8 @@
 let currentClass = null;
 let currentStudents = [];
 let classId = null;
+let duplicateStudents = [];
+let rollNumberHistory = new Map(); // Track roll number changes
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', async function() {
@@ -160,7 +162,16 @@ async function loadStudents() {
     }));
     
     currentStudents = studentsWithProfiles;
+    
+    // Detect and handle duplicates
+    await detectDuplicateStudents();
+    
     renderStudentsTable();
+    
+    // Show duplicate warning if found
+    if (duplicateStudents.length > 0) {
+      showDuplicateWarning();
+    }
     
     hideLoading();
   } catch (error) {
@@ -223,6 +234,13 @@ function renderStudentsTable() {
                         style="font-size: 0.8rem; padding: 0.4rem 0.8rem; min-width: 80px;">
                   ${student.student_profile_id ? 'Unlink' : 'Link'}
                 </button>
+                ${student.student_profile_id ? `
+                <button class="action-btn primary" 
+                        onclick="replaceStudentAccount('${student.id}')"
+                        style="font-size: 0.8rem; padding: 0.4rem 0.8rem; min-width: 80px;"
+                        title="Replace with correct account">
+                  Replace
+                </button>` : ''}
                 <button class="action-btn secondary" 
                         onclick="editStudent('${student.id}')"
                         style="font-size: 0.8rem; padding: 0.4rem 0.8rem; min-width: 80px;">
@@ -371,14 +389,14 @@ async function linkStudent(studentId) {
       return;
     }
     
-    // Update class_rosters with the profile ID
+    // Update class_rosters with the profile ID (preserve existing name, only update email if not set)
     const { error: updateError } = await window.supabaseClient
       .from('class_rosters')
       .update({ 
         student_profile_id: profileData.id,
         is_verified: true,
-        student_name: profileData.full_name || student.student_name,
-        student_email: profileData.email || student.student_email
+        // Only update email if it's not already set in class roster
+        student_email: student.student_email || profileData.email
       })
       .eq('id', studentId);
     
@@ -439,90 +457,43 @@ async function editStudent(studentId) {
   const student = currentStudents.find(s => s.id === studentId);
   if (!student) return;
   
-  // Pre-fill form with current data
-  document.getElementById('rollNumber').value = student.roll_number || '';
-  document.getElementById('studentName').value = student.student_name || '';
-  document.getElementById('studentEmail').value = student.student_email || '';
+  // Use prompt for inline editing like in admin panel
+  const newName = prompt(`Edit student name for ${student.student_name} (Roll: ${student.roll_number}):`, student.student_name);
   
-  // Show form
-  document.getElementById('addStudentForm').classList.add('show');
+  if (newName === null || newName.trim() === '') {
+    return; // User cancelled or entered empty name
+  }
   
-  // Change form title and submit handler
-  const formTitle = document.querySelector('#addStudentForm h4');
-  formTitle.textContent = 'Edit Student Information';
-  
-  const form = document.querySelector('#addStudentForm form');
-  form.onsubmit = async (event) => {
-    event.preventDefault();
-    await updateStudent(studentId);
-  };
-  
-  // Change button text
-  const submitBtn = document.querySelector('#addStudentForm button[type="submit"]');
-  submitBtn.textContent = 'Update Student';
-}
-
-// Update student information
-async function updateStudent(studentId) {
-  const rollNumber = document.getElementById('rollNumber').value.trim();
-  const studentName = document.getElementById('studentName').value.trim();
-  const studentEmail = document.getElementById('studentEmail').value.trim();
-  
-  if (!rollNumber || !studentName) {
-    showMessage('Roll number and student name are required.', true);
+  if (newName.trim() === student.student_name) {
+    showMessage('No changes made.', false);
     return;
   }
   
   try {
-    showLoading('Updating student...');
+    showLoading('Updating student name...');
     
-    // Check if roll number conflicts with another student
-    const { data: existingStudent, error: checkError } = await window.supabaseClient
+    // Update student name in database
+    const { error } = await window.supabaseClient
       .from('class_rosters')
-      .select('id')
-      .eq('class_id', classId)
-      .eq('roll_number', rollNumber)
-      .neq('id', studentId)
-      .single();
-    
-    if (checkError && checkError.code !== 'PGRST116') {
-      throw checkError;
-    }
-    
-    if (existingStudent) {
-      showMessage('Another student with this roll number already exists in the class.', true);
-      hideLoading();
-      return;
-    }
-    
-    // Update student information
-    const { error: updateError } = await window.supabaseClient
-      .from('class_rosters')
-      .update({
-        roll_number: rollNumber,
-        student_name: studentName,
-        student_email: studentEmail || null
-      })
+      .update({ student_name: newName.trim() })
       .eq('id', studentId);
     
-    if (updateError) throw updateError;
+    if (error) throw error;
     
-    showMessage(`Student ${studentName} (${rollNumber}) updated successfully!`, false);
+    showMessage(`Student name updated successfully from "${student.student_name}" to "${newName.trim()}"`, false);
     
-    // Refresh the view
+    // Refresh the students list
     await loadStudents();
     await loadStatistics();
     
-    // Reset form
-    resetAddStudentForm();
-    
     hideLoading();
   } catch (error) {
-    console.error('Error updating student:', error);
-    showMessage('Error updating student: ' + error.message, true);
+    console.error('Error updating student name:', error);
+    showMessage('Error updating student name: ' + error.message, true);
     hideLoading();
   }
 }
+
 
 // Remove student from class roster
 async function removeStudent(studentId) {
@@ -1823,16 +1794,890 @@ function hideLoading() {
 }
 
 function showMessage(message, isError = false) {
-  const messageDisplay = document.getElementById('messageDisplay');
-  if (!messageDisplay) return;
+  const messageDiv = document.getElementById('messageDisplay');
+  if (!messageDiv) return;
   
-  messageDisplay.textContent = message;
-  messageDisplay.className = `message ${isError ? 'error' : 'success'}`;
+  messageDiv.textContent = message;
+  messageDiv.style.color = isError ? '#dc2626' : '#22c55e';
+  messageDiv.style.backgroundColor = isError ? '#fee2e2' : '#dcfce7';
+  messageDiv.style.borderColor = isError ? '#fecaca' : '#bbf7d0';
+  messageDiv.classList.remove('hidden');
   
-  // Auto-hide after 5 seconds
   setTimeout(() => {
-    messageDisplay.className = 'message';
+    messageDiv.classList.add('hidden');
   }, 5000);
+}
+
+// Detect duplicate students
+async function detectDuplicateStudents() {
+  duplicateStudents = [];
+  const rollNumberGroups = {};
+  const nameGroups = {};
+  const emailGroups = {};
+  
+  // Group students by roll number, name, and email
+  currentStudents.forEach(student => {
+    // Group by roll number
+    if (!rollNumberGroups[student.roll_number]) {
+      rollNumberGroups[student.roll_number] = [];
+    }
+    rollNumberGroups[student.roll_number].push(student);
+    
+    // Group by name (case insensitive)
+    const normalizedName = student.student_name.toLowerCase().trim();
+    if (!nameGroups[normalizedName]) {
+      nameGroups[normalizedName] = [];
+    }
+    nameGroups[normalizedName].push(student);
+    
+    // Group by email if exists
+    if (student.student_email) {
+      const normalizedEmail = student.student_email.toLowerCase().trim();
+      if (!emailGroups[normalizedEmail]) {
+        emailGroups[normalizedEmail] = [];
+      }
+      emailGroups[normalizedEmail].push(student);
+    }
+  });
+  
+  // Find duplicates
+  Object.values(rollNumberGroups).forEach(group => {
+    if (group.length > 1) {
+      duplicateStudents.push(...group.map(s => ({ ...s, duplicateType: 'roll_number' })));
+    }
+  });
+  
+  Object.values(nameGroups).forEach(group => {
+    if (group.length > 1) {
+      group.forEach(student => {
+        if (!duplicateStudents.find(d => d.id === student.id)) {
+          duplicateStudents.push({ ...student, duplicateType: 'name' });
+        }
+      });
+    }
+  });
+  
+  Object.values(emailGroups).forEach(group => {
+    if (group.length > 1) {
+      group.forEach(student => {
+        if (!duplicateStudents.find(d => d.id === student.id)) {
+          duplicateStudents.push({ ...student, duplicateType: 'email' });
+        }
+      });
+    }
+  });
+  
+  console.log('Duplicate students detected:', duplicateStudents.length);
+}
+
+// Show duplicate warning
+function showDuplicateWarning() {
+  const warningHtml = `
+    <div style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 1rem; margin: 1rem 0;">
+      <h3 style="color: #92400e; margin: 0 0 0.5rem 0;">⚠️ Duplicate Students Detected</h3>
+      <p style="color: #92400e; margin: 0 0 1rem 0;">
+        Found ${duplicateStudents.length} students with duplicate information. This may cause login issues.
+      </p>
+      <button class="action-btn primary" onclick="showDuplicateManager()" style="margin-right: 0.5rem;">
+        🔧 Manage Duplicates
+      </button>
+      <button class="action-btn secondary" onclick="hideDuplicateWarning()">
+        ✕ Dismiss
+      </button>
+    </div>
+  `;
+  
+  const container = document.querySelector('.content-wrapper');
+  const existingWarning = container.querySelector('.duplicate-warning');
+  if (existingWarning) {
+    existingWarning.remove();
+  }
+  
+  const warningDiv = document.createElement('div');
+  warningDiv.className = 'duplicate-warning';
+  warningDiv.innerHTML = warningHtml;
+  container.insertBefore(warningDiv, container.firstChild);
+}
+
+// Hide duplicate warning
+function hideDuplicateWarning() {
+  const warning = document.querySelector('.duplicate-warning');
+  if (warning) {
+    warning.remove();
+  }
+}
+
+// Group duplicates by roll number
+function groupDuplicatesByRollNumber() {
+  const groups = {};
+  duplicateStudents.forEach(student => {
+    if (!groups[student.roll_number]) {
+      groups[student.roll_number] = [];
+    }
+    groups[student.roll_number].push(student);
+  });
+  return groups;
+}
+
+// Show duplicate manager modal
+function showDuplicateManager() {
+  const duplicateGroups = groupDuplicatesByRollNumber();
+  
+  let modalHtml = `
+    <div class="modal-overlay" id="duplicateModal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center;">
+      <div class="modal-container" style="background: white; border-radius: 12px; max-width: 1200px; width: 90%; max-height: 80vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+        <div class="modal-header" style="padding: 1.5rem; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+          <h2 style="margin: 0; color: #1f2937;">🔧 Duplicate Student Manager</h2>
+          <button class="modal-close" onclick="closeDuplicateManager()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #6b7280;">✕</button>
+        </div>
+        <div class="modal-content" style="padding: 1.5rem;">
+          <div class="preview-stats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+            <div class="stat-item" style="background: #f8fafc; padding: 1rem; border-radius: 8px; text-align: center;">
+              <span class="stat-label" style="display: block; font-size: 0.9rem; color: #64748b; margin-bottom: 0.5rem;">Duplicate Groups:</span>
+              <span class="stat-value" style="font-size: 1.5rem; font-weight: 700; color: #1f2937;">${Object.keys(duplicateGroups).length}</span>
+            </div>
+            <div class="stat-item" style="background: #f8fafc; padding: 1rem; border-radius: 8px; text-align: center;">
+              <span class="stat-label" style="display: block; font-size: 0.9rem; color: #64748b; margin-bottom: 0.5rem;">Affected Students:</span>
+              <span class="stat-value" style="font-size: 1.5rem; font-weight: 700; color: #1f2937;">${duplicateStudents.length}</span>
+            </div>
+          </div>
+          
+          <div class="preview-table-container" style="overflow-x: auto;">
+            <table class="preview-table" style="width: 100%; border-collapse: collapse; border: 1px solid #e2e8f0;">
+              <thead>
+                <tr style="background: #f8fafc;">
+                  <th style="padding: 0.75rem; text-align: left; border-bottom: 1px solid #e2e8f0; font-weight: 600;">Roll Number</th>
+                  <th style="padding: 0.75rem; text-align: left; border-bottom: 1px solid #e2e8f0; font-weight: 600;">Student Name</th>
+                  <th style="padding: 0.75rem; text-align: left; border-bottom: 1px solid #e2e8f0; font-weight: 600;">Email</th>
+                  <th style="padding: 0.75rem; text-align: left; border-bottom: 1px solid #e2e8f0; font-weight: 600;">Profile Status</th>
+                  <th style="padding: 0.75rem; text-align: left; border-bottom: 1px solid #e2e8f0; font-weight: 600;">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+  `;
+  
+  Object.entries(duplicateGroups).forEach(([rollNumber, group]) => {
+    group.forEach((student, index) => {
+      const isFirst = index === 0;
+      const rowStyle = isFirst ? 'background: #fef3c7;' : '';
+      
+      modalHtml += `
+        <tr style="${rowStyle}">
+          <td style="padding: 0.75rem; border-bottom: 1px solid #e2e8f0;"><strong>${student.roll_number}</strong></td>
+          <td style="padding: 0.75rem; border-bottom: 1px solid #e2e8f0;">${student.student_name}</td>
+          <td style="padding: 0.75rem; border-bottom: 1px solid #e2e8f0;">${student.student_email || 'Not provided'}</td>
+          <td style="padding: 0.75rem; border-bottom: 1px solid #e2e8f0;">
+            <span style="padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem; font-weight: 500; ${student.student_profile_id ? 'background: #dcfce7; color: #166534;' : 'background: #fef3c7; color: #92400e;'}">
+              ${student.student_profile_id ? '✓ Linked' : '⚠ Unlinked'}
+            </span>
+          </td>
+          <td style="padding: 0.75rem; border-bottom: 1px solid #e2e8f0;">
+            <button onclick="editDuplicateStudent('${student.id}')" style="background: #3b82f6; color: white; border: none; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem; margin-right: 0.5rem; cursor: pointer;">
+              ✏️ Edit
+            </button>
+            ${student.student_profile_id ? `
+            <button onclick="replaceStudentAccount('${student.id}')" style="background: #10b981; color: white; border: none; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem; margin-right: 0.5rem; cursor: pointer;" title="Replace with correct account">
+              🔄 Replace
+            </button>` : ''}
+            <button onclick="deleteDuplicateStudent('${student.id}')" style="background: #dc2626; color: white; border: none; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem; cursor: pointer;">
+              🗑️ Delete
+            </button>
+          </td>
+        </tr>
+      `;
+    });
+  });
+  
+  modalHtml += `
+              </tbody>
+            </table>
+          </div>
+          
+          <div class="modal-actions" style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #e2e8f0;">
+            <button onclick="closeDuplicateManager()" style="background: #6b7280; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 6px; cursor: pointer;">
+              Cancel
+            </button>
+            <button onclick="autoResolveDuplicates()" style="background: #059669; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 6px; cursor: pointer;">
+              🤖 Auto-Resolve
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+}
+
+// Close duplicate manager
+function closeDuplicateManager() {
+  const modal = document.getElementById('duplicateModal');
+  if (modal) {
+    modal.remove();
+  }
+}
+
+// Edit duplicate student
+function editDuplicateStudent(studentId) {
+  const student = currentStudents.find(s => s.id === studentId);
+  if (!student) return;
+  
+  const newRollNumber = prompt('Enter new roll number:', student.roll_number);
+  if (!newRollNumber || newRollNumber === student.roll_number) return;
+  
+  // Validate roll number format
+  if (!validateRollNumber(newRollNumber)) {
+    alert('Invalid roll number format. Please use formats like: 2021001, 21CSE001, 441/23');
+    return;
+  }
+  
+  // Check if new roll number already exists
+  const existingStudent = currentStudents.find(s => s.roll_number === newRollNumber && s.id !== studentId);
+  if (existingStudent) {
+    alert('A student with this roll number already exists.');
+    return;
+  }
+  
+  updateStudentRollNumber(studentId, newRollNumber);
+}
+
+// Delete duplicate student
+function deleteDuplicateStudent(studentId) {
+  if (!confirm('Are you sure you want to delete this duplicate student entry?')) {
+    return;
+  }
+  
+  removeStudent(studentId);
+}
+
+// Auto-resolve duplicates with smart merging
+async function autoResolveDuplicates() {
+  if (!confirm('Auto-resolve will intelligently merge duplicate entries, keeping the best data from each. Continue?')) {
+    return;
+  }
+  
+  try {
+    showLoading('Auto-resolving duplicates...');
+    
+    const duplicateGroups = groupDuplicatesByRollNumber();
+    let resolvedCount = 0;
+    let mergedCount = 0;
+    
+    for (const [rollNumber, group] of Object.entries(duplicateGroups)) {
+      if (group.length > 1) {
+        // Smart merge: prioritize linked profiles and complete data
+        const mergedStudent = await smartMergeDuplicates(group);
+        
+        if (mergedStudent) {
+          // Remove all duplicates except the merged one
+          const toRemove = group.filter(s => s.id !== mergedStudent.id);
+          
+          for (const student of toRemove) {
+            await removeStudentFromDB(student.id);
+            resolvedCount++;
+          }
+          
+          mergedCount++;
+        }
+      }
+    }
+    
+    showMessage(`Auto-resolved ${resolvedCount} duplicate entries across ${mergedCount} students.`, false);
+    closeDuplicateManager();
+    await loadStudents(); // Refresh the list
+    await loadStatistics();
+    
+    hideLoading();
+    
+  } catch (error) {
+    console.error('Error auto-resolving duplicates:', error);
+    showMessage('Error auto-resolving duplicates: ' + error.message, true);
+    hideLoading();
+  }
+}
+
+// Smart merge duplicates - keeps best data from each duplicate
+async function smartMergeDuplicates(duplicateGroup) {
+  try {
+    // Sort by priority: linked profiles first, then by creation date
+    const sortedGroup = duplicateGroup.sort((a, b) => {
+      // Prioritize students with linked profiles
+      if (a.student_profile_id && !b.student_profile_id) return -1;
+      if (!a.student_profile_id && b.student_profile_id) return 1;
+      
+      // Then by creation date (newer first)
+      return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+    });
+    
+    const primaryStudent = sortedGroup[0];
+    const otherStudents = sortedGroup.slice(1);
+    
+    // Merge data from all duplicates into the primary student
+    const mergedData = {
+      student_name: primaryStudent.student_name,
+      student_email: primaryStudent.student_email,
+      student_profile_id: primaryStudent.student_profile_id,
+      is_verified: primaryStudent.is_verified
+    };
+    
+    // Enhance with data from other duplicates
+    for (const student of otherStudents) {
+      // Use email from other student if primary doesn't have one
+      if (!mergedData.student_email && student.student_email) {
+        mergedData.student_email = student.student_email;
+      }
+      
+      // Use profile link if primary doesn't have one
+      if (!mergedData.student_profile_id && student.student_profile_id) {
+        mergedData.student_profile_id = student.student_profile_id;
+        mergedData.is_verified = student.is_verified;
+      }
+      
+      // Use better name if available (longer, more complete names)
+      if (student.student_name && student.student_name.length > mergedData.student_name.length) {
+        mergedData.student_name = student.student_name;
+      }
+    }
+    
+    // Update the primary student with merged data
+    const { error } = await window.supabaseClient
+      .from('class_rosters')
+      .update(mergedData)
+      .eq('id', primaryStudent.id);
+    
+    if (error) throw error;
+    
+    console.log(`✅ Merged ${duplicateGroup.length} duplicates for roll ${primaryStudent.roll_number}`);
+    return primaryStudent;
+    
+  } catch (error) {
+    console.error('Error merging duplicates:', error);
+    return null;
+  }
+}
+
+// Remove student from database (helper function)
+async function removeStudentFromDB(studentId) {
+  try {
+    const { error } = await window.supabaseClient
+      .from('class_rosters')
+      .delete()
+      .eq('id', studentId);
+    
+    if (error) throw error;
+    
+  } catch (error) {
+    console.error('Error removing student from DB:', error);
+    throw error;
+  }
+}
+
+// Validate roll number format
+function validateRollNumber(rollNumber) {
+  if (!rollNumber || rollNumber.trim() === '') return false;
+  
+  const patterns = [
+    /^\d{4,7}$/, // Simple numeric: 2021001
+    /^\d{2}[A-Z]{2,3}\d{3}$/, // Format like: 21CSE001
+    /^\d{3,4}\/\d{2}$/, // Format like: 441/23
+    /^[A-Z]{2,3}\d{2,4}$/, // Format like: CSE2021
+    /^\d{2}[A-Z]\d{3}$/ // Format like: 21A001
+  ];
+  
+  return patterns.some(pattern => pattern.test(rollNumber.trim()));
+}
+
+// Update student roll number
+async function updateStudentRollNumber(studentId, newRollNumber) {
+  try {
+    showLoading('Updating roll number...');
+    
+    const student = currentStudents.find(s => s.id === studentId);
+    const oldRollNumber = student.roll_number;
+    
+    // Update in database
+    const { error } = await window.supabaseClient
+      .from('class_rosters')
+      .update({ roll_number: newRollNumber })
+      .eq('id', studentId);
+    
+    if (error) throw error;
+    
+    // Track roll number change history
+    if (!rollNumberHistory.has(studentId)) {
+      rollNumberHistory.set(studentId, []);
+    }
+    rollNumberHistory.get(studentId).push({
+      from: oldRollNumber,
+      to: newRollNumber,
+      timestamp: new Date().toISOString(),
+      reason: 'Duplicate resolution'
+    });
+    
+    showMessage(`Roll number updated from ${oldRollNumber} to ${newRollNumber}`, false);
+    
+    // Reload students and re-detect duplicates
+    await loadStudents();
+    await loadStatistics();
+    
+    hideLoading();
+    
+  } catch (error) {
+    console.error('Error updating roll number:', error);
+    showMessage('Error updating roll number: ' + error.message, true);
+    hideLoading();
+  }
+}
+
+// Clean up duplicate profile links - with interactive dialog
+async function cleanupDuplicateProfileLinks() {
+  try {
+    showLoading('Scanning for duplicate profile links...');
+    
+    // Get all students in this class with profile links
+    const { data: linkedStudents, error } = await window.supabaseClient
+      .from('class_rosters')
+      .select('*')
+      .eq('class_id', classId)
+      .not('student_profile_id', 'is', null)
+      .order('created_at');
+    
+    if (error) throw error;
+    
+    // Group by profile_id to find duplicates
+    const profileGroups = {};
+    linkedStudents.forEach(student => {
+      if (!profileGroups[student.student_profile_id]) {
+        profileGroups[student.student_profile_id] = [];
+      }
+      profileGroups[student.student_profile_id].push(student);
+    });
+    
+    // Find profiles linked to multiple roll numbers
+    const duplicateProfiles = Object.entries(profileGroups).filter(([profileId, students]) => students.length > 1);
+    
+    hideLoading();
+    
+    if (duplicateProfiles.length === 0) {
+      showMessage('No duplicate profile links found. All students are properly linked.', false);
+      return;
+    }
+    
+    // Show interactive cleanup dialog
+    await showCleanupDialog(duplicateProfiles);
+    
+  } catch (error) {
+    console.error('Error scanning duplicate profile links:', error);
+    showMessage('Error scanning duplicate links: ' + error.message, true);
+    hideLoading();
+  }
+}
+
+// Show interactive cleanup dialog
+async function showCleanupDialog(duplicateProfiles) {
+  try {
+    // Get profile details for all duplicates
+    const profilesWithDetails = await Promise.all(
+      duplicateProfiles.map(async ([profileId, students]) => {
+        const { data: profile, error } = await window.supabaseClient
+          .from('profiles')
+          .select('student_id, full_name, email, created_at')
+          .eq('id', profileId)
+          .single();
+        
+        return {
+          profileId,
+          students,
+          profile: profile || { student_id: 'Unknown', full_name: 'Unknown', email: 'Unknown' }
+        };
+      })
+    );
+    
+    let modalHtml = `
+      <div class="modal-overlay" id="cleanupModal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 2000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+        <div class="modal-container" style="background: white; border-radius: 16px; max-width: 95vw; width: 1200px; max-height: 90vh; overflow: hidden; box-shadow: 0 25px 50px rgba(0,0,0,0.3);">
+          <div class="modal-header" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 2rem; display: flex; justify-content: space-between; align-items: center;">
+            <h2 style="margin: 0; font-size: 1.75rem; font-weight: 700;">🔧 Fix Duplicate Profile Links</h2>
+            <button class="modal-close" onclick="closeCleanupDialog()" style="background: rgba(255,255,255,0.2); border: none; color: white; width: 2.5rem; height: 2.5rem; border-radius: 50%; font-size: 1.25rem; cursor: pointer;">✕</button>
+          </div>
+          
+          <div class="modal-content" style="padding: 2rem; max-height: calc(90vh - 200px); overflow-y: auto;">
+            <div class="cleanup-summary" style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;">
+              <h3 style="margin: 0 0 1rem 0; color: #92400e;">⚠️ Found ${duplicateProfiles.length} profiles with duplicate links</h3>
+              <p style="margin: 0; color: #92400e; line-height: 1.5;">
+                Each profile should only be linked to one roll number per class. Review each case below and select which entry to keep linked.
+                <br><strong>Tip:</strong> Usually keep the entry that matches the profile's registered roll number.
+              </p>
+            </div>
+            
+            <div class="duplicate-groups">
+    `;
+    
+    profilesWithDetails.forEach((item, groupIndex) => {
+      const { profileId, students, profile } = item;
+      
+      modalHtml += `
+        <div class="duplicate-group" style="background: white; border: 2px solid #e5e7eb; border-radius: 12px; margin-bottom: 2rem; overflow: hidden;" data-profile-id="${profileId}">
+          <div class="group-header" style="background: #f9fafb; padding: 1.5rem; border-bottom: 1px solid #e5e7eb;">
+            <h4 style="margin: 0 0 0.5rem 0; color: #1f2937; font-size: 1.2rem;">${profile.full_name}</h4>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; font-size: 0.9rem; color: #6b7280;">
+              <div><strong>Email:</strong> ${profile.email}</div>
+              <div><strong>Profile Roll:</strong> ${profile.student_id}</div>
+              <div><strong>Linked to ${students.length} entries</strong></div>
+            </div>
+          </div>
+          
+          <div class="group-entries" style="padding: 1rem;">
+            <div style="margin-bottom: 1rem; font-weight: 600; color: #374151;">Select which entry to keep linked (others will be unlinked):</div>
+            
+            ${students.map((student, studentIndex) => {
+              const isProfileMatch = student.roll_number === profile.student_id;
+              const isRecommended = isProfileMatch;
+              
+              return `
+                <div class="entry-option" style="display: flex; align-items: center; padding: 1rem; border: 2px solid ${isRecommended ? '#10b981' : '#e5e7eb'}; border-radius: 8px; margin-bottom: 0.75rem; background: ${isRecommended ? '#f0fdf4' : '#ffffff'};">
+                  <input type="radio" name="keep_${groupIndex}" value="${student.id}" id="keep_${groupIndex}_${studentIndex}" ${isRecommended ? 'checked' : ''} style="margin-right: 1rem; transform: scale(1.2);">
+                  <label for="keep_${groupIndex}_${studentIndex}" style="flex: 1; cursor: pointer;">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; align-items: center;">
+                      <div>
+                        <strong style="color: #1f2937;">Roll: ${student.roll_number}</strong>
+                        ${isProfileMatch ? '<span style="background: #10b981; color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; margin-left: 0.5rem;">MATCHES PROFILE</span>' : ''}
+                      </div>
+                      <div style="color: #6b7280;">Name: ${student.student_name}</div>
+                      <div style="color: #6b7280;">Email: ${student.student_email || 'Not provided'}</div>
+                      <div style="color: #6b7280; font-size: 0.85rem;">Added: ${new Date(student.created_at).toLocaleDateString()}</div>
+                    </div>
+                  </label>
+                  <button onclick="unlinkEntry('${student.id}', ${groupIndex})" style="background: #ef4444; color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; margin-left: 1rem; cursor: pointer; font-size: 0.85rem;">
+                    🗑️ Unlink This
+                  </button>
+                </div>
+              `;
+            }).join('')}
+            
+            <div style="margin-top: 1rem; padding: 0.75rem; background: #fef3c7; border-radius: 6px; font-size: 0.9rem; color: #92400e;">
+              <strong>💡 Recommendation:</strong> Keep the entry that matches the profile's roll number (${profile.student_id}) if available, or the most recently created entry.
+            </div>
+          </div>
+        </div>
+      `;
+    });
+    
+    modalHtml += `
+            </div>
+          </div>
+          
+          <div class="modal-footer" style="background: #f9fafb; border-top: 1px solid #e5e7eb; padding: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
+            <div style="color: #6b7280; font-size: 0.9rem;">
+              <span id="cleanupProgress">Ready to fix ${duplicateProfiles.length} duplicate profiles</span>
+            </div>
+            <div style="display: flex; gap: 1rem;">
+              <button onclick="closeCleanupDialog()" style="background: #6b7280; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 8px; cursor: pointer;">
+                Cancel
+              </button>
+              <button onclick="executeCleanup()" style="background: #10b981; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                🔧 Fix Selected Links
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    document.body.style.overflow = 'hidden';
+    
+  } catch (error) {
+    console.error('Error showing cleanup dialog:', error);
+    showMessage('Error showing cleanup dialog: ' + error.message, true);
+  }
+}
+
+// Close cleanup dialog
+function closeCleanupDialog() {
+  const modal = document.getElementById('cleanupModal');
+  if (modal) {
+    modal.remove();
+  }
+  document.body.style.overflow = '';
+}
+
+// Unlink individual entry from dialog
+async function unlinkEntry(studentId, groupIndex) {
+  const student = currentStudents.find(s => s.id === studentId);
+  if (!student) return;
+  
+  const shouldClear = confirm(
+    `Current entry: ${student.student_name} (Roll: ${student.roll_number})\n\n` +
+    'Choose unlinking method:\n\n' +
+    'OK = Replace with correct student name\n' +
+    'Cancel = Keep current data but unlink profile\n\n' +
+    'Click OK to enter the correct student name for this roll number.'
+  );
+  
+  try {
+    let updateData = {
+      student_profile_id: null,
+      is_verified: false
+    };
+    
+    // If user chose to clear data, prompt for correct student name
+    if (shouldClear) {
+      const correctName = prompt(
+        `Enter the CORRECT student name for roll number ${student.roll_number}:`,
+        ''
+      );
+      
+      if (!correctName || correctName.trim() === '') {
+        showMessage('Operation cancelled - student name is required.', true);
+        return;
+      }
+      
+      updateData.student_name = correctName.trim();
+      updateData.student_email = null; // Clear email so correct student can add theirs
+    }
+    
+    const { error } = await window.supabaseClient
+      .from('class_rosters')
+      .update(updateData)
+      .eq('id', studentId);
+    
+    if (error) throw error;
+    
+    // Remove the entry option from the dialog
+    const entryOption = document.querySelector(`input[value="${studentId}"]`).closest('.entry-option');
+    if (entryOption) {
+      entryOption.style.opacity = '0.5';
+      entryOption.style.pointerEvents = 'none';
+      const actionText = shouldClear ? 
+        `✅ Updated to: ${updateData.student_name} - Ready for linking` : 
+        '✅ Unlinked - Profile data preserved';
+      entryOption.innerHTML = `<div style="padding: 1rem; text-align: center; color: #6b7280;">${actionText}</div>`;
+    }
+    
+    const message = shouldClear ? 
+      `Entry updated with correct name: ${updateData.student_name}. Student can now link their profile.` :
+      'Entry unlinked but data preserved!';
+    showMessage(message, false);
+    
+  } catch (error) {
+    console.error('Error unlinking entry:', error);
+    showMessage('Error unlinking entry: ' + error.message, true);
+  }
+}
+
+// Execute cleanup based on user selections
+async function executeCleanup() {
+  try {
+    showLoading('Processing cleanup selections...');
+    
+    const duplicateGroups = document.querySelectorAll('.duplicate-group');
+    let processedCount = 0;
+    let unlinkedCount = 0;
+    
+    for (const group of duplicateGroups) {
+      const profileId = group.dataset.profileId;
+      const selectedRadio = group.querySelector('input[type="radio"]:checked');
+      
+      if (!selectedRadio) {
+        // No selection made for this group, skip
+        continue;
+      }
+      
+      const keepStudentId = selectedRadio.value;
+      
+      // Get all radio buttons in this group to find entries to unlink
+      const allRadios = group.querySelectorAll('input[type="radio"]');
+      const unlinkPromises = [];
+      
+      for (const radio of allRadios) {
+        if (radio.value !== keepStudentId) {
+          // Get the student info for this radio
+          const studentToUnlink = currentStudents.find(s => s.id === radio.value);
+          if (studentToUnlink) {
+            const correctName = prompt(
+              `Enter the CORRECT student name for roll number ${studentToUnlink.roll_number}:`,
+              ''
+            );
+            
+            if (!correctName || correctName.trim() === '') {
+              console.log(`Skipping ${studentToUnlink.roll_number} - no name provided`);
+              continue; // Skip this entry if no name provided
+            }
+            
+            // This entry should be unlinked and updated with correct name
+            unlinkPromises.push(
+              window.supabaseClient
+                .from('class_rosters')
+                .update({ 
+                  student_profile_id: null,
+                  is_verified: false,
+                  student_name: correctName.trim(),
+                  student_email: null
+                })
+                .eq('id', radio.value)
+            );
+            unlinkedCount++;
+          }
+        }
+      }
+      
+      // Execute all unlink operations for this group
+      const results = await Promise.all(unlinkPromises);
+      
+      // Check for errors
+      const errors = results.filter(result => result.error);
+      if (errors.length > 0) {
+        console.error('Some unlink operations failed:', errors);
+      } else {
+        processedCount++;
+      }
+    }
+    
+    hideLoading();
+    closeCleanupDialog();
+    
+    showMessage(`✅ Cleanup completed!\n\nProcessed ${processedCount} duplicate profiles\nUnlinked ${unlinkedCount} incorrect entries\n\nStudents can now login with their correct roll numbers.`, false);
+    
+    // Refresh the view
+    await loadStudents();
+    await loadStatistics();
+    
+  } catch (error) {
+    console.error('Error executing cleanup:', error);
+    showMessage('Error executing cleanup: ' + error.message, true);
+    hideLoading();
+  }
+}
+
+// Replace student account - handles scenario where student has wrong account linked
+async function replaceStudentAccount(studentId) {
+  const student = currentStudents.find(s => s.id === studentId);
+  if (!student) return;
+  
+  const newRollNumber = prompt(
+    `Replace account for ${student.student_name}\n\n` +
+    `Current roll: ${student.roll_number}\n` +
+    `Current status: ${student.student_profile_id ? 'Linked to app account' : 'Not linked'}\n\n` +
+    `Enter the CORRECT roll number to search for the right app account:`,
+    student.roll_number
+  );
+  
+  if (!newRollNumber || newRollNumber === student.roll_number) return;
+  
+  try {
+    showLoading('Searching for correct student account...');
+    
+    // Search for the correct app profile
+    const { data: correctProfile, error: searchError } = await window.supabaseClient
+      .from('profiles')
+      .select('id, full_name, email, student_id')
+      .eq('student_id', newRollNumber)
+      .single();
+    
+    if (searchError && searchError.code !== 'PGRST116') {
+      throw searchError;
+    }
+    
+    if (!correctProfile) {
+      showMessage(`No app account found with roll number ${newRollNumber}. Student needs to register first.`, true);
+      hideLoading();
+      return;
+    }
+    
+    // Check if this profile is already linked to another roster entry
+    const { data: existingLink, error: linkCheckError } = await window.supabaseClient
+      .from('class_rosters')
+      .select('id, student_name, roll_number')
+      .eq('student_profile_id', correctProfile.id)
+      .eq('class_id', classId)
+      .single();
+    
+    if (linkCheckError && linkCheckError.code !== 'PGRST116') {
+      throw linkCheckError;
+    }
+    
+    let confirmMessage = `Replace account for ${student.student_name}?\n\n`;
+    confirmMessage += `OLD: Roll ${student.roll_number} → ${student.student_profile_id ? 'Linked' : 'Not linked'}\n`;
+    confirmMessage += `NEW: Roll ${newRollNumber} → ${correctProfile.full_name} (${correctProfile.email})\n\n`;
+    
+    if (existingLink) {
+      confirmMessage += `⚠️ WARNING: This will unlink ${correctProfile.full_name} from "${existingLink.student_name}" (${existingLink.roll_number}) and link to this student instead.\n\n`;
+    }
+    
+    confirmMessage += `This action will:\n`;
+    confirmMessage += `• Update roll number to ${newRollNumber}\n`;
+    confirmMessage += `• Link to correct app account (${correctProfile.full_name})\n`;
+    confirmMessage += `• Free up the wrong account for the correct student\n\n`;
+    confirmMessage += `Continue?`;
+    
+    if (!confirm(confirmMessage)) {
+      hideLoading();
+      return;
+    }
+    
+    // If the correct profile is linked elsewhere, unlink it first
+    if (existingLink) {
+      const { error: unlinkError } = await window.supabaseClient
+        .from('class_rosters')
+        .update({ 
+          student_profile_id: null,
+          is_verified: false
+        })
+        .eq('id', existingLink.id);
+      
+      if (unlinkError) throw unlinkError;
+    }
+    
+    // Update current student with correct information
+    const { error: updateError } = await window.supabaseClient
+      .from('class_rosters')
+      .update({
+        roll_number: newRollNumber,
+        student_profile_id: correctProfile.id,
+        is_verified: true,
+        // Preserve admin-entered name as per memory guidance
+        student_email: correctProfile.email
+      })
+      .eq('id', studentId);
+    
+    if (updateError) throw updateError;
+    
+    // Track the replacement in history
+    if (!rollNumberHistory.has(studentId)) {
+      rollNumberHistory.set(studentId, []);
+    }
+    rollNumberHistory.get(studentId).push({
+      from: student.roll_number,
+      to: newRollNumber,
+      timestamp: new Date().toISOString(),
+      reason: 'Account replacement - wrong account corrected',
+      oldProfile: student.student_profile_id,
+      newProfile: correctProfile.id
+    });
+    
+    let successMessage = `✅ Successfully replaced account!\n\n`;
+    successMessage += `${student.student_name} is now linked to the correct app account:\n`;
+    successMessage += `• Roll: ${student.roll_number} → ${newRollNumber}\n`;
+    successMessage += `• App: ${correctProfile.full_name} (${correctProfile.email})\n\n`;
+    
+    if (existingLink) {
+      successMessage += `The previous link for "${existingLink.student_name}" has been removed and is now available for the correct student.`;
+    }
+    
+    showMessage(successMessage, false);
+    
+    // Refresh the view
+    await loadStudents();
+    await loadStatistics();
+    
+    hideLoading();
+    
+  } catch (error) {
+    console.error('Error replacing student account:', error);
+    showMessage('Error replacing student account: ' + error.message, true);
+    hideLoading();
+  }
 }
 
 // Bulk Student Addition Functions

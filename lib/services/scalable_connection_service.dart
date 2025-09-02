@@ -10,10 +10,10 @@ class ScalableConnectionService {
   static int _peakConcurrentUsers = 0;
   static DateTime _lastStatsReset = DateTime.now();
   
-  // Dynamic connection limits based on usage - OPTIMIZED FOR 50 CONCURRENT TESTS
-  static int _maxConnections = 50; // Start higher for test scenarios (increased from 45)
-  static const int _absoluteMaxConnections = 65; // Never exceed this (increased from 55)
-  static const int _emergencyMaxConnections = 70; // Last resort (increased from 58)
+  // Dynamic connection limits based on usage
+  static int _maxConnections = 45; // Start conservative
+  static const int _absoluteMaxConnections = 55; // Never exceed this
+  static const int _emergencyMaxConnections = 58; // Last resort
   
   // Circuit breaker pattern
   static bool _circuitBreakerOpen = false;

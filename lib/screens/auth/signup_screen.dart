@@ -28,11 +28,19 @@ class _SignupScreenBody extends StatefulWidget {
 class _SignupScreenBodyState extends State<_SignupScreenBody> {
   final _formKey = GlobalKey<FormState>();
   SignupController? _controller;
+  DateTime? _lastButtonPress;
+  static const Duration _debounceDelay = Duration(milliseconds: 1000);
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _controller = Provider.of<SignupController>(context, listen: false);
+  }
+
+  bool _canPressButton() {
+    final now = DateTime.now();
+    if (_lastButtonPress == null) return true;
+    return now.difference(_lastButtonPress!) >= _debounceDelay;
   }
 
   @override
@@ -231,11 +239,67 @@ class _SignupScreenBodyState extends State<_SignupScreenBody> {
                       if (controller.errorMessage != null)
                         Padding(
                           padding: const EdgeInsets.only(bottom: 12),
-                          child: Text(
-                            controller.errorMessage!,
-                            style: const TextStyle(
-                              color: Colors.red,
-                              fontSize: 13,
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.red.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.red.shade200),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.error_outline,
+                                  color: Colors.red.shade600,
+                                  size: 16,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    controller.errorMessage!,
+                                    style: TextStyle(
+                                      color: Colors.red.shade700,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      // Rate Limit Warning
+                      if (!controller.canMakeRequest && controller.remainingCooldown != null)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.orange.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.orange.shade200),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.schedule,
+                                  color: Colors.orange.shade600,
+                                  size: 16,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    controller.remainingCooldown!.inMinutes > 0
+                                        ? 'Please wait ${controller.remainingCooldown!.inMinutes} minutes before trying again.'
+                                        : 'Please wait ${controller.remainingCooldown!.inSeconds} seconds before trying again.',
+                                    style: TextStyle(
+                                      color: Colors.orange.shade700,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
@@ -284,9 +348,13 @@ class _SignupScreenBodyState extends State<_SignupScreenBody> {
                                     : MouseCursor.defer,
                         child: ElevatedButton(
                           onPressed:
-                              controller.isLoading
+                              (controller.isLoading || !controller.canMakeRequest)
                                   ? null
                                   : () async {
+                                    // Debounce button presses
+                                    if (!_canPressButton()) return;
+                                    _lastButtonPress = DateTime.now();
+                                    
                                     if (_formKey.currentState!.validate()) {
                                           final status =
                                               await controller.signUp();
@@ -319,6 +387,9 @@ class _SignupScreenBodyState extends State<_SignupScreenBody> {
                                           case SignupStatus.existingUser:
                                             break;
                                           case SignupStatus.error:
+                                            break;
+                                          case SignupStatus.rateLimited:
+                                            // Error message already set in controller
                                             break;
                                         }
                                       }

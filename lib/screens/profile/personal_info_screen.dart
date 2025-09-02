@@ -57,8 +57,8 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
       setState(() {
         _isLoading = false;
       });
-      final message = ErrorMessageService.getFriendlyMessage(e);
       if (mounted) {
+        final message = ErrorMessageService.getFriendlyMessage(e);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(message), backgroundColor: Colors.red),
         );
@@ -76,9 +76,11 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
     if (studentId.isNotEmpty) {
       final uniqueError = await _validateStudentIdUnique(studentId);
       if (uniqueError != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(uniqueError), backgroundColor: Colors.red),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(uniqueError), backgroundColor: Colors.red),
+          );
+        }
         return;
       }
     }
@@ -118,16 +120,18 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
         throw Exception('Failed to update profile');
       }
     } catch (e) {
-      final message = ErrorMessageService.getFriendlyMessage(e);
       if (mounted) {
+        final message = ErrorMessageService.getFriendlyMessage(e);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(message), backgroundColor: Colors.red),
         );
       }
     } finally {
-      setState(() {
-        _isSaving = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+      }
     }
   }
 

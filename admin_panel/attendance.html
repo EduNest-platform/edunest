@@ -16,8 +16,11 @@
   <link rel="stylesheet" href="attendance.css?v=1.0">
   <link rel="stylesheet" href="attendance_enhancements.css?v=1.0">
   <link rel="stylesheet" href="button_fix.css?v=1.0">
+  <link rel="stylesheet" href="skeleton.css?v=1.0">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script src="supabaseClient.js?v=1.2"></script>
+  <script src="authManager.js?v=1.0"></script>
+  <script src="connectionMonitor.js?v=1.0"></script>
 </head>
 
 <body>
@@ -148,6 +151,10 @@
           <div class="section-header">
             <h2 id="rosterTitle">📚 Class Roster</h2>
             <div class="roster-actions">
+              <button class="action-btn primary" onclick="openStudentManagement()">
+                <span class="btn-icon">👥</span>
+                Manage Students
+              </button>
               <button class="action-btn secondary" onclick="downloadRoster()">
                 <span class="btn-icon">📥</span>
                 Download Roster

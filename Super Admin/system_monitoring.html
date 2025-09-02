@@ -463,11 +463,11 @@
         <div class="auto-refresh">
             <label>
                 <input type="checkbox" id="autoRefresh" checked> 
-                <span>🔄 Auto Refresh (30s)</span>
+                <span>🔄 Auto Refresh (4min)</span>
             </label>
             <button onclick="refreshAll()">🔄 Refresh Now</button>
             <span id="lastUpdate">⏰ Last updated: Never</span>
-            <small style="color: #6c757d;">📊 Data updates every 5 minutes</small>
+            <small style="color: #6c757d;">📊 Data updates every 4 minutes</small>
         </div>
 
         <!-- System Status Overview -->
@@ -600,7 +600,9 @@
         </div>
     </div>
 
-    <!-- Include monitoring script -->
+    <!-- Include Supabase and monitoring scripts -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="supabaseAdmin.js"></script>
     <script src="system_monitoring.js"></script>
 </body>
 </html>

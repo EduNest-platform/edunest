@@ -79,8 +79,8 @@ class _SecurityScreenState extends State<SecurityScreen> {
         _isLoadingHistory = false;
       });
     } catch (e) {
-      final message = ErrorMessageService.getFriendlyMessage(e);
       if (mounted) {
+        final message = ErrorMessageService.getFriendlyMessage(e);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(message), backgroundColor: Colors.red),
         );
@@ -1430,12 +1430,14 @@ class _SecurityScreenState extends State<SecurityScreen> {
             ElevatedButton(
               onPressed: () {
                 Navigator.of(context).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Two-factor authentication setup initiated'),
-                    backgroundColor: Colors.blue,
-                  ),
-                );
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Two-factor authentication setup initiated'),
+                      backgroundColor: Colors.blue,
+                    ),
+                  );
+                }
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.blue,
@@ -1573,12 +1575,14 @@ class _SecurityScreenState extends State<SecurityScreen> {
             ElevatedButton(
               onPressed: () {
                 Navigator.of(context).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Other sessions logged out'),
-                    backgroundColor: Colors.orange,
-                  ),
-                );
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Other sessions logged out'),
+                      backgroundColor: Colors.orange,
+                    ),
+                  );
+                }
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.indigo,
@@ -1938,12 +1942,14 @@ class _SecurityScreenState extends State<SecurityScreen> {
             ElevatedButton(
               onPressed: () {
                 Navigator.of(context).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Account deletion requested'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Account deletion requested'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red,

@@ -3,6 +3,9 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../theme/app_theme.dart';
 import '../../services/supabase_service.dart';
 import '../../services/auth_service.dart';
+import '../../services/fcm_service.dart';
+import 'package:edunest/services/global_system_monitor.dart';
+import 'package:flutter/foundation.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -31,6 +34,23 @@ class _SplashScreenState extends State<SplashScreen> {
     if (user == null) {
       Navigator.pushReplacementNamed(context, '/login');
       return;
+    }
+
+    // Initialize global system monitoring only if authenticated
+    if (user != null) {
+      await GlobalSystemMonitor.initialize();
+      
+      // Refresh FCM token for existing authenticated sessions
+      // This ensures FCM token is updated when users install new APK without logging out
+      if (defaultTargetPlatform == TargetPlatform.android ||
+          defaultTargetPlatform == TargetPlatform.iOS) {
+        try {
+          await FCMService().refreshAndStoreToken();
+          print('📱 FCM token refreshed for existing session');
+        } catch (e) {
+          print('⚠️ FCM token refresh failed: $e');
+        }
+      }
     }
 
     // Use AuthService.checkAuthStatus() for consistent navigation logic

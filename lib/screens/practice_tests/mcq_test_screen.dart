@@ -10,8 +10,6 @@ import '../../services/supabase_service.dart';
 import '../../services/network_service.dart';
 import '../../services/assigned_mcq_supabase_service.dart';
 import '../../services/error_message_service.dart';
-import '../../services/test_load_monitor.dart';
-import '../../services/exam_optimization_service.dart';
 // import '../../mixins/performance_mixin.dart';
 import 'package:window_manager/window_manager.dart';
 import '../../services/android_proctoring_service.dart';
@@ -220,6 +218,20 @@ class _MCQTestScreenState extends State<MCQTestScreen>
     }
   }
   
+  // Helper function to map practice mode back to database difficulty
+  String _mapPracticeModeToDbDifficulty(String practiceMode) {
+    switch (practiceMode) {
+      case 'academic':
+        return 'beginner';
+      case 'competitive':
+        return 'intermediate';
+      case 'career':
+        return 'advanced';
+      default:
+        return 'beginner';
+    }
+  }
+  
   // Helper function to get practice mode display name
   String _getPracticeModeDisplayName(String practiceMode) {
     switch (practiceMode) {
@@ -271,19 +283,6 @@ class _MCQTestScreenState extends State<MCQTestScreen>
     super.initState();
     // startScreenMonitoring('mcq_test_screen');
 
-    // PERFORMANCE: Start test load monitoring for assigned tests
-    if (isAssignedTest && widget.assignedTest != null) {
-      final testTitle = widget.assignedTest!['test_name'] ?? widget.assignedTest!['title'] ?? '';
-      if (testTitle.isNotEmpty) {
-        TestLoadMonitor.startMonitoring(testTitle, 50); // Assume max 50 students
-        final userId = SupabaseService.currentUser?.id ?? 'anonymous';
-        TestLoadMonitor.recordStudentJoin(testTitle, userId);
-        
-        // EXAM OPTIMIZATION: Activate exam mode for assigned tests
-        ExamOptimizationService.activateExamMode(testTitle, 50);
-      }
-    }
-
     // Initialize Android proctoring if available
     if (isProctored && Platform.isAndroid) {
       _initializeAndroidProctoring();
@@ -317,15 +316,6 @@ class _MCQTestScreenState extends State<MCQTestScreen>
 
   @override
   void dispose() {
-    // PERFORMANCE: Stop test load monitoring for assigned tests
-    if (isAssignedTest && widget.assignedTest != null) {
-      final testTitle = widget.assignedTest!['test_name'] ?? widget.assignedTest!['title'] ?? '';
-      if (testTitle.isNotEmpty) {
-        final userId = SupabaseService.currentUser?.id ?? 'anonymous';
-        TestLoadMonitor.recordStudentLeave(testTitle, userId);
-      }
-    }
-
     if (isProctored) {
       WidgetsBinding.instance.removeObserver(this);
       if (!Platform.isAndroid) {
@@ -399,14 +389,21 @@ class _MCQTestScreenState extends State<MCQTestScreen>
       final status = await AndroidProctoringService.getProctoringStatus();
 
       if (mounted) {
+        final isActive = status['supported'] == true;
+        final isScreenRecording = status['screenRecording'] == true;
+        final isCameraActive = status['cameraAccess'] == true;
+        final isMicrophoneActive = status['microphoneAccess'] == true;
+        
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Proctoring: ${status['supported'] ? 'Supported' : 'Not Supported'}\n'
-              'Advanced: ${status['advancedFeatures'] ? 'Yes' : 'No'}\n'
-              'Active: ${status['isActive'] ? 'Yes' : 'No'}',
+              'Proctoring Status: ${isActive ? "Active" : "Inactive"}\n'
+              'Screen Recording: ${isScreenRecording ? "ON" : "OFF"}\n'
+              'Camera Access: ${isCameraActive ? "ON" : "OFF"}\n'
+              'Microphone Access: ${isMicrophoneActive ? "ON" : "OFF"}',
             ),
-            duration: const Duration(seconds: 3),
+            backgroundColor: isActive ? Colors.green : Colors.orange,
+            duration: const Duration(seconds: 4),
           ),
         );
       }
@@ -599,18 +596,18 @@ class _MCQTestScreenState extends State<MCQTestScreen>
         });
       }
     } catch (e) {
-      final message = ErrorMessageService.getFriendlyMessage(e);
       if (mounted) {
+        final message = ErrorMessageService.getFriendlyMessage(e);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(message), backgroundColor: Colors.red),
         );
+        setState(() {
+          _isLoading = false;
+          _initialLoading = false;
+          _error = message;
+        });
       }
-      setState(() {
-        _error = 'Failed to load questions: $e';
-        _isLoading = false;
-        _hasNetworkError = !isAssignedTest;
-        _initialLoading = false;
-      });
+      _hasNetworkError = !isAssignedTest;
     }
   }
 
@@ -754,7 +751,7 @@ class _MCQTestScreenState extends State<MCQTestScreen>
           subjectName: widget.subject!.name,
           chapterId: widget.chapter!['id'],
           chapterName: widget.chapter!['name'],
-          difficulty: mode, // Save practice mode as difficulty for now
+          difficulty: _mapPracticeModeToDbDifficulty(mode), // Map to database difficulty
           score: score,
           correctAnswers: correctAnswers,
           totalQuestions: totalQuestions,
@@ -782,8 +779,8 @@ class _MCQTestScreenState extends State<MCQTestScreen>
         }
       }
     } catch (e) {
-      final message = ErrorMessageService.getFriendlyMessage(e);
       if (mounted) {
+        final message = ErrorMessageService.getFriendlyMessage(e);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(message), backgroundColor: Colors.red),
         );
@@ -880,7 +877,7 @@ class _MCQTestScreenState extends State<MCQTestScreen>
 
     return PopScope(
       canPop: false,
-      onPopInvoked: (didPop) async {
+      onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
         final shouldExit = await _showExitDialog(context);
         if (shouldExit ?? false && mounted) {

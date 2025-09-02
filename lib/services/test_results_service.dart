@@ -1,7 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/supabase_service.dart';
 import 'free_plan_optimizer_service.dart';
-import 'test_load_monitor.dart';
 
 class TestResultsService {
   static final SupabaseClient _supabase = SupabaseService.client;
@@ -45,8 +44,7 @@ class TestResultsService {
                     'correct_answers': correctAnswers,
                     'score': score,
                     'time_taken': timeTaken,
-                    'created_at': DateTime.now().toIso8601String(),
-                    'test_title': testTitle,
+                    'test_title': testTitle.isEmpty ? null : testTitle,
                   })
                   .select()
                   .single();
@@ -114,7 +112,6 @@ class TestResultsService {
           .where((title) => title.isNotEmpty)
           .toSet() // Remove duplicates
           .toList();
-          return [];
     } catch (e) {
       return [];
     }

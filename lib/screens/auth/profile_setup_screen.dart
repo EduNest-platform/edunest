@@ -6,23 +6,28 @@ import '../../theme/app_theme.dart';
 import '../../controllers/profile_setup_controller.dart';
 import '../../services/user_profile_service.dart';
 import '../../services/error_message_service.dart';
+import '../../services/network_service.dart';
 // import '../../mixins/performance_mixin.dart';
 import 'dart:io';
 
 class ProfileSetupScreen extends StatelessWidget {
-  const ProfileSetupScreen({super.key});
+  final bool isEditingExisting;
+  
+  const ProfileSetupScreen({super.key, this.isEditingExisting = false});
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
       create: (_) => ProfileSetupController(),
-      child: const _ProfileSetupScreenBody(),
+      child: _ProfileSetupScreenBody(isEditingExisting: isEditingExisting),
     );
   }
 }
 
 class _ProfileSetupScreenBody extends StatefulWidget {
-  const _ProfileSetupScreenBody();
+  final bool isEditingExisting;
+  
+  const _ProfileSetupScreenBody({this.isEditingExisting = false});
 
   @override
   State<_ProfileSetupScreenBody> createState() =>
@@ -45,7 +50,10 @@ class _ProfileSetupScreenBodyState extends State<_ProfileSetupScreenBody>
   void initState() {
     super.initState();
     // startScreenMonitoring('profile_setup_screen');
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // Check if user already has complete academic path
+      await _checkAndNavigateIfProfileComplete();
+      
       final controller = Provider.of<ProfileSetupController>(
         context,
         listen: false,
@@ -53,6 +61,43 @@ class _ProfileSetupScreenBodyState extends State<_ProfileSetupScreenBody>
       controller.fetchColleges();
       controller.loadExistingAcademicPath();
     });
+  }
+
+  Future<void> _checkAndNavigateIfProfileComplete() async {
+    // Skip auto-navigation if user is editing existing profile
+    if (widget.isEditingExisting) return;
+    
+    try {
+      // Try to get profile (will use cache if available)
+      final profile = await UserProfileService.getCurrentUserProfile();
+      
+      // If no profile, stay on setup screen
+      if (profile == null) return;
+      
+      // Check if academic path is complete
+      if (profile.college != null && 
+          profile.branch != null && 
+          profile.semester != null) {
+        
+        if (!mounted) return;
+        // Navigate to academic path review screen
+        Navigator.pushReplacementNamed(context, '/academic-path-review');
+        return;
+      }
+    } catch (e) {
+      // If network error, try to get cached profile
+      final cachedProfile = UserProfileService.getCachedProfile();
+      if (cachedProfile != null &&
+          cachedProfile.college != null && 
+          cachedProfile.branch != null && 
+          cachedProfile.semester != null) {
+        
+        if (!mounted) return;
+        // Navigate to academic path review screen using cached data
+        Navigator.pushReplacementNamed(context, '/academic-path-review');
+        return;
+      }
+    }
   }
 
   @override
@@ -183,6 +228,7 @@ class _ProfileSetupScreenBodyState extends State<_ProfileSetupScreenBody>
     final headerFontSize = isDesktop ? 28.0 : 24.0;
     final subHeaderFontSize = isDesktop ? 18.0 : 16.0;
     final buttonFontSize = isDesktop ? 17.0 : 16.0;
+    
     return Scaffold(
       body: Container(
         width: double.infinity,
@@ -195,6 +241,28 @@ class _ProfileSetupScreenBodyState extends State<_ProfileSetupScreenBody>
           ),
         ),
         child: SafeArea(
+          child: controller.hasNetworkError
+              ? buildNetworkErrorWidget(
+                  title: '📡 No Internet Connection',
+                  message: 'Unable to load college information. Please connect to the internet and try again.',
+                  customEmoji: '🎓',
+                  onRetry: () => controller.retryNetworkOperation(),
+                )
+              : _buildMainContent(controller, contentMaxWidth, cardPadding, headerFontSize, subHeaderFontSize, buttonFontSize),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMainContent(
+    ProfileSetupController controller,
+    double contentMaxWidth,
+    EdgeInsets cardPadding,
+    double headerFontSize,
+    double subHeaderFontSize,
+    double buttonFontSize,
+  ) {
+    return SafeArea(
           child: Center(
             child: ConstrainedBox(
               constraints: BoxConstraints(maxWidth: contentMaxWidth),
@@ -312,16 +380,11 @@ class _ProfileSetupScreenBodyState extends State<_ProfileSetupScreenBody>
                           topRight: Radius.circular(32),
                         ),
                       ),
-                      child: GestureDetector(
-                        onTap: () {
-                          // Remove focus when tapping outside
-                          FocusScope.of(context).unfocus();
-                        },
-                        child: SingleChildScrollView(
-                          padding: cardPadding,
-                          child: Form(
-                            key: _formKey,
-                            child: Column(
+                      child: SingleChildScrollView(
+                        padding: cardPadding,
+                        child: Form(
+                          key: _formKey,
+                          child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               // Welcome Text
@@ -421,7 +484,6 @@ class _ProfileSetupScreenBodyState extends State<_ProfileSetupScreenBody>
                                 ),
                                 child: TextFormField(
                                   controller: controller.rollNumberController,
-                                  autofocus: false, // Explicitly disable autofocus
                                   decoration: InputDecoration(
                                     labelText: 'Roll Number',
                                     hintText: 'Enter your roll number',
@@ -466,9 +528,11 @@ class _ProfileSetupScreenBodyState extends State<_ProfileSetupScreenBody>
                                     // Trigger rebuild to update button state
                                     setState(() {});
                                   },
-                                  textInputAction: TextInputAction.done, // Add done action
-                                  onFieldSubmitted: (value) {
-                                    // Remove focus when done
+                                  onTap: () {
+                                    // Ensure keyboard shows when field is tapped
+                                  },
+                                  onEditingComplete: () {
+                                    // Dismiss keyboard when done editing
                                     FocusScope.of(context).unfocus();
                                   },
                                 ),
@@ -645,9 +709,6 @@ class _ProfileSetupScreenBodyState extends State<_ProfileSetupScreenBody>
                                               )
                                           ? null
                                           : () async {
-                                            // Remove focus from any text fields
-                                            FocusScope.of(context).unfocus();
-                                            
                                             if (_formKey.currentState!
                                                 .validate()) {
                                               final success =
@@ -660,14 +721,13 @@ class _ProfileSetupScreenBodyState extends State<_ProfileSetupScreenBody>
                                                   context,
                                                   '/home',
                                                 );
-                                              } else if (mounted) {
+                                              } else if (!success && context.mounted) {
                                                 // Show error if save failed
                                                 ScaffoldMessenger.of(context).showSnackBar(
                                                   SnackBar(
-                                                    content: Text(
-                                                      controller.errorMessage ?? 'Failed to save academic path. Please try again.',
-                                                    ),
+                                                    content: Text(controller.errorMessage ?? 'Failed to save profile'),
                                                     backgroundColor: Colors.red,
+                                                    duration: const Duration(seconds: 3),
                                                   ),
                                                 );
                                               }
@@ -728,7 +788,6 @@ class _ProfileSetupScreenBodyState extends State<_ProfileSetupScreenBody>
                               ),
                               const SizedBox(height: 20),
                             ],
-                            ),
                           ),
                         ),
                       ),
@@ -738,8 +797,6 @@ class _ProfileSetupScreenBodyState extends State<_ProfileSetupScreenBody>
               ),
             ),
           ),
-        ),
-      ),
-    );
+          );
   }
 }

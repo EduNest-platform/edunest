@@ -1,11 +1,11 @@
 class AssignmentMark {
   final String id;
   final String classId;
-  final String assignmentName;
+  String assignmentName;
   final String studentId;
-  final double marks;
-  final double maxMarks;
-  final DateTime gradedAt;
+  final double? marks;
+  final double? maxMarks;
+  final DateTime? gradedAt;
   final String gradedBy;
   final String? studentName;
   final String? studentEmail;
@@ -16,9 +16,9 @@ class AssignmentMark {
     required this.classId,
     required this.assignmentName,
     required this.studentId,
-    required this.marks,
-    required this.maxMarks,
-    required this.gradedAt,
+    this.marks,
+    this.maxMarks,
+    this.gradedAt,
     required this.gradedBy,
     this.studentName,
     this.studentEmail,
@@ -31,11 +31,9 @@ class AssignmentMark {
       classId: json['class_id'] ?? '',
       assignmentName: json['assignment_name'] ?? '',
       studentId: json['student_id'] ?? '',
-      marks: (json['marks'] ?? 0).toDouble(),
-      maxMarks: (json['max_marks'] ?? 0).toDouble(),
-      gradedAt: DateTime.parse(
-        json['graded_at'] ?? DateTime.now().toIso8601String(),
-      ),
+      marks: json['marks']?.toDouble(),
+      maxMarks: json['max_marks']?.toDouble(),
+      gradedAt: json['graded_at'] != null ? DateTime.parse(json['graded_at']) : null,
       gradedBy: json['graded_by'] ?? '',
       studentName: json['student_name'],
       studentEmail: json['student_email'],
@@ -51,7 +49,7 @@ class AssignmentMark {
       'student_id': studentId,
       'marks': marks,
       'max_marks': maxMarks,
-      'graded_at': gradedAt.toIso8601String(),
+      'graded_at': gradedAt?.toIso8601String(),
       'graded_by': gradedBy,
       'student_name': studentName,
       'student_email': studentEmail,
@@ -60,7 +58,7 @@ class AssignmentMark {
   }
 
   // Helper method to get percentage
-  double get percentage => maxMarks > 0 ? (marks / maxMarks) * 100 : 0;
+  double get percentage => (maxMarks != null && marks != null && maxMarks! > 0) ? (marks! / maxMarks!) * 100 : 0;
 
   // Helper method to get grade
   String get grade {

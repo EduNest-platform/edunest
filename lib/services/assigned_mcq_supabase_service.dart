@@ -1,7 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:supabase/supabase.dart';
 import 'free_plan_optimizer_service.dart';
-import 'test_load_monitor.dart';
 
 class AssignedMCQSupabaseService {
   static const String supabaseUrl = 'https://pfuzvpihupvhjshxiofn.supabase.co';
@@ -20,9 +19,7 @@ class AssignedMCQSupabaseService {
     return FreePlanOptimizerService.optimizedDatabaseOperation(
       'fetch_questions_for_test_$testName',
       () async {
-        // Start monitoring for this test
-        TestLoadMonitor.startMonitoring(testName, 50);
-        
+        // Direct database call without monitoring
         final response = await client
             .from('questions')
             .select()

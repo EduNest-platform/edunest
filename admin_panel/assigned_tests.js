@@ -110,14 +110,15 @@ function updateUIForClassContext() {
 }
 
 function updateContextDisplay() {
-  const contextDisplay = document.getElementById('contextDisplay');
-  if (contextDisplay && isClassContext) {
-    contextDisplay.innerHTML = `
-      <div class="context-info">
-        <span class="context-label">Class Context:</span>
-        <span class="context-value">${classContextSubject}</span>
-      </div>
-    `;
+  if (isClassContext && selectedCollegeName && selectedBranchName && selectedSemesterName) {
+    // Update the header context elements
+    const contextCollege = document.getElementById('contextCollege');
+    const contextBranch = document.getElementById('contextBranch');
+    const contextSemester = document.getElementById('contextSemester');
+    
+    if (contextCollege) contextCollege.textContent = selectedCollegeName;
+    if (contextBranch) contextBranch.textContent = selectedBranchName;
+    if (contextSemester) contextSemester.textContent = selectedSemesterName;
   }
 }
 

@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../theme/app_theme.dart';
 import '../../services/user_profile_service.dart';
+import '../../services/network_service.dart';
 import '../../models/user_profile.dart';
 import '../../services/error_message_service.dart';
+import 'profile_setup_screen.dart';
 import 'dart:io';
 
 class AcademicPathReviewScreen extends StatefulWidget {
@@ -17,6 +19,8 @@ class AcademicPathReviewScreen extends StatefulWidget {
 class _AcademicPathReviewScreenState extends State<AcademicPathReviewScreen> {
   UserProfile? _userProfile;
   bool _isLoading = true;
+  bool _hasNetworkError = false;
+  final NetworkService _networkService = NetworkService();
 
   @override
   void initState() {
@@ -25,18 +29,54 @@ class _AcademicPathReviewScreenState extends State<AcademicPathReviewScreen> {
   }
 
   Future<void> _loadUserProfile() async {
+    setState(() {
+      _isLoading = true;
+      _hasNetworkError = false;
+    });
+
     try {
+      // Try to get profile (will use cache if available)
       final profile = await UserProfileService.getCurrentUserProfile();
       setState(() {
         _userProfile = profile;
         _isLoading = false;
+        _hasNetworkError = false;
       });
     } catch (e) {
-      final message = ErrorMessageService.getFriendlyMessage(e);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message), backgroundColor: Colors.red),
-        );
+      // Check if it's a network-related error
+      if (e.toString().contains('Failed host lookup') || 
+          e.toString().contains('SocketException') ||
+          e.toString().contains('No address associated with hostname')) {
+        
+        // Try to get cached profile as fallback
+        try {
+          final cachedProfile = await UserProfileService.getCachedProfile();
+          if (cachedProfile != null) {
+            setState(() {
+              _userProfile = cachedProfile;
+              _isLoading = false;
+              _hasNetworkError = false;
+            });
+            return;
+          }
+        } catch (_) {
+          // If cached profile also fails, show network error
+        }
+        
+        setState(() {
+          _hasNetworkError = true;
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _isLoading = false;
+        });
+        final message = ErrorMessageService.getFriendlyMessage(e);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(message), backgroundColor: Colors.red),
+          );
+        }
       }
     }
   }
@@ -63,8 +103,14 @@ class _AcademicPathReviewScreenState extends State<AcademicPathReviewScreen> {
           ),
         ),
         child: SafeArea(
-          child:
-              _isLoading
+          child: _hasNetworkError
+              ? buildNetworkErrorWidget(
+                  title: '📡 No Internet Connection',
+                  message: 'Unable to load your academic information. Please connect to the internet and try again.',
+                  customEmoji: '🎓',
+                  onRetry: _loadUserProfile,
+                )
+              : _isLoading
                   ? const Center(
                     child: CircularProgressIndicator(color: Colors.white),
                   )
@@ -284,9 +330,11 @@ class _AcademicPathReviewScreenState extends State<AcademicPathReviewScreen> {
                                       height: 56,
                                       child: OutlinedButton(
                                         onPressed: () {
-                                          Navigator.pushReplacementNamed(
+                                          Navigator.pushReplacement(
                                             context,
-                                            '/profile-setup',
+                                            MaterialPageRoute(
+                                              builder: (context) => const ProfileSetupScreen(isEditingExisting: true),
+                                            ),
                                           );
                                         },
                                         style: OutlinedButton.styleFrom(

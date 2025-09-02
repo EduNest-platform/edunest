@@ -232,12 +232,32 @@ bool _isNewerVersion(String latest, String current) {
    print('Is newer: ${_isNewerVersion(latestVersion, currentVersion)}');
    ```
 
+## Recent Major Implementations (Ready for v1.1.0)
+
+### Performance Optimizations
+- **Comprehensive Caching System**: Multi-layer caching for assignment marks, midsem marks, attendance data
+- **Cache Invalidation**: Smart cache clearing when academic path changes
+- **Database Optimization**: Migrated from professor_attendance to class_attendance_sessions (6x faster)
+- **Request Deduplication**: Eliminated excessive profile API requests
+
+### Critical Bug Fixes
+- **Assignment Marks Filtering**: Fixed cross-college subject display issues
+- **Midsem Marks System**: Complete overhaul with proper filtering and notifications
+- **Home Screen Cache**: Fixed stale data issues during logout/login cycles
+- **Student Profile Linking**: Preserved admin-entered names during profile linking
+
+### New Features
+- **Enhanced Academic Path Filtering**: Subjects now filter by current college/branch/semester
+- **Improved Notification System**: Comprehensive triggers for marks updates
+- **Admin Panel Optimizations**: Reduced API calls and improved performance
+- **Robust Error Handling**: Better user experience with proper error management
+
 ## Quick Reference
 
-### For New Release:
-1. Update `pubspec.yaml` version
-2. Update `whats_new_dialog.dart` currentVersion
-3. Update `whats_new_dialog.dart` whatsNewItems
+### For New Release (v1.1.0):
+1. Update `pubspec.yaml` version to `1.1.0+2`
+2. Update `whats_new_dialog.dart` currentVersion to `1.1.0`
+3. Update `whats_new_dialog.dart` whatsNewItems with new features
 4. Update GitHub `latest.json`
 5. Build and release
 6. Test update flow
@@ -245,7 +265,6 @@ bool _isNewerVersion(String latest, String current) {
 ### For Hotfix:
 1. Increment patch version in both files
 2. Update `latest.json` with new version
-3. Build and release update
 4. Test on previous version
 
 ### Version URLs:

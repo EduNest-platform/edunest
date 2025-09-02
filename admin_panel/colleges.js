@@ -8,9 +8,9 @@ async function getCurrentUser() {
     console.error('Supabase Admin client not initialized');
     return null;
   }
-  const { data, error } = await window.supabaseAdmin.auth.getUser();
-  if (error || !data || !data.user) return null;
-  return data.user;
+  const user = await window.authManager.getCurrentUser();
+  if (!user) return null;
+  return user;
 }
 
 async function loadAdminProfile() {

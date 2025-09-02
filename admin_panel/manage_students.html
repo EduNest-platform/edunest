@@ -1222,12 +1222,13 @@
                             <th>Email</th>
                             <th>App Status</th>
                             <th>Profile Link</th>
-                            <th>Actions</th>
+                            <th>Edit</th>
+                            <th>Remove</th>
                         </tr>
                     </thead>
                     <tbody id="studentsTableBody">
                         <tr>
-                            <td colspan="7" class="empty-state">
+                            <td colspan="8" class="empty-state">
                                 <div>
                                     <h3>📚 No Students Added Yet</h3>
                                     <p>Upload a CSV file or add students manually to get started.</p>
@@ -1338,7 +1339,10 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-    <script src="supabaseClient.js?v=1.2"></script>
+  <script src="supabaseClient.js?v=1.2"></script>
+  <script src="authManager.js?v=1.0"></script>
+  <script src="connectionMonitor.js?v=1.0"></script>
+    <script src="admin_cache.js"></script>
     <script src="login.js"></script>
     <script src="supabaseAdmin.js"></script>
     <script src="manage_students.js?v=1.2"></script>

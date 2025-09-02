@@ -3,15 +3,33 @@
 
 class SystemMonitor {
     constructor() {
-        this.supabase = window.supabaseAdmin; // Use admin database client
+        this.supabase = null;
         this.autoRefresh = true;
-        this.refreshInterval = 30000; // 30 seconds instead of 5 seconds
+        this.refreshInterval = 240000; // 4 minutes (240 seconds) to match backend reporting
         this.charts = {};
         this.connectionData = [];
         this.activityData = [];
         this.logs = [];
         this.lastDataInsert = 0; // Track when we last inserted data
-        this.dataInsertInterval = 300000; // Only insert data every 5 minutes
+        this.dataInsertInterval = 240000; // Only insert data every 4 minutes to match backend
+        
+        this.initializeSupabaseClient();
+    }
+    
+    async initializeSupabaseClient() {
+        // Wait for supabaseAdmin to be available
+        let attempts = 0;
+        while (!window.supabaseAdmin && attempts < 50) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+            attempts++;
+        }
+        
+        if (window.supabaseAdmin) {
+            this.supabase = window.supabaseAdmin;
+            this.addLogEntry('✅ Supabase client initialized successfully');
+        } else {
+            this.addLogEntry('❌ Failed to initialize Supabase client - using simulated data');
+        }
         
         this.initializeCharts();
         this.startMonitoring();
@@ -40,7 +58,8 @@ class SystemMonitor {
             // Get real-time stats from admin database
             const stats = await this.getSystemStatsFromSupabase();
             this.updateDashboard(stats);
-            this.addLogEntry(`System stats updated: ${stats.activeConnections} active connections`);
+            const dataSource = stats.realDataUsed ? 'real database' : 'simulation';
+            this.addLogEntry(`System stats updated from ${dataSource}: ${stats.activeConnections} active connections`);
             
         } catch (error) {
             console.error('Error fetching system stats:', error);
@@ -52,78 +71,124 @@ class SystemMonitor {
     }
     
     async getSystemStatsFromSupabase() {
-        // This function would query your Supabase database for system metrics
-        // For now, we'll create a realistic simulation
-        
         try {
-            // Query connection pool usage from a hypothetical monitoring table
-            const { data: connectionStats } = await this.supabase
+            if (!this.supabase) {
+                console.warn('Supabase client not initialized, using simulated data');
+                return this.getSimulatedStats();
+            }
+            
+            // Get stats from last 10 minutes (since backend reports every 4 minutes)
+            const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+            
+            // Query real system monitoring data
+            const { data: monitoringData, error: monitoringError } = await this.supabase
                 .from('system_monitoring')
                 .select('*')
+                .gte('timestamp', tenMinutesAgo)
                 .order('timestamp', { ascending: false })
-                .limit(1);
+                .limit(200);
             
-            // Query exam activity
-            const { data: examStats } = await this.supabase
-                .from('exam_sessions')
-                .select('*')
-                .eq('active', true);
+            if (monitoringError) {
+                this.addLogEntry(`⚠️ Monitoring query error: ${monitoringError.message}`);
+                return this.getSimulatedStats();
+            }
             
-            // Generate realistic stats based on current time and activity
-            const currentHour = new Date().getHours();
-            const isPeakTime = [8, 9, 14, 15, 19, 20].includes(currentHour);
+            // Skip exam sessions query - table not used currently
+            const examStats = null;
             
-            const baseConnections = isPeakTime ? 35 : 15;
-            const randomVariation = Math.floor(Math.random() * 15);
-            const activeConnections = baseConnections + randomVariation;
+            if (!monitoringData || monitoringData.length === 0) {
+                this.addLogEntry('⚠️ No monitoring data found, using simulated stats');
+                return this.getSimulatedStats();
+            }
+            
+            // Aggregate real data from monitoring table
+            const uniqueActiveDevices = new Set();
+            let totalLoad = 0;
+            let maxPeakUsers = 0;
+            let totalConnections = 0;
+            let totalCacheHitRate = 0;
+            let totalCacheEntries = 0;
+            let validRecords = 0;
+            
+            for (const record of monitoringData) {
+                const metadata = record.metadata;
+                const isActive = record.is_active !== false; // Default to true for backward compatibility
+                const activeConnections = record.active_connections || 0;
+                
+                // Only count devices that are actually active
+                if (metadata && metadata.device_id && isActive && activeConnections > 0) {
+                    uniqueActiveDevices.add(metadata.device_id);
+                }
+                
+                totalLoad += record.system_load || 0;
+                maxPeakUsers = Math.max(maxPeakUsers, record.peak_users || 0);
+                totalConnections += activeConnections;
+                totalCacheHitRate += record.cache_hit_rate || 0;
+                totalCacheEntries += record.cache_entries || 0;
+                validRecords++;
+            }
+            
+            const activeUsers = uniqueActiveDevices.size;
+            const avgLoad = validRecords > 0 ? totalLoad / validRecords : 0;
+            const avgCacheHitRate = validRecords > 0 ? totalCacheHitRate / validRecords : 85;
+            const avgCacheEntries = validRecords > 0 ? Math.round(totalCacheEntries / validRecords) : 150;
+            
+            // Calculate crash risk based on real active users
+            let crashRisk = 'LOW';
+            if (activeUsers > 80) {
+                crashRisk = 'CRITICAL';
+            } else if (activeUsers > 50) {
+                crashRisk = 'HIGH';
+            } else if (activeUsers > 30) {
+                crashRisk = 'MEDIUM';
+            }
             
             const stats = {
-                activeConnections: activeConnections,
+                activeConnections: Math.min(activeUsers, 58), // Cap at max connections
                 maxConnections: 58,
-                queueSize: Math.max(0, activeConnections - 50),
-                systemLoad: Math.min(100, activeConnections * 1.5),
-                crashRisk: this.calculateCrashRisk(activeConnections),
-                peakUsers: Math.max(activeConnections, 45),
+                queueSize: Math.max(0, activeUsers - 50),
+                systemLoad: Math.min(100, avgLoad),
+                crashRisk: crashRisk,
+                peakUsers: Math.max(activeUsers, maxPeakUsers),
                 examMode: examStats && examStats.length > 0,
                 activeTestTakers: examStats ? examStats.length * 3 : 0,
                 activeExams: examStats ? examStats.length : 0,
-                cacheHitRate: Math.random() * 30 + 60, // 60-90%
-                cacheEntries: Math.floor(Math.random() * 500 + 200),
-                circuitBreakerOpen: activeConnections > 55,
-                timestamp: new Date()
+                cacheHitRate: avgCacheHitRate,
+                cacheEntries: avgCacheEntries,
+                circuitBreakerOpen: activeUsers > 55,
+                timestamp: new Date(),
+                realDataUsed: true,
+                totalRecords: validRecords,
+                uniqueDevices: activeUsers
             };
             
+            this.addLogEntry(`📊 Real data: ${activeUsers} active users from ${validRecords} records`);
             return stats;
             
         } catch (error) {
-            // If Supabase query fails, return simulated data
-            console.warn('Using simulated data:', error.message);
+            console.warn('Supabase query failed, using simulated data:', error);
+            this.addLogEntry(`⚠️ Database connection failed, using simulated data`);
             return this.getSimulatedStats();
         }
     }
     
     getSimulatedStats() {
-        const currentHour = new Date().getHours();
-        const isPeakTime = [8, 9, 14, 15, 19, 20].includes(currentHour);
-        
-        const activeConnections = isPeakTime ? 
-            Math.floor(Math.random() * 20 + 40) : 
-            Math.floor(Math.random() * 15 + 10);
-        
+        // Return zero stats when no real data is available
         return {
-            activeConnections: activeConnections,
+            activeConnections: 0,
             maxConnections: 58,
-            queueSize: Math.max(0, activeConnections - 50),
-            systemLoad: Math.min(100, activeConnections * 1.8),
-            crashRisk: this.calculateCrashRisk(activeConnections),
-            peakUsers: Math.max(activeConnections, 35),
-            examMode: Math.random() > 0.7, // 30% chance of exam mode
-            activeTestTakers: Math.floor(Math.random() * 25),
-            activeExams: Math.floor(Math.random() * 3),
-            cacheHitRate: Math.random() * 30 + 65,
-            cacheEntries: Math.floor(Math.random() * 400 + 300),
-            circuitBreakerOpen: activeConnections > 55,
-            timestamp: new Date()
+            queueSize: 0,
+            systemLoad: 0,
+            crashRisk: 'LOW',
+            peakUsers: 0,
+            examMode: false,
+            activeTestTakers: 0,
+            activeExams: 0,
+            cacheHitRate: 0,
+            cacheEntries: 0,
+            circuitBreakerOpen: false,
+            timestamp: new Date(),
+            realDataUsed: false
         };
     }
     
@@ -172,7 +237,7 @@ class SystemMonitor {
             indicator.className = 'status-indicator warning';
             progress.className = 'progress-fill warning';
             if (usagePercent % 10 === 0) { // Log only at round numbers to avoid spam
-                this.addLogEntry(`⚠️ WARNING: Connection usage at ${usagePercent}% - Approaching limits`);
+                    this.addLogEntry(`⚠️ WARNING: Connection usage at ${usagePercent}% - Approaching limits`);
             }
         } else {
             card.className = 'status-card success';
@@ -245,19 +310,19 @@ class SystemMonitor {
     updateCharts(stats) {
         // Update connection chart data with time-based x values
         const now = new Date();
-        const minutesAgo = this.connectionData.length * -0.5; // Each point is 30 seconds apart
+        const minutesAgo = this.connectionData.length * -4; // Each point is 4 minutes apart
         
         this.connectionData.push({
             x: minutesAgo,
             y: stats.activeConnections
         });
         
-        // Keep only last 20 data points (10 minutes at 30s intervals)
-        if (this.connectionData.length > 20) {
+        // Keep only last 10 data points (40 minutes at 4min intervals)
+        if (this.connectionData.length > 10) {
             this.connectionData.shift();
-            // Recalculate x values to maintain proper spacing
+            // Recalculate x values to maintain proper spacing (4 minutes apart)
             this.connectionData = this.connectionData.map((point, index) => ({
-                x: (index - this.connectionData.length + 1) * 0.5,
+                x: (index - this.connectionData.length + 1) * 4,
                 y: point.y
             }));
         }
@@ -268,11 +333,11 @@ class SystemMonitor {
             y: stats.peakUsers
         });
         
-        if (this.activityData.length > 20) {
+        if (this.activityData.length > 10) {
             this.activityData.shift();
-            // Recalculate x values
+            // Recalculate x values (4 minutes apart)
             this.activityData = this.activityData.map((point, index) => ({
-                x: (index - this.activityData.length + 1) * 0.5,
+                x: (index - this.activityData.length + 1) * 4,
                 y: point.y
             }));
         }
@@ -334,7 +399,7 @@ class SystemMonitor {
                         position: 'bottom',
                         title: {
                             display: true,
-                            text: 'Time (minutes ago)',
+                            text: 'Time (minutes ago) - 4min intervals',
                             font: {
                                 size: 12,
                                 weight: 'bold'
@@ -439,7 +504,7 @@ class SystemMonitor {
                         position: 'bottom',
                         title: {
                             display: true,
-                            text: 'Time (minutes ago)',
+                            text: 'Time (minutes ago) - 4min intervals',
                             font: {
                                 size: 12,
                                 weight: 'bold'
@@ -702,6 +767,8 @@ function refreshAll() {
 
 // Initialize monitoring when page loads
 let monitor;
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    // Wait for all scripts to load
+    await new Promise(resolve => setTimeout(resolve, 500));
     monitor = new SystemMonitor();
 });

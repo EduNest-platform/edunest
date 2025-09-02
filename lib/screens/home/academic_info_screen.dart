@@ -10,8 +10,10 @@ import '../../services/network_service.dart';
 import 'package:flutter/foundation.dart';
 import '../../widgets/desktop_sidebar.dart';
 import 'Assignment marks/assignment_subjects_screen.dart';
+import 'Midsem marks/midsem_subjects_screen.dart';
 import 'subject_feedback/subject_feedback_list_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../widgets/skeleton_loading.dart';
 
 class AcademicInfoScreen extends StatefulWidget {
   const AcademicInfoScreen({super.key});
@@ -182,24 +184,45 @@ class _AcademicInfoScreenState extends State<AcademicInfoScreen>
                           ),
                           Expanded(
                             child: _isLoading
-                                ? const Center(
-                                  child: CircularProgressIndicator(),
+                                ? Padding(
+                                  padding: const EdgeInsets.all(32),
+                                  child: Column(
+                                    children: [
+                                      // Academic cards skeleton
+                                      Row(
+                                        children: [
+                                          Expanded(child: SkeletonLoading(width: double.infinity, height: 120)),
+                                          SizedBox(width: 16),
+                                          Expanded(child: SkeletonLoading(width: double.infinity, height: 120)),
+                                        ],
+                                      ),
+                                      SizedBox(height: 16),
+                                      Row(
+                                        children: [
+                                          Expanded(child: SkeletonLoading(width: double.infinity, height: 120)),
+                                          SizedBox(width: 16),
+                                          Expanded(child: SkeletonLoading(width: double.infinity, height: 120)),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
                                 )
-                                : Center(
-                                  child: ConstrainedBox(
-                                    constraints: const BoxConstraints(
-                                      maxWidth: 1200,
-                                    ),
-                                    child: Padding(
-                                      padding:
-                                          const EdgeInsets.symmetric(
-                                            horizontal: 32,
-                                            vertical: 32,
-                                          ),
-                                      child: Column(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.center,
-                                                children: [
+                                : SingleChildScrollView(
+                                  child: Center(
+                                    child: ConstrainedBox(
+                                      constraints: const BoxConstraints(
+                                        maxWidth: 1200,
+                                      ),
+                                      child: Padding(
+                                        padding:
+                                            const EdgeInsets.symmetric(
+                                              horizontal: 32,
+                                              vertical: 32,
+                                            ),
+                                        child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.center,
+                                                  children: [
                                                   // Remove header and subtitle for Android/iOS
                                                   Container(
                                                     padding:
@@ -221,13 +244,13 @@ class _AcademicInfoScreenState extends State<AcademicInfoScreen>
                                                           ),
                                                       boxShadow: [
                                                         BoxShadow(
-                                                          color: Colors.black.withOpacity(0.08),
+                                                          color: Colors.black.withValues(alpha: 0.08),
                                                           blurRadius: 20,
                                                           offset: const Offset(0, 6),
                                                           spreadRadius: 0,
                                                         ),
                                                         BoxShadow(
-                                                          color: Colors.black.withOpacity(0.04),
+                                                          color: Colors.black.withValues(alpha: 0.04),
                                                           blurRadius: 8,
                                                           offset: const Offset(0, 3),
                                                           spreadRadius: 0,
@@ -270,7 +293,26 @@ class _AcademicInfoScreenState extends State<AcademicInfoScreen>
                                                                   ),
                                                                 ),
                                                                 const SizedBox(height: 24),
-                                                                // Second row with Class Feedback
+                                                                // Midsem Marks
+                                                                SizedBox(
+                                                                  width: double.infinity,
+                                                                  child: _AcademicInfoCard(
+                                                                    icon: Icons.quiz_outlined,
+                                                                    title: 'Midsem Marks',
+                                                                    subtitle: 'View your midsem exam scores',
+                                                                    color: AppTheme.secondaryGreen,
+                                                                    onTap: () {
+                                                                      Navigator.push(
+                                                                        context,
+                                                                        MaterialPageRoute(
+                                                                          builder: (context) => const MidsemSubjectsScreen(),
+                                                                        ),
+                                                                      );
+                                                                    },
+                                                                  ),
+                                                                ),
+                                                                const SizedBox(height: 24),
+                                                                // Third row with Class Feedback
                                                                 SizedBox(
                                                                   width: double.infinity,
                                                                   child: _AcademicInfoCard(
@@ -414,6 +456,24 @@ class _AcademicInfoScreenState extends State<AcademicInfoScreen>
                                                                 const SizedBox(
                                                                   height: 20,
                                                                 ),
+                                                                // Midsem Marks
+                                                                _AcademicInfoCard(
+                                                                  icon: Icons.quiz_outlined,
+                                                                  title: 'Midsem Marks',
+                                                                  subtitle: 'View your midsem exam scores',
+                                                                  color: AppTheme.secondaryGreen,
+                                                                  onTap: () {
+                                                                    Navigator.push(
+                                                                      context,
+                                                                      MaterialPageRoute(
+                                                                        builder: (context) => const MidsemSubjectsScreen(),
+                                                                      ),
+                                                                    );
+                                                                  },
+                                                                ),
+                                                                const SizedBox(
+                                                                  height: 20,
+                                                                ),
                                                                 _AcademicInfoCard(
                                                                   icon: Icons.feedback_rounded,
                                                                   title: 'Class Feedback',
@@ -527,6 +587,7 @@ class _AcademicInfoScreenState extends State<AcademicInfoScreen>
                                           ),
                                         ),
                           ),
+                          ),
                         ],
                       ),
             ),
@@ -566,16 +627,30 @@ class _AcademicInfoScreenState extends State<AcademicInfoScreen>
                     ),
                     Expanded(
                       child: _isLoading
-                          ? const Center(child: CircularProgressIndicator())
+                          ? Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              children: [
+                                SkeletonLoading(width: double.infinity, height: 100),
+                                SizedBox(height: 16),
+                                SkeletonLoading(width: double.infinity, height: 100),
+                                SizedBox(height: 16),
+                                SkeletonLoading(width: double.infinity, height: 100),
+                                SizedBox(height: 16),
+                                SkeletonLoading(width: double.infinity, height: 100),
+                              ],
+                            ),
+                          )
                           : Padding(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 16,
                             vertical: 16,
                           ),
-                          child: Column(
-                            crossAxisAlignment:
-                                CrossAxisAlignment.center,
-                            children: [
+                          child: SingleChildScrollView(
+                            child: Column(
+                              crossAxisAlignment:
+                                  CrossAxisAlignment.center,
+                              children: [
                               _AcademicInfoCard(
                                 icon:
                                     Icons
@@ -627,9 +702,7 @@ class _AcademicInfoScreenState extends State<AcademicInfoScreen>
                                         title: 'Timetable',
                                         subtitle:
                                             'View your class schedule',
-                                        color:
-                                            AppTheme
-                                                .primaryLight,
+                                        color: Colors.red,
                                         onTap:
                                             _semesterId != null
                                                 ? () {
@@ -684,6 +757,24 @@ class _AcademicInfoScreenState extends State<AcademicInfoScreen>
                                       const SizedBox(
                                         height: 16,
                                       ),
+                                      // Midsem Marks
+                                      _AcademicInfoCard(
+                                        icon: Icons.quiz_outlined,
+                                        title: 'Midsem Marks',
+                                        subtitle: 'View your midsem exam scores',
+                                        color: AppTheme.secondaryGreen,
+                                        onTap: () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) => const MidsemSubjectsScreen(),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                      const SizedBox(
+                                        height: 16,
+                                      ),
                                       _AcademicInfoCard(
                                         icon: Icons.feedback_rounded,
                                         title: 'Class Feedback',
@@ -701,6 +792,7 @@ class _AcademicInfoScreenState extends State<AcademicInfoScreen>
                                     ],
                                   ),
                                 ),
+                              ),
                     ),
                   ],
                 ),
@@ -730,8 +822,8 @@ class _AcademicInfoCard extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(20),
-      splashColor: color.withOpacity(0.1),
-      highlightColor: color.withOpacity(0.05),
+      splashColor: color.withValues(alpha: 0.1),
+      highlightColor: color.withValues(alpha: 0.05),
       child: Container(
         padding: EdgeInsets.all(isDesktop ? 32 : 24),
         decoration: BoxDecoration(
@@ -746,20 +838,20 @@ class _AcademicInfoCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.08),
+              color: Colors.black.withValues(alpha: 0.08),
               blurRadius: 16,
               offset: const Offset(0, 4),
               spreadRadius: 0,
             ),
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: Colors.black.withValues(alpha: 0.04),
               blurRadius: 6,
               offset: const Offset(0, 2),
               spreadRadius: 0,
             ),
           ],
           border: Border.all(
-            color: color.withOpacity(0.15), 
+            color: color.withValues(alpha: 0.15), 
             width: 1,
           ),
         ),
@@ -772,13 +864,13 @@ class _AcademicInfoCard extends StatelessWidget {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    color.withOpacity(0.15),
-                    color.withOpacity(0.08),
+                    color.withValues(alpha: 0.15),
+                    color.withValues(alpha: 0.08),
                   ],
                 ),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: color.withOpacity(0.2),
+                  color: color.withValues(alpha: 0.2),
                   width: 1,
                 ),
               ),
@@ -814,7 +906,7 @@ class _AcademicInfoCard extends StatelessWidget {
             Container(
               padding: EdgeInsets.all(isDesktop ? 10 : 8),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.08),
+                color: color.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(

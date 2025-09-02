@@ -16,6 +16,8 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script src="supabaseClient.js?v=1.2"></script>
   <script src="supabaseAdmin.js?v=1.2"></script>
+  <script src="authManager.js?v=1.0"></script>
+  <script src="connectionMonitor.js?v=1.0"></script>
 </head>
 <body>
   <div class="main-bg"></div>
@@ -99,11 +101,11 @@
           <div class="action-buttons">
             <button class="action-btn primary" onclick="window.location.href='colleges.html'">
               <span class="action-icon">🏗️</span>
-              Manage Hierarchy
+              <span>Manage Hierarchy</span>
             </button>
-            <button class="action-btn" onclick="window.location.href='attendance.html'">
+            <button class="action-btn secondary" onclick="window.location.href='attendance.html'">
               <span class="action-icon">📋</span>
-              Manage Classes
+              <span>View Classes</span>
             </button>
           </div>
           

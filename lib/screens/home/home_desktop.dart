@@ -13,6 +13,7 @@ import 'resources/code_screen.dart';
 import 'resources/lab_manuals_screen.dart';
 import 'Subject Screen/resources_screen.dart';
 import '../practice_tests/chapter_selection_screen.dart';
+import '../../widgets/recent_activity_skeleton.dart';
 // For navigatorKey
 import 'academic_info_screen.dart';
 import 'package:http/http.dart' as http;
@@ -20,6 +21,7 @@ import 'dart:convert';
 import '../../widgets/whats_new_dialog.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../widgets/skeleton_loading.dart';
 
 class HomeDesktop extends StatefulWidget {
   final UserProfile? userProfile;
@@ -408,70 +410,73 @@ class _HomeDesktopState extends State<HomeDesktop>
                                                   ],
                                                 ),
                                                 const SizedBox(height: 10),
-                                                Row(
-                                                  children: [
-                                                    Icon(
-                                                      Icons.school_rounded,
-                                                      color:
-                                                          AppTheme.primaryBlue,
-                                                      size: 18,
-                                                    ),
-                                                    const SizedBox(width: 6),
-                                                    Text(
-                                                      widget
-                                                              .userProfile
-                                                              ?.college ??
-                                                          '-',
-                                                      style:
-                                                          GoogleFonts.poppins(
-                                                            fontSize: 15,
-                                                            color:
-                                                                Colors.black87,
-                                                          ),
-                                                    ),
-                                                    const SizedBox(width: 16),
-                                                    Icon(
-                                                      Icons
-                                                          .account_tree_rounded,
-                                                      color:
-                                                          AppTheme.primaryLight,
-                                                      size: 18,
-                                                    ),
-                                                    const SizedBox(width: 6),
-                                                    Text(
-                                                      widget
-                                                              .userProfile
-                                                              ?.branch ??
-                                                          '-',
-                                                      style:
-                                                          GoogleFonts.poppins(
-                                                            fontSize: 15,
-                                                            color:
-                                                                Colors.black87,
-                                                          ),
-                                                    ),
-                                                    const SizedBox(width: 16),
-                                                    Icon(
-                                                      Icons
-                                                          .calendar_today_rounded,
-                                                      color: Colors.orange,
-                                                      size: 18,
-                                                    ),
-                                                    const SizedBox(width: 6),
-                                                    Text(
-                                                      widget
-                                                              .userProfile
-                                                              ?.semester
-                                                              ?.toString() ??
-                                                          '-',
-                                                      style:
-                                                          GoogleFonts.poppins(
-                                                            fontSize: 15,
-                                                            color:
-                                                                Colors.black87,
-                                                          ),
-                                                    ),
-                                                  ],
+                                                SingleChildScrollView(
+                                                  scrollDirection: Axis.horizontal,
+                                                  child: Row(
+                                                    children: [
+                                                      Icon(
+                                                        Icons.school_rounded,
+                                                        color:
+                                                            AppTheme.primaryBlue,
+                                                        size: 18,
+                                                      ),
+                                                      const SizedBox(width: 6),
+                                                      Text(
+                                                        widget
+                                                                .userProfile
+                                                                ?.college ??
+                                                            '-',
+                                                        style:
+                                                            GoogleFonts.poppins(
+                                                              fontSize: 15,
+                                                              color:
+                                                                  Colors.black87,
+                                                            ),
+                                                      ),
+                                                      const SizedBox(width: 16),
+                                                      Icon(
+                                                        Icons
+                                                            .account_tree_rounded,
+                                                        color:
+                                                            AppTheme.primaryLight,
+                                                        size: 18,
+                                                      ),
+                                                      const SizedBox(width: 6),
+                                                      Text(
+                                                        widget
+                                                                .userProfile
+                                                                ?.branch ??
+                                                            '-',
+                                                        style:
+                                                            GoogleFonts.poppins(
+                                                              fontSize: 15,
+                                                              color:
+                                                                  Colors.black87,
+                                                            ),
+                                                      ),
+                                                      const SizedBox(width: 16),
+                                                      Icon(
+                                                        Icons
+                                                            .calendar_today_rounded,
+                                                        color: Colors.orange,
+                                                        size: 18,
+                                                      ),
+                                                      const SizedBox(width: 6),
+                                                      Text(
+                                                        widget
+                                                                .userProfile
+                                                                ?.semester
+                                                                ?.toString() ??
+                                                            '-',
+                                                        style:
+                                                            GoogleFonts.poppins(
+                                                              fontSize: 15,
+                                                              color:
+                                                                  Colors.black87,
+                                                            ),
+                                                      ),
+                                                    ],
+                                                  ),
                                                 ),
                                               ],
                                             ),
@@ -508,9 +513,38 @@ class _HomeDesktopState extends State<HomeDesktop>
                                       ],
                                     ),
                                     const SizedBox(height: 18),
-                                    widget.subjectsLoading
-                                        ? const Center(
-                                          child: CircularProgressIndicator(),
+                                    widget.subjectsLoading && widget.currentSubjects.isEmpty
+                                        ? Center(
+                                          child: ConstrainedBox(
+                                            constraints: const BoxConstraints(
+                                              maxWidth: 1200,
+                                            ),
+                                            child: LayoutBuilder(
+                                              builder: (context, constraints) {
+                                                int crossAxisCount = 4;
+                                                double width = constraints.maxWidth;
+                                                if (width < 600) {
+                                                  crossAxisCount = 1;
+                                                } else if (width < 900) {
+                                                  crossAxisCount = 2;
+                                                } else if (width < 1200) {
+                                                  crossAxisCount = 3;
+                                                }
+                                                return GridView.builder(
+                                                  shrinkWrap: true,
+                                                  physics: const NeverScrollableScrollPhysics(),
+                                                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                                                    crossAxisCount: crossAxisCount,
+                                                    mainAxisSpacing: 12,
+                                                    crossAxisSpacing: 12,
+                                                    childAspectRatio: 1.165,
+                                                  ),
+                                                  itemCount: 6, // Show 6 skeleton cards
+                                                  itemBuilder: (context, index) => SubjectCardSkeleton(),
+                                                );
+                                              },
+                                            ),
+                                          ),
                                         )
                                         : widget.currentSubjects.isEmpty
                                         ? Text(
@@ -620,9 +654,14 @@ class _HomeDesktopState extends State<HomeDesktop>
                                       ],
                                     ),
                                     const SizedBox(height: 18),
-                                    widget.recentLoading
-                                        ? const Center(
-                                          child: CircularProgressIndicator(),
+                                    widget.recentLoading && widget.recentFiles.isEmpty
+                                        ? Column(
+                                          children: List.generate(5, (index) => 
+                                            Padding(
+                                              padding: const EdgeInsets.only(bottom: 12),
+                                              child: RecentActivitySkeleton(),
+                                            ),
+                                          ),
                                         )
                                         : widget.recentFiles.isEmpty
                                         ? Text(
@@ -662,10 +701,8 @@ class _HomeDesktopState extends State<HomeDesktop>
                                                     accentColors.length];
                                             return GestureDetector(
                                               onTap: () {
-                                                final fileType =
-                                                    file.fileType
-                                                        .toLowerCase() ??
-                                                    '';
+                        final fileType =
+                          file.fileType.toLowerCase();
                                                 final subject = widget
                                                     .currentSubjects
                                                     .firstWhere(
@@ -822,7 +859,7 @@ class _HomeDesktopState extends State<HomeDesktop>
                                                             height: 2,
                                                           ),
                                                           Text(
-                                                            file.fileType ?? '',
+                                                            file.fileType,
                                                             style: GoogleFonts.poppins(
                                                               fontSize: 13,
                                                               color:

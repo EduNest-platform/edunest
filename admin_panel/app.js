@@ -397,9 +397,9 @@ async function loadAdminProfile() {
       return;
     }
     
-    const { data: { user }, error } = await window.supabaseAdmin.auth.getUser();
-    if (error || !user) {
-      console.error('Error getting user:', error);
+    const user = await window.authManager.getCurrentUser();
+    if (!user) {
+      console.error('Error getting user: User not authenticated');
       return;
     }
     

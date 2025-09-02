@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/user_profile_service.dart';
+import '../services/network_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ProfileSetupController extends ChangeNotifier {
@@ -16,9 +17,12 @@ class ProfileSetupController extends ChangeNotifier {
 
   bool _isLoading = false;
   String? _errorMessage;
+  bool _hasNetworkError = false;
+  final NetworkService _networkService = NetworkService();
 
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
+  bool get hasNetworkError => _hasNetworkError;
 
   void setLoading(bool value) {
     _isLoading = value;
@@ -30,15 +34,43 @@ class ProfileSetupController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setNetworkError(bool value) {
+    _hasNetworkError = value;
+    notifyListeners();
+  }
+
   // Fetch colleges from Supabase
   Future<void> fetchColleges() async {
     setLoading(true);
+    setNetworkError(false);
+    
+    // Check both general connectivity and Supabase-specific connectivity
+    final generalConnectivity = await _networkService.isConnected();
+    final supabaseConnectivity = await _networkService.isSupabaseReachable();
+    
+    if (!generalConnectivity || !supabaseConnectivity) {
+      setNetworkError(true);
+      setError('Unable to connect to EduNest servers. Please check your internet connection and try again.');
+      setLoading(false);
+      return;
+    }
+    
     try {
       final data = await Supabase.instance.client.from('colleges').select();
       colleges = List<Map<String, dynamic>>.from(data);
+      setNetworkError(false);
+      setError(null); // Clear any previous errors
       notifyListeners();
     } catch (e) {
-      setError('Failed to load colleges');
+      // Check if it's a network-related error
+      if (e.toString().contains('Failed host lookup') || 
+          e.toString().contains('SocketException') ||
+          e.toString().contains('No address associated with hostname')) {
+        setNetworkError(true);
+        setError('Unable to connect to EduNest servers. Please check your internet connection and try again.');
+      } else {
+        setError('Failed to load colleges. Please try again.');
+      }
     }
     setLoading(false);
   }
@@ -46,15 +78,38 @@ class ProfileSetupController extends ChangeNotifier {
   // Fetch branches for selected college
   Future<void> fetchBranches(String collegeId) async {
     setLoading(true);
+    setNetworkError(false);
+    
+    // Check both general connectivity and Supabase-specific connectivity
+    final generalConnectivity = await _networkService.isConnected();
+    final supabaseConnectivity = await _networkService.isSupabaseReachable();
+    
+    if (!generalConnectivity || !supabaseConnectivity) {
+      setNetworkError(true);
+      setError('Unable to connect to EduNest servers. Please check your internet connection and try again.');
+      setLoading(false);
+      return;
+    }
+    
     try {
       final data = await Supabase.instance.client
           .from('branches')
           .select()
           .eq('college_id', collegeId);
       branches = List<Map<String, dynamic>>.from(data);
+      setNetworkError(false);
+      setError(null); // Clear any previous errors
       notifyListeners();
     } catch (e) {
-      setError('Failed to load branches');
+      // Check if it's a network-related error
+      if (e.toString().contains('Failed host lookup') || 
+          e.toString().contains('SocketException') ||
+          e.toString().contains('No address associated with hostname')) {
+        setNetworkError(true);
+        setError('Unable to connect to EduNest servers. Please check your internet connection and try again.');
+      } else {
+        setError('Failed to load branches. Please try again.');
+      }
     }
     setLoading(false);
   }
@@ -62,17 +117,45 @@ class ProfileSetupController extends ChangeNotifier {
   // Fetch semesters for selected branch
   Future<void> fetchSemesters(String branchId) async {
     setLoading(true);
+    setNetworkError(false);
+    
+    // Check both general connectivity and Supabase-specific connectivity
+    final generalConnectivity = await _networkService.isConnected();
+    final supabaseConnectivity = await _networkService.isSupabaseReachable();
+    
+    if (!generalConnectivity || !supabaseConnectivity) {
+      setNetworkError(true);
+      setError('Unable to connect to EduNest servers. Please check your internet connection and try again.');
+      setLoading(false);
+      return;
+    }
+    
     try {
       final data = await Supabase.instance.client
           .from('semesters')
           .select()
           .eq('branch_id', branchId);
       semesters = List<Map<String, dynamic>>.from(data);
+      setNetworkError(false);
+      setError(null); // Clear any previous errors
       notifyListeners();
     } catch (e) {
-      setError('Failed to load semesters');
+      // Check if it's a network-related error
+      if (e.toString().contains('Failed host lookup') || 
+          e.toString().contains('SocketException') ||
+          e.toString().contains('No address associated with hostname')) {
+        setNetworkError(true);
+        setError('Unable to connect to EduNest servers. Please check your internet connection and try again.');
+      } else {
+        setError('Failed to load semesters. Please try again.');
+      }
     }
     setLoading(false);
+  }
+
+  // Retry network operations
+  Future<void> retryNetworkOperation() async {
+    await fetchColleges();
   }
 
   void setSelectedCollege(String? collegeId) {
@@ -99,12 +182,6 @@ class ProfileSetupController extends ChangeNotifier {
 
   void setSelectedSemester(String? semesterId) {
     selectedSemesterId = semesterId;
-    notifyListeners();
-  }
-
-  // Method to trigger UI updates when roll number changes
-  void updateRollNumber(String value) {
-    rollNumberController.text = value;
     notifyListeners();
   }
 
@@ -150,15 +227,8 @@ class ProfileSetupController extends ChangeNotifier {
         return false;
       }
 
-      // Debug: Check if all required fields are filled
-      final rollNumber = rollNumberController.text.trim();
-      if (selectedCollegeId == null || selectedBranchId == null || selectedSemesterId == null || rollNumber.isEmpty) {
-        setError('Please fill in all required fields');
-        setLoading(false);
-        return false;
-      }
-
       // Validate roll number uniqueness within same academic context
+      final rollNumber = rollNumberController.text.trim();
       if (rollNumber.isNotEmpty) {
         final isDuplicate = await UserProfileService.checkStudentIdExistsInSameContext(
           studentId: rollNumber,
@@ -212,7 +282,7 @@ class ProfileSetupController extends ChangeNotifier {
       setLoading(false);
       return success;
     } catch (e) {
-      setError('Failed to save academic path: ${e.toString()}');
+      setError('Failed to save academic path');
       setLoading(false);
       return false;
     }
@@ -297,8 +367,7 @@ class ProfileSetupController extends ChangeNotifier {
                 if (profile.semester != null) {
                   final semester = semesters.firstWhere(
                     (semester) =>
-                        semester['id'].toString() ==
-                        profile.semester.toString(),
+                        semester['name'] == profile.semester,
                     orElse: () => {},
                   );
                   if (semester.isNotEmpty) {

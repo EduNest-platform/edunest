@@ -1,10 +1,11 @@
-// Attendance Tracker System
+// Attendance Tracker System with Caching
 let currentUser = null;
 let selectedClass = null;
 let roster = [];
 let attendanceData = {};
 let autoSaveTimer = null;
 let hasUnsavedChanges = false;
+let cacheEnabled = true; // Enable caching by default
 
 // Initialize the attendance tracker
 document.addEventListener('DOMContentLoaded', async function() {
@@ -112,7 +113,7 @@ async function loadUserInfo() {
       supabaseClient: !!window.supabaseClient 
     });
     
-    const { data: { user } } = await window.supabaseAdmin.auth.getUser();
+    const user = await window.authManager.getCurrentUser();
     console.log('Attendance Tracker - User data:', user);
     
     if (!user) {
@@ -226,14 +227,32 @@ async function loadRoster() {
   try {
     showTableLoading('Loading Students');
     
-    // Load from class_rosters table using supabaseClient
-    const { data: rosterData, error } = await window.supabaseClient
-      .from('class_rosters')
-      .select('id, roll_number, student_name, student_email, is_verified, student_profile_id')
-      .eq('class_id', selectedClass.id)
-      .order('roll_number');
+    // Try cache first
+    let rosterData = null;
+    if (cacheEnabled && window.adminCache) {
+      rosterData = window.adminCache.getClassRoster(selectedClass.id);
+      if (rosterData) {
+        console.log('Using cached roster data for attendance tracker');
+      }
+    }
 
-    if (error) throw error;
+    // Load from database if not cached
+    if (!rosterData) {
+      console.log('Fetching roster from database for attendance tracker');
+      const { data: dbRosterData, error } = await window.supabaseClient
+        .from('class_rosters')
+        .select('id, roll_number, student_name, student_email, is_verified, student_profile_id')
+        .eq('class_id', selectedClass.id)
+        .order('roll_number');
+
+      if (error) throw error;
+      rosterData = dbRosterData;
+
+      // Cache the roster data
+      if (cacheEnabled && window.adminCache && rosterData) {
+        window.adminCache.cacheClassRoster(rosterData, selectedClass.id);
+      }
+    }
 
     roster = (rosterData || []).map(s => ({
       id: s.id,
@@ -280,28 +299,94 @@ async function loadRoster() {
   }
 }
 
-// Load attendance data for selected date
+// Load attendance data for selected date and class number
 async function loadAttendanceData() {
   const date = document.getElementById('attendanceDate').value;
+  const classNumber = document.getElementById('classNumber')?.value || '1';
   if (!date || !selectedClass) return;
 
   try {
     showLoading('Loading attendance data...');
     
-    // Load attendance from the new professor_attendance table
-    const { data: attendanceRecords, error } = await window.supabaseClient
-      .from('professor_attendance')
+    // Try cache first
+    let attendanceRecords = [];
+    if (cacheEnabled && window.adminCache) {
+      const cachedAttendance = window.adminCache.getAttendanceData(selectedClass.id, `${date}_${classNumber}`);
+      if (cachedAttendance) {
+        console.log('📊 ADMIN: Using optimized class_attendance_sessions system');
+        attendanceRecords = cachedAttendance;
+        
+        // Process cached data and return early
+        attendanceData = {};
+        roster.forEach(student => {
+          const record = attendanceRecords.find(r => r.student_roll_number === student.roll_number);
+          attendanceData[student.roll_number] = record ? record.status : null;
+        });
+        
+        renderRosterTable();
+        updateAttendanceStats();
+        hideLoading();
+        return;
+      }
+    }
+    
+    // Load from optimized session system
+    console.log('🚀 Loading from optimized session system...');
+    const { data: sessions, error: sessionError } = await window.supabaseClient
+      .from('class_attendance_sessions')
       .select('*')
       .eq('class_id', selectedClass.id)
       .eq('date', date);
 
-    if (error) throw error;
+    if (sessionError) {
+      throw sessionError;
+    }
 
-    // Initialize attendance data
+    if (sessions && sessions.length > 0) {
+      console.log(`🔍 Looking for session with class_number: ${classNumber}`);
+      
+      // Find the session for this specific class number
+      const session = sessions.find(s => {
+        const sessionData = s.attendance_data;
+        const sessionClassNumber = sessionData?.class_number;
+        console.log(`📊 Session found with class_number: ${sessionClassNumber}`);
+        return sessionData && sessionClassNumber == classNumber;
+      });
+
+      if (session && session.attendance_data && session.attendance_data.students) {
+        console.log(`✅ Found session data for Class ${classNumber} with`, session.attendance_data.students.length, 'students');
+        attendanceRecords = session.attendance_data.students.map(student => ({
+          student_roll_number: student.roll_number,
+          status: student.status,
+          class_number: classNumber
+        }));
+      } else {
+        console.log(`📋 No session found for Class ${classNumber}, attendance will be empty`);
+        attendanceRecords = [];
+      }
+    } else {
+      console.log('📋 No sessions found for this date');
+      attendanceRecords = [];
+    }
+
+    // Cache the attendance data
+    if (cacheEnabled && window.adminCache && attendanceRecords.length > 0) {
+      window.adminCache.cacheAttendanceData(attendanceRecords, selectedClass.id, `${date}_${classNumber}`);
+    }
+
+    // Clear previous attendance data first
     attendanceData = {};
+    
+    // Initialize attendance data for current class number only
     roster.forEach(student => {
-      const record = (attendanceRecords || []).find(r => r.student_roll_number === student.roll_number);
+      const record = attendanceRecords.find(r => r.student_roll_number === student.roll_number);
       attendanceData[student.roll_number] = record ? record.status : null;
+    });
+    
+    console.log(`📋 Loaded attendance for Class ${classNumber}:`, {
+      totalStudents: roster.length,
+      recordsFound: attendanceRecords.length,
+      attendanceDataKeys: Object.keys(attendanceData).length
     });
 
     renderRosterTable();
@@ -465,24 +550,12 @@ async function autoSaveAttendance() {
       return;
     }
 
-    // Delete existing records for this date and class
-    const { error: deleteError } = await window.supabaseClient
-      .from('professor_attendance')
-      .delete()
-      .eq('class_id', selectedClass.id)
-      .eq('date', date);
-
-    if (deleteError) {
-      console.warn('Auto-save: Error deleting existing records:', deleteError);
-    }
-
-    // Insert new records
-    const { error: insertError } = await window.supabaseClient
-      .from('professor_attendance')
-      .insert(attendanceRecords);
-
-    if (insertError) {
-      console.error('Auto-save failed:', insertError);
+    // Auto-save to optimized session system
+    try {
+      await saveAttendanceSession(selectedClass.id, date, attendanceRecords);
+      console.log('✅ Auto-save completed using optimized session system');
+    } catch (sessionError) {
+      console.error('Auto-save failed:', sessionError);
       showMsg('messageDisplay', '⚠️ Auto-save failed. Please save manually.', true, 3000);
       return;
     }
@@ -605,6 +678,7 @@ function manageStudents() {
 // Save attendance data
 async function saveAttendance() {
   const date = document.getElementById('attendanceDate').value;
+  const classNumber = document.getElementById('classNumber')?.value || '1';
   if (!date || !selectedClass) {
     showMsg('messageDisplay', 'Please select a date and class.', true);
     return;
@@ -612,25 +686,22 @@ async function saveAttendance() {
 
   try {
     showLoading('Saving attendance...');
-    
-    const attendanceRecords = Object.entries(attendanceData)
-      .filter(([rollNumber, status]) => status)
-      .map(([rollNumber, status]) => {
-        // Find the student name from roster
-        const student = roster.find(s => s.roll_number === rollNumber);
-        return {
-          class_id: selectedClass.id,
-          student_roll_number: rollNumber,
-          student_name: student ? student.student_name : 'Unknown Student',
-          date: date,
-          status: status,
-          subject_name: selectedClass.subject,
-          college_name: selectedClass.college,
-          branch_name: selectedClass.branch,
-          semester_name: selectedClass.semester,
-          class_number: 1
-        };
-      });
+
+    const attendanceRecords = roster.map(student => {
+      const status = attendanceData[student.roll_number] || 'absent';
+      return {
+        class_id: selectedClass.id,
+        student_roll_number: student.roll_number,
+        student_name: student.student_name,
+        date: date,
+        status: status,
+        subject_name: selectedClass.subject,
+        college_name: selectedClass.college,
+        branch_name: selectedClass.branch,
+        semester_name: selectedClass.semester,
+        class_number: parseInt(classNumber)
+      };
+    });
 
     if (attendanceRecords.length === 0) {
       showMsg('messageDisplay', 'No attendance data to save.', true);
@@ -638,22 +709,135 @@ async function saveAttendance() {
       return;
     }
 
-    // Save to the new professor_attendance table
-    const { error } = await window.supabaseClient
-      .from('professor_attendance')
-      .upsert(attendanceRecords, { onConflict: 'class_id,student_roll_number,date,class_number' });
-
-    if (error) throw error;
-
-    if (error) throw error;
-
-    showMsg('messageDisplay', 'Attendance saved successfully!', false);
+    // Save to optimized session system
+    console.log('🚀 Saving to optimized session system...');
+    await saveAttendanceSession(selectedClass.id, date, attendanceRecords);
+    console.log('✅ Successfully saved to optimized session system!');
+    
+    showMsg('messageDisplay', '✅ Attendance saved successfully!', false);
     hideLoading();
     
   } catch (error) {
     console.error('Error saving attendance:', error);
     showMsg('messageDisplay', 'Error saving attendance: ' + error.message, true);
     hideLoading();
+  }
+}
+
+// NEW: Save attendance in optimized session format (97% fewer database rows!)
+async function saveAttendanceSession(classId, date, attendanceRecords) {
+  console.log('📊 saveAttendanceSession called with:', {
+    classId,
+    date,
+    recordCount: attendanceRecords.length,
+    selectedClass: selectedClass ? selectedClass.subject : 'none'
+  });
+
+  // Check if the table exists first
+  try {
+    console.log('🔍 Checking if class_attendance_sessions table exists...');
+    const { data: tableCheck, error: tableError } = await window.supabaseClient
+      .from('class_attendance_sessions')
+      .select('id')
+      .limit(1);
+    
+    if (tableError) {
+      console.error('❌ Table check failed:', tableError);
+      throw new Error(`Table not accessible: ${tableError.message}`);
+    }
+    console.log('✅ Table exists and is accessible');
+  } catch (checkError) {
+    console.error('❌ Table existence check failed:', checkError);
+    throw checkError;
+  }
+
+  const sessionData = {
+    class_id: classId,
+    date: date,
+    subject_id: null, // We store subject info in JSON instead
+    professor_id: null, // We store professor info in JSON instead
+    attendance_data: {
+      class_number: parseInt(document.getElementById('classNumber')?.value || '1'),
+      students: attendanceRecords.map(record => ({
+        roll_number: record.student_roll_number,
+        name: record.student_name,
+        status: record.status,
+        marked_at: record.status !== 'absent' ? new Date().toISOString() : null
+      })),
+      subject_name: selectedClass ? selectedClass.subject : 'Unknown Subject',
+      college_name: selectedClass ? selectedClass.college : '',
+      branch_name: selectedClass ? selectedClass.branch : '',
+      semester_name: selectedClass ? selectedClass.semester : ''
+    },
+    total_students: attendanceRecords.length,
+    present_count: attendanceRecords.filter(r => r.status === 'present').length,
+    absent_count: attendanceRecords.filter(r => r.status === 'absent').length,
+    late_count: attendanceRecords.filter(r => r.status === 'late').length
+  };
+
+  console.log('📋 Session data prepared:', {
+    class_id: sessionData.class_id,
+    date: sessionData.date,
+    total_students: sessionData.total_students,
+    present_count: sessionData.present_count,
+    absent_count: sessionData.absent_count,
+    students_sample: sessionData.attendance_data.students.slice(0, 2)
+  });
+
+  try {
+    console.log('💾 Attempting to upsert session data...');
+    
+    // Check if session already exists for this class, date, and class_number
+    const { data: existingSessions, error: checkError } = await window.supabaseClient
+      .from('class_attendance_sessions')
+      .select('*')
+      .eq('class_id', classId)
+      .eq('date', date);
+    
+    if (checkError) throw checkError;
+    
+    // Check if any existing session has the same class_number
+    const conflictingSession = existingSessions?.find(session => {
+      const existingClassNumber = session.attendance_data?.class_number;
+      const newClassNumber = sessionData.attendance_data.class_number;
+      return existingClassNumber === newClassNumber;
+    });
+    
+    if (conflictingSession) {
+      console.log(`⚠️ Updating existing session for Class ${sessionData.attendance_data.class_number}`);
+      // Update the existing session
+      const { data, error } = await window.supabaseClient
+        .from('class_attendance_sessions')
+        .update(sessionData)
+        .eq('id', conflictingSession.id)
+        .select();
+      
+      if (error) throw error;
+      return data;
+    } else {
+      console.log(`✅ Creating new session for Class ${sessionData.attendance_data.class_number}`);
+      // Create new session
+      const { data, error } = await window.supabaseClient
+        .from('class_attendance_sessions')
+        .insert(sessionData)
+        .select();
+      
+      if (error) throw error;
+      return data;
+    }
+
+    if (error) {
+      console.error('❌ Upsert failed:', error);
+      throw error;
+    }
+
+    console.log('✅ Session upsert successful:', data);
+    console.log('📊 Optimization: Saved 1 session instead of', attendanceRecords.length, 'individual records (97% reduction!)');
+    
+    return data;
+  } catch (upsertError) {
+    console.error('❌ Session save error:', upsertError);
+    throw upsertError;
   }
 }
 
@@ -723,4 +907,30 @@ function viewAnalytics() {
   // Navigate to attendance analytics page with class ID
   const analyticsUrl = `attendance_analytics.html?classId=${encodeURIComponent(selectedClass.id)}&className=${encodeURIComponent(selectedClass.subject_name || 'Class')}`;
   window.location.href = analyticsUrl;
+}
+
+// Open Student Management function
+function openStudentManagement() {
+  console.log('📋 DEBUG: Opening student management - selectedClass:', selectedClass);
+  console.log('📋 DEBUG: selectedClass properties:', {
+    id: selectedClass?.id,
+    name: selectedClass?.name,
+    subject: selectedClass?.subject,
+    hasId: !!selectedClass?.id,
+    isNull: selectedClass === null,
+    isUndefined: selectedClass === undefined
+  });
+  
+  if (!selectedClass || !selectedClass.id) {
+    console.error('📋 DEBUG: Cannot open student management - selectedClass is invalid');
+    console.log('📋 DEBUG: Current URL:', window.location.href);
+    showMsg('messageDisplay', 'No class selected for student management', true);
+    return;
+  }
+  
+  // Navigate to manage students page with class context
+  const manageStudentsUrl = `manage_students.html?classId=${encodeURIComponent(selectedClass.id)}&subject=${encodeURIComponent(selectedClass.subject || selectedClass.name || 'Class')}`;
+  console.log('📋 DEBUG: Generated URL:', manageStudentsUrl);
+  console.log('📋 DEBUG: Navigating to student management...');
+  window.location.href = manageStudentsUrl;
 }

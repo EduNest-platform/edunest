@@ -271,13 +271,13 @@ class _FeedbackFormScreenState extends State<FeedbackFormScreen> {
           end: Alignment.bottomRight,
           colors: [
             Colors.green.shade50,
-            Colors.green.shade100.withOpacity(0.5),
+            Colors.green.shade100.withValues(alpha: 0.5),
           ],
         ),
         borderRadius: BorderRadius.circular(isDesktop ? 24 : 16),
         boxShadow: [
           BoxShadow(
-            color: Colors.green.withOpacity(0.1),
+            color: Colors.green.withValues(alpha: 0.1),
             blurRadius: isDesktop ? 24 : 16,
             offset: const Offset(0, 8),
             spreadRadius: 0,
@@ -378,13 +378,13 @@ class _FeedbackFormScreenState extends State<FeedbackFormScreen> {
         borderRadius: BorderRadius.circular(isDesktop ? 20 : 16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: isDesktop ? 20 : 16,
             offset: const Offset(0, 6),
             spreadRadius: 0,
           ),
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 8,
             offset: const Offset(0, 3),
             spreadRadius: 0,
@@ -469,13 +469,13 @@ class _FeedbackFormScreenState extends State<FeedbackFormScreen> {
         borderRadius: BorderRadius.circular(isDesktop ? 24 : 16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: isDesktop ? 24 : 16,
             offset: const Offset(0, 8),
             spreadRadius: 0,
           ),
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 12,
             offset: const Offset(0, 4),
             spreadRadius: 0,
@@ -498,13 +498,13 @@ class _FeedbackFormScreenState extends State<FeedbackFormScreen> {
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      AppTheme.primaryBlue.withOpacity(0.15),
-                      AppTheme.primaryBlue.withOpacity(0.08),
+                      AppTheme.primaryBlue.withValues(alpha: 0.15),
+                      AppTheme.primaryBlue.withValues(alpha: 0.08),
                     ],
                   ),
                   borderRadius: BorderRadius.circular(isDesktop ? 16 : 12),
                   border: Border.all(
-                    color: AppTheme.primaryBlue.withOpacity(0.2),
+                    color: AppTheme.primaryBlue.withValues(alpha: 0.2),
                     width: 1,
                   ),
                 ),
@@ -572,13 +572,13 @@ class _FeedbackFormScreenState extends State<FeedbackFormScreen> {
         borderRadius: BorderRadius.circular(isDesktop ? 16 : 12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: isDesktop ? 20 : 16,
             offset: const Offset(0, 4),
             spreadRadius: 0,
           ),
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 8,
             offset: const Offset(0, 2),
             spreadRadius: 0,
@@ -645,7 +645,7 @@ class _FeedbackFormScreenState extends State<FeedbackFormScreen> {
                             end: Alignment.bottomRight,
                             colors: [
                               AppTheme.primaryBlue,
-                              AppTheme.primaryBlue.withOpacity(0.8),
+                              AppTheme.primaryBlue.withValues(alpha: 0.8),
                             ],
                           )
                         : LinearGradient(
@@ -660,8 +660,8 @@ class _FeedbackFormScreenState extends State<FeedbackFormScreen> {
                     boxShadow: [
                       BoxShadow(
                         color: isSelected
-                            ? AppTheme.primaryBlue.withOpacity(0.3)
-                            : Colors.black.withOpacity(0.1),
+                            ? AppTheme.primaryBlue.withValues(alpha: 0.3)
+                            : Colors.black.withValues(alpha: 0.1),
                         blurRadius: isSelected ? 12 : 8,
                         offset: const Offset(0, 4),
                         spreadRadius: 0,
@@ -716,7 +716,7 @@ class _FeedbackFormScreenState extends State<FeedbackFormScreen> {
           backgroundColor: WidgetStateProperty.resolveWith<Color>(
             (Set<WidgetState> states) {
               if (states.contains(WidgetState.pressed)) {
-                return AppTheme.primaryBlue.withOpacity(0.8);
+                return AppTheme.primaryBlue.withValues(alpha: 0.8);
               }
               if (states.contains(WidgetState.disabled)) {
                 return Colors.grey.shade300;

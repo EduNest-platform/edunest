@@ -10,6 +10,7 @@ import '../../models/user_profile.dart';
 import '../profile/personal_info_screen.dart';
 import '../../services/test_results_service.dart';
 import '../../services/error_message_service.dart';
+import '../../services/supabase_service.dart';
 
 class AssignedTestCardScreen extends StatefulWidget {
   const AssignedTestCardScreen({super.key});
@@ -62,7 +63,7 @@ class _AssignedTestCardScreenState extends State<AssignedTestCardScreen> {
       }
     } catch (e) {
       final message = ErrorMessageService.getFriendlyMessage(e);
-      if (mounted) {
+      if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(message), backgroundColor: Colors.red),
         );
@@ -77,15 +78,20 @@ class _AssignedTestCardScreenState extends State<AssignedTestCardScreen> {
   Future<void> _fetchAssignedTests() async {
     try {
       final tests = await AssignedMCQSupabaseService.fetchAssignedTests();
+      
+      // Filter tests by current user's academic path
+      List<Map<String, dynamic>> filteredTests = [];
+      if (tests != null && _userProfile != null) {
+        filteredTests = await _filterTestsByAcademicPath(tests);
+      }
 
-      List<Map<String, dynamic>> displayTests = (tests ?? []);
       setState(() {
-        _assignedTests = displayTests;
+        _assignedTests = filteredTests;
         _isLoading = false;
       });
     } catch (e) {
       final message = ErrorMessageService.getFriendlyMessage(e);
-      if (mounted) {
+      if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(message), backgroundColor: Colors.red),
         );
@@ -106,6 +112,52 @@ class _AssignedTestCardScreenState extends State<AssignedTestCardScreen> {
       });
     } catch (e) {
       // Don't show error for completion status
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> _filterTestsByAcademicPath(
+      List<Map<String, dynamic>> tests) async {
+    if (_userProfile?.college == null ||
+        _userProfile?.branch == null ||
+        _userProfile?.semester == null) {
+      // If academic path is incomplete, return all tests
+      return tests;
+    }
+
+    try {
+      // Get user's current academic context
+      final userCollege = _userProfile!.college!.toLowerCase().trim();
+      final userBranch = _userProfile!.branch!.toLowerCase().trim();
+      final userSemester = _userProfile!.semester!.toLowerCase().trim();
+
+      // Filter tests directly based on questions table fields (college, branch, semester)
+      // Since tests are fetched from admin database, we need to query that database for matching tests
+      final filteredTests = <Map<String, dynamic>>[];
+      
+      for (final test in tests) {
+        final testName = test['test_name'];
+        if (testName == null) continue;
+
+        // Query the admin database to check if this test has questions for user's academic path
+        final questionsResponse = await AssignedMCQSupabaseService.client
+            .from('questions')
+            .select('college, branch, semester')
+            .eq('test_name', testName)
+            .ilike('college', userCollege)
+            .ilike('branch', userBranch)
+            .ilike('semester', userSemester)
+            .limit(1);
+
+        // If questions exist for this test matching user's academic path, include the test
+        if (questionsResponse.isNotEmpty) {
+          filteredTests.add(test);
+        }
+      }
+
+      return filteredTests;
+    } catch (e) {
+      // If filtering fails, return all tests to avoid breaking functionality
+      return tests;
     }
   }
 
@@ -147,25 +199,29 @@ class _AssignedTestCardScreenState extends State<AssignedTestCardScreen> {
       onTap: () async {
         if (isCompleted) {
           // Show completion message
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('You have already completed this test.'),
-              backgroundColor: AppTheme.primaryBlue,
-              duration: const Duration(seconds: 2),
-            ),
-          );
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('You have already completed this test.'),
+                backgroundColor: AppTheme.primaryBlue,
+                duration: const Duration(seconds: 2),
+              ),
+            );
+          }
           return;
         }
 
         if (isExpired) {
           // Show expired message
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('This test has expired.'),
-              backgroundColor: Colors.grey,
-              duration: const Duration(seconds: 2),
-            ),
-          );
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('This test has expired.'),
+                backgroundColor: Colors.grey,
+                duration: const Duration(seconds: 2),
+              ),
+            );
+          }
           return;
         }
 
@@ -428,16 +484,25 @@ class _AssignedTestCardScreenState extends State<AssignedTestCardScreen> {
           icon: const Icon(Icons.arrow_back_ios_rounded),
           onPressed: () => Navigator.of(context).pop(),
         ),
-      ),
-      body: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 900),
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(
-            isWide ? 40 : 16,
-            isWide ? 32 : 20,
-            isWide ? 40 : 16,
-            isWide ? 24 : 12,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded),
+            onPressed: _isLoading ? null : _loadUserProfileAndTests,
+            tooltip: 'Refresh',
           ),
+        ],
+      ),
+      body: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 900),
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+              isWide ? 40 : 16,
+              isWide ? 32 : 20,
+              isWide ? 40 : 16,
+              isWide ? 24 : 12,
+            ),
           child:
               _isLoading
                   ? const Center(child: CircularProgressIndicator())
@@ -498,15 +563,12 @@ class _AssignedTestCardScreenState extends State<AssignedTestCardScreen> {
                       ),
                     ),
                   )
-                  : Scrollbar(
-                    controller: _scrollController,
-                    thumbVisibility: isWide,
-                    child: ListView(
-                      controller: _scrollController,
-                      shrinkWrap: true,
+                  : SingleChildScrollView(
                       physics: const AlwaysScrollableScrollPhysics(),
-                      children: [
-                        if (liveTests.isNotEmpty) ...[
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Always show Live Tests section
                           Container(
                             margin: const EdgeInsets.only(bottom: 8, top: 4),
                             padding: const EdgeInsets.symmetric(
@@ -528,47 +590,70 @@ class _AssignedTestCardScreenState extends State<AssignedTestCardScreen> {
                               ),
                             ),
                           ),
-                          ...liveTests.map(
-                            (test) => Padding(
-                              padding: EdgeInsets.only(
-                                bottom: isWide ? 16 : 10,
+                          if (liveTests.isNotEmpty) ...[
+                            ...liveTests.map(
+                              (test) => Padding(
+                                padding: EdgeInsets.only(
+                                  bottom: isWide ? 16 : 10,
+                                ),
+                                child: _buildTestCard(context, test),
                               ),
-                              child: _buildTestCard(context, test),
                             ),
-                          ),
+                          ] else ...[
+                            // Show simple message when no live tests
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 4,
+                                vertical: 12,
+                              ),
+                              child: Text(
+                                'No active tests available.',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 14,
+                                  color: Colors.grey.shade600,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
+                          if (expiredTests.isNotEmpty) ...[
+                            Container(
+                              margin: EdgeInsets.only(
+                                bottom: 8,
+                                top: liveTests.isNotEmpty ? 18 : 4,
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 8,
+                                horizontal: 18,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.withValues(alpha: 0.07),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                'Expired Tests',
+                                style: GoogleFonts.poppins(
+                                  fontSize: isWide ? 20 : 17,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.grey.shade700,
+                                ),
+                              ),
+                            ),
+                            ...expiredTests.map(
+                              (test) => Padding(
+                                padding: EdgeInsets.only(
+                                  bottom: isWide ? 16 : 10,
+                                ),
+                                child: _buildTestCard(context, test),
+                              ),
+                            ),
+                          ],
+                          // Add bottom padding
+                          SizedBox(height: isWide ? 32 : 20),
                         ],
-                        if (expiredTests.isNotEmpty) ...[
-                          Container(
-                            margin: const EdgeInsets.only(bottom: 8, top: 18),
-                            padding: const EdgeInsets.symmetric(
-                              vertical: 8,
-                              horizontal: 18,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.grey.withValues(alpha: 0.07),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              'Expired Tests',
-                              style: GoogleFonts.poppins(
-                                fontSize: isWide ? 20 : 17,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.grey.shade700,
-                              ),
-                            ),
-                          ),
-                          ...expiredTests.map(
-                            (test) => Padding(
-                              padding: EdgeInsets.only(
-                                bottom: isWide ? 16 : 10,
-                              ),
-                              child: _buildTestCard(context, test),
-                            ),
-                          ),
-                        ],
-                      ],
+                      ),
                     ),
-                  ),
+          ),
         ),
       ),
     );

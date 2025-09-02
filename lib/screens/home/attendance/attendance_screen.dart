@@ -13,8 +13,32 @@ import '../../../services/error_message_service.dart';
 import 'package:flutter/foundation.dart';
 import '../../../widgets/desktop_sidebar.dart';
 import '../../../models/user_profile.dart';
-import '../../../services/monitoring_integration_helper.dart';
 import 'dart:async';
+import '../../../widgets/skeleton_loading.dart';
+
+// Query deduplication to prevent duplicate database calls
+class QueryDeduplicator {
+  static final Map<String, Future<dynamic>> _activeQueries = {};
+  
+  static Future<T> deduplicate<T>(String key, Future<T> Function() query) {
+    if (_activeQueries.containsKey(key)) {
+      print('🔄 DEDUP: Reusing active query for $key');
+      return _activeQueries[key] as Future<T>;
+    }
+    
+    print('🆕 DEDUP: Starting new query for $key');
+    final future = query();
+    _activeQueries[key] = future;
+    
+    // Clean up after completion
+    future.whenComplete(() {
+      _activeQueries.remove(key);
+      print('✅ DEDUP: Cleaned up query $key');
+    });
+    
+    return future;
+  }
+}
 
 class AttendanceScreen extends StatefulWidget {
   const AttendanceScreen({super.key});
@@ -45,25 +69,72 @@ class _AttendanceScreenState extends State<AttendanceScreen>
   @override
   void initState() {
     super.initState();
-    _fetchAttendanceAndSubjects();
+    // OPTIMIZED: Don't block UI on initialization
+    _initializeAsync();
+  }
+
+  // NEW: Non-blocking initialization for better home screen performance
+  Future<void> _initializeAsync() async {
+    // Quick check for cached data first
+    if (_subjects.isNotEmpty && _lastRefreshTime != null && 
+        DateTime.now().difference(_lastRefreshTime!) < _cacheValidityDuration) {
+      print('📊 ATTENDANCE: Using cached data for faster loading');
+      setState(() {
+        _initialLoading = false;
+      });
+      return;
+    }
+
+    // Load data in background without blocking UI
+    print('🚀 ATTENDANCE: Starting background data load...');
+    await Future.delayed(Duration(milliseconds: 100)); // Let UI render first
+    
+    await _fetchAttendanceAndSubjects();
   }
 
   Future<void> _fetchAttendanceAndSubjects({bool forceRefresh = false}) async {
-    // Check if we have recent data and don't need to refresh
-    if (!forceRefresh && _lastRefreshTime != null && 
-        DateTime.now().difference(_lastRefreshTime!) < _cacheValidityDuration &&
-        _subjects.isNotEmpty) {
-      return; // Skip refresh if data is still fresh
+    // Use query deduplication to prevent multiple simultaneous calls
+    final queryKey = 'attendance_fetch_${_userProfileCache?.id ?? 'unknown'}_$forceRefresh';
+    
+    return QueryDeduplicator.deduplicate(queryKey, () async {
+      print('🔍 ATTENDANCE: _fetchAttendanceAndSubjects called (forceRefresh: $forceRefresh)');
+      
+      // Check if we have recent data and don't need to refresh
+      if (!forceRefresh && _lastRefreshTime != null && 
+          DateTime.now().difference(_lastRefreshTime!) < _cacheValidityDuration &&
+          _subjects.isNotEmpty) {
+        print('📊 ATTENDANCE: Using cached data (${_subjects.length} subjects)');
+        return; // Skip refresh if data is still fresh
+      }
+      
+      return _performActualFetch(forceRefresh);
+    });
+  }
+
+  Future<void> _performActualFetch(bool forceRefresh) async {
+
+    // Only show loading if not initial load (to prevent home screen blocking)
+    if (!_initialLoading) {
+      setState(() {
+        _loading = true;
+        _hasNetworkError = false;
+      });
     }
 
-    setState(() {
-      _loading = true; // Set loading immediately
-      _hasNetworkError = false;
-    });
-
-    final networkStatus = await _networkService.isConnected();
+    // Quick network check with timeout
+    bool networkStatus = true;
+    try {
+      networkStatus = await _networkService.isConnected().timeout(
+        Duration(seconds: 2),
+        onTimeout: () => true, // Assume connected if check takes too long
+      );
+    } catch (e) {
+      print('⚠️ ATTENDANCE: Network check failed, assuming connected: $e');
+      networkStatus = true;
+    }
 
     if (!networkStatus) {
+      print('❌ ATTENDANCE: No network connection');
       setState(() {
         _hasNetworkError = true;
         _loading = false;
@@ -73,8 +144,10 @@ class _AttendanceScreenState extends State<AttendanceScreen>
     }
 
     try {
+      print('🔍 ATTENDANCE: Checking user authentication...');
       final user = Supabase.instance.client.auth.currentUser;
       if (user == null) {
+        print('❌ ATTENDANCE: No authenticated user');
         setState(() {
           _loading = false;
           _initialLoading = false;
@@ -85,11 +158,29 @@ class _AttendanceScreenState extends State<AttendanceScreen>
       // Use cached profile if available
       UserProfile? profile = _userProfileCache;
       if (profile == null || forceRefresh) {
-        profile = await UserProfileService.getCurrentUserProfile();
-        _userProfileCache = profile; // Cache the profile
+        print('🔍 ATTENDANCE: Fetching user profile...');
+        try {
+          profile = await UserProfileService.getCurrentUserProfile().timeout(
+            Duration(seconds: 5),
+            onTimeout: () => throw TimeoutException('Profile fetch timeout'),
+          );
+          _userProfileCache = profile; // Cache the profile
+          print('✅ ATTENDANCE: Profile loaded successfully');
+        } catch (e) {
+          print('❌ ATTENDANCE: Profile fetch failed: $e');
+          setState(() {
+            _loading = false;
+            _initialLoading = false;
+            _hasNetworkError = true;
+          });
+          return;
+        }
+      } else {
+        print('📊 ATTENDANCE: Using cached profile');
       }
       
       if (profile == null || profile.semester == null) {
+        print('⚠️ ATTENDANCE: Invalid profile or missing semester');
         setState(() {
           _loading = false;
           _initialLoading = false;
@@ -100,9 +191,10 @@ class _AttendanceScreenState extends State<AttendanceScreen>
       // At this point, profile is guaranteed to be non-null
       final nonNullProfile = profile;
 
-      // OPTIMIZED: Use direct database query instead of filtering all subjects
+      // OPTIMIZED: Use direct database query with timeout
       List<Map<String, String>> subjects = [];
       try {
+        print('🔍 ATTENDANCE: Fetching subjects for ${nonNullProfile.semester}...');
         final response = await Supabase.instance.client
             .from('subjects')
             .select('''
@@ -122,7 +214,11 @@ class _AttendanceScreenState extends State<AttendanceScreen>
             .ilike('semesters.branches.name', '%${nonNullProfile.branch}%')
             .ilike('semesters.branches.colleges.name', '%${nonNullProfile.college}%')
             .order('name')
-            .limit(50); // Limit results for better performance
+            .limit(50) // Limit results for better performance
+            .timeout(
+              Duration(seconds: 8),
+              onTimeout: () => throw TimeoutException('Subjects query timeout'),
+            );
 
         subjects = (response as List).map((s) => {
           'name': s['name'] as String,
@@ -146,35 +242,30 @@ class _AttendanceScreenState extends State<AttendanceScreen>
         subjects = filtered.map((s) => {'name': s.name, 'code': s.id}).toList();
       }
 
-      // Load attendance records with optimized connection management
+      // OPTIMIZED: Load attendance records only if subjects are available
       List<AttendanceRecord> records = [];
       
-      try {
-        // Use monitoring integration for optimized data loading
-        final results = await MonitoringIntegrationHelper.loadExamDataWithOptimization<List<List<AttendanceRecord>>>(
-          operation: 'load_attendance_data',
-          dataLoader: () async {
-            // Add timeout to prevent hanging
-            final attendanceFuture = Future.wait([
-              _attendanceService.getStudentAttendanceByContext(
-                nonNullProfile.studentId ?? user.id,
-                college: nonNullProfile.college,
-                branch: nonNullProfile.branch,
-                semester: nonNullProfile.semester,
-              ),
-              _attendanceService.getStudentAttendanceWithSubjectNames(user.id),
-            ]);
+      if (subjects.isNotEmpty) {
+        try {
+          print('🔍 ATTENDANCE: Loading attendance records for ${subjects.length} subjects...');
+          
+          // Direct attendance data loading with timeout
+          final attendanceFuture = Future.wait([
+            _attendanceService.getStudentAttendanceByContext(
+              nonNullProfile.studentId ?? user.id,
+              college: nonNullProfile.college,
+              branch: nonNullProfile.branch,
+              semester: nonNullProfile.semester,
+            ),
+            _attendanceService.getStudentAttendanceWithSubjectNames(user.id),
+          ]);
 
-            return await attendanceFuture.timeout(
-              const Duration(seconds: 10),
-              onTimeout: () {
-                throw TimeoutException('Attendance loading timed out', const Duration(seconds: 10));
-              },
-            );
-          },
-          examId: 'attendance_${nonNullProfile.college ?? 'unknown'}_${nonNullProfile.branch ?? 'unknown'}',
-          studentId: user.id,
-        );
+          final results = await attendanceFuture.timeout(
+            const Duration(seconds: 10),
+            onTimeout: () {
+              throw TimeoutException('Attendance loading timed out', const Duration(seconds: 10));
+            },
+          );
 
         final professorRecords = results[0];
         final studentRecords = results[1];
@@ -189,11 +280,17 @@ class _AttendanceScreenState extends State<AttendanceScreen>
           }
         }
       } catch (e) {
+        print('⚠️ ATTENDANCE: Attendance loading failed: $e');
         // Continue with empty records rather than failing completely
+      }
+      } else {
+        print('⚠️ ATTENDANCE: No subjects found, skipping attendance load');
       }
 
       // Clear stats cache when new data is loaded
       _attendanceStatsCache.clear();
+      
+      print('✅ ATTENDANCE: Data loading complete - ${subjects.length} subjects, ${records.length} records');
       
       setState(() {
         _subjects = subjects;
@@ -951,176 +1048,121 @@ class _AttendanceScreenState extends State<AttendanceScreen>
         Theme.of(context).platform == TargetPlatform.windows ||
         Theme.of(context).platform == TargetPlatform.linux ||
         Theme.of(context).platform == TargetPlatform.macOS;
-    if (isDesktop) {
-      return Scaffold(
-        backgroundColor: AppTheme.backgroundLight,
-        body: Row(
-          children: [
-            DesktopSidebar(
-              selected: 'attendance',
-              onNavigate: (route) => Navigator.pushNamed(context, route),
-            ),
-            Expanded(
-              child: _initialLoading
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          CircularProgressIndicator(
-                            color: AppTheme.primaryBlue,
-                            strokeWidth: 3,
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'Loading attendance data...',
-                            style: GoogleFonts.poppins(
-                              fontSize: 16,
-                              color: AppTheme.textSecondary,
+
+
+    Widget mainContent = isDesktop
+        ? Row(
+            children: [
+              DesktopSidebar(
+                selected: 'attendance',
+                onNavigate: (route) => Navigator.pushNamed(context, route),
+              ),
+              Expanded(
+                child: _initialLoading
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            CircularProgressIndicator(
+                              color: AppTheme.primaryBlue,
+                              strokeWidth: 3,
                             ),
-                          ),
-                        ],
-                      ),
-                    )
-                  : _hasNetworkError
-                      ? buildNetworkErrorWidget(
-                        title: '📡 No Internet Connection',
-                        message:
-                            'Unable to load attendance data. Please connect to the internet and try again.',
-                        customEmoji: '📊',
-                        onRetry: _retryWithNetworkCheck,
-                      )
-                      : Column(
-                        children: [
-                          _buildAttendanceAppBar(context),
-                          Expanded(
-                            child: Center(
-                              child: ConstrainedBox(
-                                constraints: const BoxConstraints(
-                                  maxWidth: 900,
-                                ),
-                                child:
-                                    _loading
-                                        ? const Center(
-                                          child: CircularProgressIndicator(),
-                                        )
-                                        : _subjects.isEmpty
-                                        ? _buildEmptyState()
-                                        : ListView.builder(
-                                          padding: EdgeInsets.symmetric(
-                                            horizontal: isWide ? 40 : 16,
-                                            vertical: 24,
-                                          ),
-                                          itemCount: _subjects.length,
-                                          itemBuilder:
-                                              (context, index) => Padding(
-                                                padding: const EdgeInsets.only(
-                                                  bottom: 24,
-                                                ),
-                                                child: _buildSubjectCard(
-                                                  _subjects[index],
-                                                  index,
-                                                ),
-                                              ),
-                                        ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Loading attendance data...',
+                              style: GoogleFonts.poppins(
+                                fontSize: 16,
+                                color: AppTheme.textSecondary,
                               ),
                             ),
+                          ],
+                        ),
+                      )
+                    : _hasNetworkError
+                        ? buildNetworkErrorWidget(
+                            title: '📡 No Internet Connection',
+                            message:
+                                'Unable to load attendance data. Please connect to the internet and try again.',
+                            customEmoji: '📊',
+                            onRetry: _retryWithNetworkCheck,
+                          )
+                        : Column(
+                            children: [
+                              _buildAttendanceAppBar(context),
+                              Expanded(
+                                child: Center(
+                                  child: ConstrainedBox(
+                                    constraints: const BoxConstraints(
+                                      maxWidth: 900,
+                                    ),
+                                    child:
+                                        (_loading || _initialLoading) && _subjects.isEmpty
+                                            ? AttendanceListSkeleton(itemCount: 5)
+                                            : _subjects.isEmpty
+                                            ? _buildEmptyState()
+                                            : ListView.builder(
+                                                padding: EdgeInsets.symmetric(
+                                                  horizontal: isWide ? 40 : 16,
+                                                  vertical: 24,
+                                                ),
+                                                itemCount: _subjects.length,
+                                                itemBuilder:
+                                                    (context, index) => Padding(
+                                                      padding: const EdgeInsets.only(
+                                                        bottom: 24,
+                                                      ),
+                                                      child: _buildSubjectCard(
+                                                        _subjects[index],
+                                                        index,
+                                                      ),
+                                                    ),
+                                              ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-            ),
-          ],
-        ),
-        floatingActionButton:
-            _initialLoading || _hasNetworkError
-                ? null
-                : Container(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: AppTheme.primaryGradient,
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppTheme.primaryBlue.withValues(alpha: 0.18),
-                        blurRadius: 16,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
-                  ),
-                  child: FloatingActionButton(
-                    onPressed: _addSubjectDialog,
-                    backgroundColor: Colors.transparent,
-                    elevation: 0,
-                    tooltip: 'Add Subject',
-                    child: const Icon(Icons.add, size: 32, color: Colors.white),
+                ),
+            ],
+          )
+        : Column(
+            children: [
+              _buildAttendanceAppBar(context),
+              Expanded(
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 900),
+                    child:
+                        (_loading || _initialLoading) && _subjects.isEmpty
+                            ? AttendanceListSkeleton(itemCount: 5)
+                            : _subjects.isEmpty
+                            ? _buildEmptyState()
+                            : ListView.builder(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: isWide ? 40 : 16,
+                                  vertical: 24,
+                                ),
+                                itemCount: _subjects.length,
+                                itemBuilder:
+                                    (context, index) => Padding(
+                                      padding: const EdgeInsets.only(
+                                        bottom: 24,
+                                      ),
+                                      child: _buildSubjectCard(
+                                        _subjects[index],
+                                        index,
+                                      ),
+                                    ),
+                              ),
                   ),
                 ),
-      );
-    }
+              ),
+            ],
+          );
+
     return Scaffold(
       backgroundColor: AppTheme.backgroundLight,
-      body: _initialLoading
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(
-                    color: AppTheme.primaryBlue,
-                    strokeWidth: 3,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Loading attendance data...',
-                    style: GoogleFonts.poppins(
-                      fontSize: 16,
-                      color: AppTheme.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
-            )
-          : _hasNetworkError
-              ? buildNetworkErrorWidget(
-                title: '📡 No Internet Connection',
-                message:
-                    'Unable to load attendance data. Please connect to the internet and try again.',
-                customEmoji: '📊',
-                onRetry: _retryWithNetworkCheck,
-              )
-              : Column(
-                children: [
-                  _buildAttendanceAppBar(context),
-                  Expanded(
-                    child: Center(
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 900),
-                        child:
-                            _loading
-                                ? const Center(
-                                  child: CircularProgressIndicator(),
-                                )
-                                : _subjects.isEmpty
-                                ? _buildEmptyState()
-                                : ListView.builder(
-                                  padding: EdgeInsets.symmetric(
-                                    horizontal: isWide ? 40 : 16,
-                                    vertical: 24,
-                                  ),
-                                  itemCount: _subjects.length,
-                                  itemBuilder:
-                                      (context, index) => Padding(
-                                        padding: const EdgeInsets.only(
-                                          bottom: 24,
-                                        ),
-                                        child: _buildSubjectCard(
-                                          _subjects[index],
-                                          index,
-                                        ),
-                                      ),
-                                ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+      body: mainContent,
       floatingActionButton:
           _initialLoading || _hasNetworkError
               ? null

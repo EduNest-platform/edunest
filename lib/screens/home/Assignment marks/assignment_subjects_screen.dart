@@ -17,17 +17,80 @@ class AssignmentSubjectsScreen extends StatefulWidget {
 }
 
 class _AssignmentSubjectsScreenState extends State<AssignmentSubjectsScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   final NetworkService _networkService = NetworkService();
   bool _isLoading = true;
   bool _hasNetworkError = false;
   List<Subject> _subjects = [];
   Map<String, int> _assignmentCounts = {};
+  DateTime? _lastLoadTime;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    // Register cache invalidation callback
+    AssignmentMarksService.registerCacheInvalidationCallback(_onCacheInvalidated);
     _loadSubjects();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    AssignmentMarksService.unregisterCacheInvalidationCallback();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed) {
+      // Check if we need to refresh data when app resumes
+      _checkAndRefreshIfNeeded();
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Check if we need to refresh when returning to this screen
+    _checkAndRefreshIfNeeded();
+  }
+
+  /// Callback for when assignment marks cache is invalidated
+  void _onCacheInvalidated() {
+    if (mounted) {
+      _loadSubjects();
+    }
+  }
+
+  /// Check if data needs refresh and reload if necessary
+  void _checkAndRefreshIfNeeded() {
+    if (_lastLoadTime == null) return;
+    
+    // Refresh if data is older than 1 minute or if cache is invalid
+    final now = DateTime.now();
+    final timeSinceLastLoad = now.difference(_lastLoadTime!);
+    
+    if (timeSinceLastLoad.inMinutes > 1) {
+      if (kDebugMode) {
+        // Assignment subjects: Refreshing due to stale data (${timeSinceLastLoad.inMinutes} minutes old)
+      }
+      _loadSubjects();
+    }
+  }
+
+  /// Handle edge case: User changes academic path while on this screen
+  void _handleProfileChange() {
+    if (mounted) {
+      // Clear current data and reload with new academic context
+      setState(() {
+        _subjects = [];
+        _assignmentCounts = {};
+        _isLoading = true;
+      });
+      _loadSubjects();
+    }
   }
 
   Future<void> _loadSubjects() async {
@@ -35,6 +98,8 @@ class _AssignmentSubjectsScreenState extends State<AssignmentSubjectsScreen>
       _isLoading = true;
       _hasNetworkError = false;
     });
+
+    _lastLoadTime = DateTime.now();
 
     try {
       final networkStatus = await _networkService.isConnected();
@@ -49,6 +114,14 @@ class _AssignmentSubjectsScreenState extends State<AssignmentSubjectsScreen>
       // Get all class IDs that have assignment marks for the user
       final assignmentMarksByClass = await AssignmentMarksService.getAllAssignmentMarks();
       final classIds = assignmentMarksByClass.keys.toList();
+      
+      // Edge case: Handle empty response due to network issues or data corruption
+      if (assignmentMarksByClass.isEmpty && _subjects.isNotEmpty) {
+        // Potential data inconsistency - keep existing subjects but show warning
+        if (kDebugMode) {
+          // Warning: No assignment marks found but subjects exist - potential cache inconsistency
+        }
+      }
       
       if (classIds.isEmpty) {
         setState(() {
@@ -78,7 +151,12 @@ class _AssignmentSubjectsScreenState extends State<AssignmentSubjectsScreen>
             createdAt: DateTime.now(),
             updatedAt: DateTime.now(),
           ));
-          assignmentCounts[classId] = assignmentMarksByClass[classId]?.length ?? 0;
+          // Count unique assignments, excluding midsem marks
+          final marks = assignmentMarksByClass[classId] ?? [];
+          final assignmentMarks = marks.where((mark) => !mark.assignmentName.startsWith('Midsem:')).toList();
+          final uniqueAssignments = assignmentMarks.map((mark) => mark.assignmentName).toSet();
+          print('DEBUG: Class $classId - Total records: ${marks.length}, Assignment marks: ${assignmentMarks.length}, Assignment names: ${assignmentMarks.map((m) => m.assignmentName).toList()}, Unique: ${uniqueAssignments.toList()}');
+          assignmentCounts[classId] = uniqueAssignments.length;
         } else {
           // Fallback if no info found
           subjects.add(Subject(
@@ -89,7 +167,12 @@ class _AssignmentSubjectsScreenState extends State<AssignmentSubjectsScreen>
             createdAt: DateTime.now(),
             updatedAt: DateTime.now(),
           ));
-          assignmentCounts[classId] = assignmentMarksByClass[classId]?.length ?? 0;
+          // Count unique assignments, excluding midsem marks
+          final marks = assignmentMarksByClass[classId] ?? [];
+          final assignmentMarks = marks.where((mark) => !mark.assignmentName.startsWith('Midsem:')).toList();
+          final uniqueAssignments = assignmentMarks.map((mark) => mark.assignmentName).toSet();
+          print('DEBUG: Class $classId - Total records: ${marks.length}, Assignment marks: ${assignmentMarks.length}, Assignment names: ${assignmentMarks.map((m) => m.assignmentName).toList()}, Unique: ${uniqueAssignments.toList()}');
+          assignmentCounts[classId] = uniqueAssignments.length;
         }
       }
 
@@ -104,10 +187,27 @@ class _AssignmentSubjectsScreenState extends State<AssignmentSubjectsScreen>
 
     } catch (e) {
       if (mounted) {
+        // Edge case: Distinguish between network errors and data errors
+        final isNetworkError = e.toString().contains('network') || 
+                              e.toString().contains('connection') ||
+                              e.toString().contains('timeout');
+        
         setState(() {
-          _hasNetworkError = true;
+          _hasNetworkError = isNetworkError;
           _isLoading = false;
+          
+          // If not network error but we have cached data, keep it
+          if (!isNetworkError && _subjects.isNotEmpty) {
+            // Keep existing subjects on non-network errors
+          } else {
+            _subjects = [];
+            _assignmentCounts = {};
+          }
         });
+        
+        if (kDebugMode) {
+          // Assignment subjects error: $e (Network: $isNetworkError)
+        }
       }
     }
   }
@@ -332,13 +432,13 @@ class _AssignmentSubjectsScreenState extends State<AssignmentSubjectsScreen>
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 16,
             offset: const Offset(0, 4),
             spreadRadius: 0,
           ),
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 6,
             offset: const Offset(0, 2),
             spreadRadius: 0,
@@ -353,8 +453,8 @@ class _AssignmentSubjectsScreenState extends State<AssignmentSubjectsScreen>
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(20),
-          splashColor: AppTheme.primaryBlue.withOpacity(0.1),
-          highlightColor: AppTheme.primaryBlue.withOpacity(0.05),
+          splashColor: AppTheme.primaryBlue.withValues(alpha: 0.1),
+          highlightColor: AppTheme.primaryBlue.withValues(alpha: 0.05),
           onTap: () {
             Navigator.push(
               context,
@@ -389,13 +489,13 @@ class _AssignmentSubjectsScreenState extends State<AssignmentSubjectsScreen>
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                AppTheme.primaryBlue.withOpacity(0.15),
-                AppTheme.primaryBlue.withOpacity(0.08),
+                AppTheme.primaryBlue.withValues(alpha: 0.15),
+                AppTheme.primaryBlue.withValues(alpha: 0.08),
               ],
             ),
             borderRadius: BorderRadius.circular(20), // Reduced from 24
             border: Border.all(
-              color: AppTheme.primaryBlue.withOpacity(0.2),
+              color: AppTheme.primaryBlue.withValues(alpha: 0.2),
               width: 1,
             ),
           ),
@@ -459,7 +559,7 @@ class _AssignmentSubjectsScreenState extends State<AssignmentSubjectsScreen>
                 ? LinearGradient(
                     colors: [
                       AppTheme.assignmentsTagBg,
-                      AppTheme.assignmentsTagBg.withOpacity(0.8),
+                      AppTheme.assignmentsTagBg.withValues(alpha: 0.8),
                     ],
                   )
                 : LinearGradient(
@@ -471,7 +571,7 @@ class _AssignmentSubjectsScreenState extends State<AssignmentSubjectsScreen>
             borderRadius: BorderRadius.circular(20), // Reduced from 24
             boxShadow: assignmentCount > 0 ? [
               BoxShadow(
-                color: AppTheme.assignmentsTagBg.withOpacity(0.2), // Reduced opacity
+                color: AppTheme.assignmentsTagBg.withValues(alpha: 0.2), // Reduced opacity
                 blurRadius: 6, // Reduced from 8
                 offset: const Offset(0, 2),
               ),
@@ -507,7 +607,7 @@ class _AssignmentSubjectsScreenState extends State<AssignmentSubjectsScreen>
         Container(
           padding: const EdgeInsets.all(6), // Reduced from 8
           decoration: BoxDecoration(
-            color: AppTheme.primaryBlue.withOpacity(0.08),
+            color: AppTheme.primaryBlue.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(10), // Reduced from 12
           ),
           child: Icon(
@@ -531,13 +631,13 @@ class _AssignmentSubjectsScreenState extends State<AssignmentSubjectsScreen>
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                AppTheme.primaryBlue.withOpacity(0.15),
-                AppTheme.primaryBlue.withOpacity(0.08),
+                AppTheme.primaryBlue.withValues(alpha: 0.15),
+                AppTheme.primaryBlue.withValues(alpha: 0.08),
               ],
             ),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: AppTheme.primaryBlue.withOpacity(0.2),
+              color: AppTheme.primaryBlue.withValues(alpha: 0.2),
               width: 1,
             ),
           ),
@@ -627,7 +727,7 @@ class _AssignmentSubjectsScreenState extends State<AssignmentSubjectsScreen>
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: AppTheme.primaryBlue.withOpacity(0.08),
+            color: AppTheme.primaryBlue.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(

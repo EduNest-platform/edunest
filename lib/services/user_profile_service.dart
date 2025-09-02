@@ -1,47 +1,156 @@
-import '../services/supabase_service.dart';
 import '../models/user_profile.dart';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../services/error_message_service.dart';
-import 'free_plan_optimizer_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../models/user_profile.dart';
+import 'supabase_service.dart';
+import 'assignment_marks_service.dart';
+import 'midsem_marks_service.dart';
+import 'package:flutter/foundation.dart';
+import 'dart:async';
 
 class UserProfileService {
-  static Future<UserProfile?> getCurrentUserProfile() async {
+  // Profile caching
+  static UserProfile? _cachedProfile;
+  static DateTime? _cacheExpiry;
+  static String? _cachedUserId;
+  static const Duration _cacheDuration = Duration(minutes: 5);
+  
+  // Request deduplication
+  static final Map<String, Completer<UserProfile?>> _pendingRequests = {};
+  
+  /// Get current user profile with intelligent caching
+  static Future<UserProfile?> getCurrentUserProfile({bool forceRefresh = false}) async {
     try {
       final user = SupabaseService.client.auth.currentUser;
-      if (user == null) return null;
+      if (user == null) {
+        _clearCache();
+        return null;
+      }
 
-      // OPTIMIZED: Use FreePlanOptimizerService for database operations
-      final response = await FreePlanOptimizerService.optimizedDatabaseOperation(
-        'get_current_user_profile',
-        () => SupabaseService.client
+      final userId = user.id;
+      
+      // Check if we have a valid cached profile for this user
+      if (!forceRefresh && 
+          _cachedProfile != null && 
+          _cacheExpiry != null && 
+          _cachedUserId == userId &&
+          DateTime.now().isBefore(_cacheExpiry!)) {
+        if (kDebugMode) {
+          // Using cached profile for user $userId
+        }
+        return _cachedProfile;
+      }
+
+      // Check for pending request to avoid duplicate API calls
+      if (_pendingRequests.containsKey(userId)) {
+        if (kDebugMode) {
+          // Waiting for pending request for user $userId
+        }
+        return await _pendingRequests[userId]!.future;
+      }
+
+      // Create new request completer
+      final completer = Completer<UserProfile?>();
+      _pendingRequests[userId] = completer;
+
+      try {
+        if (kDebugMode) {
+          // Fetching fresh profile for user $userId
+        }
+
+        final response = await SupabaseService.client
             .from('profiles')
             .select()
-            .eq('id', user.id)
-            .single(),
-        cacheDuration: const Duration(minutes: 5), // Cache profile for 5 minutes
-      );
+            .eq('id', userId)
+            .single();
 
-      return UserProfile.fromJson(response);
+        final profile = UserProfile.fromJson(response);
+        
+        // Cache the profile
+        _cachedProfile = profile;
+        _cachedUserId = userId;
+        _cacheExpiry = DateTime.now().add(_cacheDuration);
+        
+        // Complete the request
+        completer.complete(profile);
+        _pendingRequests.remove(userId);
+        
+        if (kDebugMode) {
+          // Cached profile for user $userId (expires: ${_cacheExpiry!.toLocal()})
+        }
+        
+        return profile;
+      } catch (e) {
+        // Handle error and complete with null
+        completer.complete(null);
+        _pendingRequests.remove(userId);
+        
+        if (kDebugMode) {
+          // Error fetching profile for user $userId: $e
+        }
+        
+        return null;
+      }
     } catch (e) {
+      if (kDebugMode) {
+        // Unexpected error in getCurrentUserProfile: $e
+      }
       return null;
     }
   }
 
-  /// Get user profile by email address
-  static Future<UserProfile?> getUserProfileByEmail(String email) async {
-    try {
-      final response =
-          await SupabaseService.client
-              .from('profiles')
-              .select()
-              .eq('email', email)
-              .single();
+  /// Get cached profile without making network requests
+  static UserProfile? getCachedProfile() {
+    final user = SupabaseService.client.auth.currentUser;
+    if (user == null) return null;
+    
+    // Return cached profile if it exists and belongs to current user
+    if (_cachedProfile != null && _cachedUserId == user.id) {
+      if (kDebugMode) {
+        // Returning cached profile for user ${user.id}
+      }
+      return _cachedProfile;
+    }
+    
+    return null;
+  }
 
-      return UserProfile.fromJson(response);
+  /// Get user profile by email address with caching
+  static Future<UserProfile?> getUserProfileByEmail(String email, {bool useCache = true}) async {
+    try {
+      // Check if this email matches the cached profile
+      if (useCache && _cachedProfile != null && _cachedProfile!.email == email &&
+          _cacheExpiry != null && DateTime.now().isBefore(_cacheExpiry!)) {
+        if (kDebugMode) {
+          // Using cached profile for email $email
+        }
+        return _cachedProfile;
+      }
+
+      final response = await SupabaseService.client
+          .from('profiles')
+          .select()
+          .eq('email', email)
+          .single();
+
+      final profile = UserProfile.fromJson(response);
+      
+      // Cache if this is the current user
+      final currentUser = SupabaseService.client.auth.currentUser;
+      if (currentUser != null && profile.id == currentUser.id) {
+        _cachedProfile = profile;
+        _cachedUserId = currentUser.id;
+        _cacheExpiry = DateTime.now().add(_cacheDuration);
+      }
+      
+      return profile;
     } catch (e) {
+      if (kDebugMode) {
+        // Error fetching profile by email $email: $e
+      }
       return null;
     }
   }
@@ -51,18 +160,23 @@ class UserProfileService {
       final user = SupabaseService.client.auth.currentUser;
       if (user == null) return false;
 
-      // OPTIMIZED: Use FreePlanOptimizerService for database operations
-      await FreePlanOptimizerService.optimizedDatabaseOperation(
-        'update_user_profile',
-        () => SupabaseService.client
-            .from('profiles')
-            .upsert(profileData, onConflict: 'id'),
-        useCache: false, // Don't cache write operations
-        priority: 2, // Medium priority for profile updates
-      );
+      // Ensure the profile data includes the current user's ID
+      profileData['id'] = user.id;
+
+      // Use UPDATE instead of UPSERT to prevent creating new records
+      await SupabaseService.client
+          .from('profiles')
+          .update(profileData)
+          .eq('id', user.id);
+
+      // Invalidate cache after successful update
+      _invalidateCache();
 
       return true;
     } catch (e) {
+      if (kDebugMode) {
+        // Error updating profile: $e
+      }
       return false;
     }
   }
@@ -88,8 +202,18 @@ class UserProfileService {
           .update(updateData)
           .eq('id', user.id);
 
+      // Invalidate cache after successful update
+      _invalidateCache();
+      
+      if (kDebugMode) {
+        // Profile updated and cache invalidated for user ${user.id}
+      }
+
       return true;
     } catch (e) {
+      if (kDebugMode) {
+        // Error updating profile: $e
+      }
       return false;
     }
   }
@@ -188,10 +312,20 @@ class UserProfileService {
             .update({'profile_image_url': imageUrl})
             .eq('id', user.id);
 
+        // Invalidate cache after profile image update
+        _invalidateCache();
+        
+        if (kDebugMode) {
+          // Profile image updated and cache invalidated
+        }
+
         return imageUrl;
       }
       return null;
     } catch (e) {
+      if (kDebugMode) {
+        // Error uploading profile image: $e
+      }
       return null;
     }
   }
@@ -252,7 +386,9 @@ class UserProfileService {
 
           return true;
         }
-      } catch (functionError) {}
+      } catch (functionError) {
+        // Ignore function call errors and continue with fallback
+      }
 
       // Fallback: Delete data locally and sign out
       // Note: This will only delete data, not the auth user
@@ -291,7 +427,139 @@ class UserProfileService {
       await prefs.setStringList('saved_credentials', updatedCredentials);
     } catch (e) {
       // Error handling with user-friendly message
-      ErrorMessageService.getFriendlyMessage(e);
+      if (kDebugMode) {
+        // Error saving credentials: $e
+      }
     }
+  }
+
+  // ============================================================================
+  // CACHE MANAGEMENT METHODS
+  // ============================================================================
+
+  /// Invalidate the current user's profile cache
+  static void _invalidateCache() {
+    _cachedProfile = null;
+    _cacheExpiry = null;
+    _cachedUserId = null;
+    
+    // Also clear home screen cache when profile changes
+    _clearHomeScreenCache();
+    
+    if (kDebugMode) {
+      // Profile cache invalidated
+    }
+  }
+
+  /// Clear home screen cache when profile changes
+  static void _clearHomeScreenCache() {
+    try {
+      // Use reflection-like approach to call static method from home screen
+      // This avoids circular imports
+      if (kDebugMode) {
+        // Clearing home screen cache due to profile update
+      }
+      
+      // We'll use a callback mechanism instead of direct import
+      if (_homeScreenCacheCallback != null) {
+        _homeScreenCacheCallback!();
+      }
+      
+      // Call registered home screen cache clear callback
+      _homeScreenCacheClearCallback?.call();
+      
+      // Clear assignment marks cache
+      AssignmentMarksService.clearCache();
+      
+      // Clear midsem marks cache
+      MidsemMarksService.clearCache();
+    } catch (e) {
+      if (kDebugMode) {
+        // Error clearing home screen cache: $e
+      }
+    }
+  }
+
+  // Callback for clearing home screen cache
+  static VoidCallback? _homeScreenCacheCallback;
+  static VoidCallback? _homeScreenCacheClearCallback;
+  
+  // Callback for clearing assignment marks cache
+  static VoidCallback? _assignmentMarksCacheCallback;
+  
+  /// Register callback to clear home screen cache
+  static void registerHomeScreenCacheClearCallback(VoidCallback callback) {
+    _homeScreenCacheClearCallback = callback;
+    if (kDebugMode) {
+      // Home screen cache clear callback registered
+    }
+  }
+  
+  /// Unregister home screen cache clear callback
+  static void unregisterHomeScreenCacheClearCallback() {
+    _homeScreenCacheClearCallback = null;
+    if (kDebugMode) {
+      // Home screen cache clear callback unregistered
+    }
+  }
+  
+  /// Register callback to clear assignment marks cache
+  static void registerAssignmentMarksCacheClearCallback(VoidCallback callback) {
+    _assignmentMarksCacheCallback = callback;
+    if (kDebugMode) {
+      // Assignment marks cache clear callback registered
+    }
+  }
+  
+  /// Unregister assignment marks cache clear callback
+  static void unregisterAssignmentMarksCacheClearCallback() {
+    _assignmentMarksCacheCallback = null;
+    if (kDebugMode) {
+      // Assignment marks cache clear callback unregistered
+    }
+  }
+
+  /// Clear all cache data
+  static void _clearCache() {
+    _cachedProfile = null;
+    _cacheExpiry = null;
+    _cachedUserId = null;
+    _pendingRequests.clear();
+    
+    if (kDebugMode) {
+      // All caches cleared
+    }
+  }
+
+  /// Public method to clear cache (for logout scenarios)
+  static void clearCache() {
+    _clearCache();
+  }
+
+  /// Force refresh the current user's profile
+  static Future<UserProfile?> refreshCurrentUserProfile() async {
+    return await getCurrentUserProfile(forceRefresh: true);
+  }
+
+  /// Check if profile cache is valid
+  static bool get isCacheValid {
+    return _cachedProfile != null && 
+           _cacheExpiry != null && 
+           DateTime.now().isBefore(_cacheExpiry!);
+  }
+
+  /// Get cache expiry time
+  static DateTime? get cacheExpiry => _cacheExpiry;
+
+
+  /// Get cache statistics for monitoring
+  static Map<String, dynamic> getCacheStats() {
+    return {
+      'profile_cached': _cachedProfile != null,
+      'cache_valid': isCacheValid,
+      'cache_expiry': _cacheExpiry?.toIso8601String(),
+      'cached_user_id': _cachedUserId,
+      'pending_requests': _pendingRequests.length,
+    };
   }
 }

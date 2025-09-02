@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
 import '../services/auth_service.dart';
-import '../services/supabase_auth_service.dart'; // For SupabaseAuthService
 import '../services/user_profile_service.dart';
 import '../models/user_profile.dart';
 import '../../main.dart';
@@ -173,7 +172,7 @@ class _DrawerMenuState extends State<DrawerMenu> {
                               error = null;
                             });
                             try {
-                              await SupabaseAuthService.signOut().timeout(
+                              await AuthService.signOut().timeout(
                                 const Duration(seconds: 10),
                                 onTimeout:
                                     () => throw Exception('Logout timed out'),
@@ -221,7 +220,7 @@ class _DrawerMenuState extends State<DrawerMenu> {
                               error = null;
                             });
                             try {
-                              await SupabaseAuthService.signOut().timeout(
+                              await AuthService.signOut().timeout(
                                 const Duration(seconds: 10),
                                 onTimeout:
                                     () => throw Exception('Logout timed out'),

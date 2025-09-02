@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/error_message_service.dart';
@@ -571,7 +572,9 @@ class FilesService {
         uploadedCount++;
       } catch (e) {
         // Error handling with user-friendly message
-        ErrorMessageService.getFriendlyMessage(e);
+        if (kDebugMode) {
+          print('Error uploading file: $e');
+        }
       }
     }
 

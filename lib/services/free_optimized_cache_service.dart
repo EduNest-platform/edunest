@@ -94,6 +94,21 @@ class FreeOptimizedCacheService {
     return result;
   }
 
+  /// Alias for cacheOrExecute to maintain compatibility
+  static Future<T> getCachedOrExecute<T>(
+    String key,
+    Future<T> Function() operation, {
+    Duration? duration,
+    bool forceRefresh = false,
+  }) async {
+    return cacheOrExecute<T>(
+      key,
+      operation,
+      cacheDuration: duration,
+      forceRefresh: forceRefresh,
+    );
+  }
+
   /// Preload critical data during low usage
   static Future<void> preloadCriticalData(String userId) async {
     try {

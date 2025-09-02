@@ -541,6 +541,18 @@
   box-shadow: 0 8px 20px rgba(239, 68, 68, 0.25);
 }
 
+.midsem-btn {
+  color: #8b5cf6;
+  border-color: #8b5cf6;
+  background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);
+}
+
+.midsem-btn:hover {
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  color: white;
+  box-shadow: 0 8px 20px rgba(139, 92, 246, 0.25);
+}
+
 .feedback-btn {
   color: #8b5cf6;
   border-color: #8b5cf6;
@@ -723,6 +735,22 @@
 }
 
 .feedback-btn .btn-text {
+  color: white;
+}
+
+.students-btn {
+  color: #6366f1;
+  border-color: #6366f1;
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+}
+
+.students-btn:hover {
+  background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+  border-color: #4338ca;
+  box-shadow: 0 8px 20px rgba(99, 102, 241, 0.25);
+}
+
+.students-btn .btn-text {
   color: white;
 }
 

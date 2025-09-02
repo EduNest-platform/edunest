@@ -63,12 +63,12 @@ class _TestResultsListScreenState extends State<TestResultsListScreen> {
       final results = await TestResultsService.getUserTestResults();
       results.sort((a, b) {
         final aDate =
-            a['completedAt'] != null && a['completedAt'].toString().isNotEmpty
-                ? DateTime.parse(a['completedAt'])
+            a['created_at'] != null && a['created_at'].toString().isNotEmpty
+                ? DateTime.parse(a['created_at'])
                 : DateTime(2000);
         final bDate =
-            b['completedAt'] != null && b['completedAt'].toString().isNotEmpty
-                ? DateTime.parse(b['completedAt'])
+            b['created_at'] != null && b['created_at'].toString().isNotEmpty
+                ? DateTime.parse(b['created_at'])
                 : DateTime(2000);
         return bDate.compareTo(aDate);
       });
@@ -79,7 +79,7 @@ class _TestResultsListScreenState extends State<TestResultsListScreen> {
       });
     } catch (e) {
       final message = ErrorMessageService.getFriendlyMessage(e);
-      if (mounted) {
+      if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(message), backgroundColor: Colors.red),
         );
@@ -165,7 +165,7 @@ class _TestResultsListScreenState extends State<TestResultsListScreen> {
     final chapterName = result['chapter_name'] ?? '';
     final difficulty = result['difficulty'] ?? 'unknown';
     final createdAt = result['created_at'] ?? '';
-    final timeTaken = result['timeTaken'] ?? 0;
+    final timeTaken = result['time_taken'] ?? result['timeTaken'] ?? 0;
     final correct = result['correct_answers'] ?? result['correctAnswers'] ?? 0;
     final total = result['total_questions'] ?? result['totalQuestions'] ?? 0;
     final date =

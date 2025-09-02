@@ -343,8 +343,11 @@ class _PracticeTestsScreenState extends State<PracticeTestsScreen>
   @override
   void initState() {
     super.initState();
-    // startScreenMonitoring('practice_tests_screen');
-    _loadSavedSubjectColors().then((_) => _loadUserProfileAndSubjects());
+    // Clear cache to ensure fresh data for new user session
+    clearCache();
+    _loadUserProfileAndSubjects();
+    _loadSavedSubjectColors();
+    _checkOnboardingTip();
   }
 
   Future<void> _loadSavedSubjectColors() async {
@@ -452,7 +455,7 @@ class _PracticeTestsScreenState extends State<PracticeTestsScreen>
       // await stopOperationTrace('practice_tests_data_loading');
     } catch (e) {
       final message = ErrorMessageService.getFriendlyMessage(e);
-      if (mounted) {
+      if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(message), backgroundColor: Colors.red),
         );
@@ -820,6 +823,16 @@ class _PracticeTestsScreenState extends State<PracticeTestsScreen>
                       icon: const Icon(Icons.arrow_back_ios_new_rounded),
                       onPressed: () => Navigator.of(context).pop(),
                     ),
+                    actions: [
+                      IconButton(
+                        icon: const Icon(Icons.refresh_rounded),
+                        onPressed: () {
+                          clearCache();
+                          _loadUserProfileAndSubjects();
+                        },
+                        tooltip: 'Refresh',
+                      ),
+                    ],
                   ),
                   Expanded(
                     child: Stack(
@@ -840,7 +853,8 @@ class _PracticeTestsScreenState extends State<PracticeTestsScreen>
                           )
                         else
                           SafeArea(
-                            child: Center(
+                            child: Align(
+                              alignment: Alignment.topCenter,
                               child: ConstrainedBox(
                                 constraints: const BoxConstraints(
                                   maxWidth: 1000,
@@ -854,6 +868,7 @@ class _PracticeTestsScreenState extends State<PracticeTestsScreen>
                                     child: Column(
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
+                                      mainAxisAlignment: MainAxisAlignment.start,
                                       children: [
                                         // Assigned MCQ Tests card at the top
                                         Card(
@@ -1265,6 +1280,16 @@ class _PracticeTestsScreenState extends State<PracticeTestsScreen>
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
           onPressed: () => Navigator.of(context).pop(),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded),
+            onPressed: () {
+              clearCache();
+              _loadUserProfileAndSubjects();
+            },
+            tooltip: 'Refresh',
+          ),
+        ],
       ),
       body: Stack(
         children: [
@@ -1281,10 +1306,9 @@ class _PracticeTestsScreenState extends State<PracticeTestsScreen>
               onRetry: _retryWithNetworkCheck,
             )
           else
-            SafeArea(
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 1000),
+            Column(
+              children: [
+                Expanded(
                   child: SingleChildScrollView(
                     child: Padding(
                       padding: EdgeInsets.symmetric(
@@ -1293,6 +1317,7 @@ class _PracticeTestsScreenState extends State<PracticeTestsScreen>
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.start,
                         children: [
                           // Assigned MCQ Tests card at the top
                           Card(
@@ -1490,7 +1515,7 @@ class _PracticeTestsScreenState extends State<PracticeTestsScreen>
                     ),
                   ),
                 ),
-              ),
+              ],
             ),
           // Onboarding tooltip overlay
           if (_showOnboardingTip && _subjects.isNotEmpty)

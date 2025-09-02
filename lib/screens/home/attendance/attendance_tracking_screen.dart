@@ -84,8 +84,9 @@ class _AttendanceTrackingScreenState extends State<AttendanceTrackingScreen>
   UserProfile? _userProfile;
   bool _hasNetworkError = false;
 
-  // Add loading states for individual buttons
-  final Map<int, bool> _buttonLoadingStates = {};
+  // Add loading states 
+  bool _isLoading = false;
+  final Map<int, bool> _buttonLoadingStates = <int, bool>{};
   bool _isMarkingAttendance = false; // Global marking state
   
   // What-if mode variables
@@ -363,6 +364,11 @@ class _AttendanceTrackingScreenState extends State<AttendanceTrackingScreen>
   Future<void> _markSingleAttendance(int classIdx, String status) async {
     if (!mounted) return;
     
+    // Prevent rapid clicks - check if already processing
+    if (_buttonLoadingStates[classIdx] == true) {
+      return; // Already processing this button
+    }
+    
     if (_isProfessorManaged) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -394,7 +400,7 @@ class _AttendanceTrackingScreenState extends State<AttendanceTrackingScreen>
         _classStatuses[classIdx] = status;
       });
       
-      await _attendanceService.markAttendance(
+      final realRecordId = await _attendanceService.markAttendance(
         studentId: studentId,
         subjectId: subjectId,
         date: _selectedDate,
@@ -405,9 +411,9 @@ class _AttendanceTrackingScreenState extends State<AttendanceTrackingScreen>
         classNumber: classIdx + 1,
       );
 
-      // Create optimistic record and update local records list
+      // Create record with the real database ID
       final newRecord = AttendanceRecord(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        id: realRecordId ?? DateTime.now().millisecondsSinceEpoch.toString(),
         classId: subjectId,
         studentRollNumber: _userProfile?.studentId ?? studentId,
         studentName: _userProfile?.fullName ?? '',
@@ -422,7 +428,7 @@ class _AttendanceTrackingScreenState extends State<AttendanceTrackingScreen>
         createdAt: DateTime.now(),
       );
       
-      // Update local records optimistically
+      // Update local records with real database record
       final existingIndex = _attendanceRecords.indexWhere(
         (r) => DateFormat('yyyy-MM-dd').format(r.date) == DateFormat('yyyy-MM-dd').format(_selectedDate) && 
                (r.classNumber ?? 1) == classIdx + 1
@@ -433,8 +439,17 @@ class _AttendanceTrackingScreenState extends State<AttendanceTrackingScreen>
       } else {
         _attendanceRecords.add(newRecord);
       }
+      
+      // Update class record ID with real database ID for proper state management
+      while (_classRecordIds.length <= classIdx) {
+        _classRecordIds.add(null);
+      }
+      _classRecordIds[classIdx] = realRecordId;
 
-      // Update final state
+      // Sync attendance status to update button states properly
+      _syncCurrentAttendanceStatus();
+
+      // Update final state after sync
       setState(() {
         _buttonLoadingStates[classIdx] = false;
       });
@@ -1767,22 +1782,54 @@ class _AttendanceTrackingScreenState extends State<AttendanceTrackingScreen>
       if (result == true) {
         final recordId = _classRecordIds[idx];
         if (recordId != null) {
-          // Set a loading state if desired
-          setState(() {
-            _buttonLoadingStates[idx] = true;
-          });
+          try {
+            // Set a loading state if desired
+            setState(() {
+              _buttonLoadingStates[idx] = true;
+            });
 
-          await _attendanceService.deleteAttendance(recordId);
+            await _attendanceService.deleteAttendance(recordId);
 
-          // Optimistically update local state instead of full reload
-          setState(() {
-            _classStatuses[idx] = null;
-            _classRecordIds[idx] = null;
-            _buttonLoadingStates[idx] = false;
+            // Optimistically update local state instead of full reload
+            setState(() {
+              _classStatuses[idx] = null;
+              _classRecordIds[idx] = null;
+              _buttonLoadingStates[idx] = false;
+              
+              // Also remove from local attendance records
+              _attendanceRecords.removeWhere((record) => record.id == recordId);
+            });
+
+            // Show success message
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Attendance cleared successfully'),
+                  backgroundColor: AppTheme.secondaryGreen,
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  duration: const Duration(milliseconds: 1500),
+                ),
+              );
+            }
+          } catch (e) {
+            // Handle error
+            setState(() {
+              _buttonLoadingStates[idx] = false;
+            });
             
-            // Also remove from local attendance records
-            _attendanceRecords.removeWhere((record) => record.id == recordId);
-          });
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Failed to clear attendance: ${e.toString()}'),
+                  backgroundColor: AppTheme.error,
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  duration: const Duration(milliseconds: 2000),
+                ),
+              );
+            }
+          }
         }
       }
     }

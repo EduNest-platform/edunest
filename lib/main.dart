@@ -19,14 +19,19 @@ import 'screens/about/about_screen.dart';
 import 'screens/home/academic_info_screen.dart';
 import 'services/supabase_service.dart';
 import 'services/network_service.dart';
-import 'services/monitoring_reporting_service.dart';
 import 'services/free_plan_optimizer_service.dart';
+import 'services/user_load_tracker.dart';
+import 'services/fcm_service.dart';
+import 'services/ad_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter/foundation.dart'
-    show kReleaseMode, defaultTargetPlatform, TargetPlatform;
+    show kReleaseMode, kDebugMode, defaultTargetPlatform, TargetPlatform;
 import 'package:window_manager/window_manager.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'dart:async';
+// ignore: depend_on_referenced_packages
 import 'package:device_preview/device_preview.dart';
 import 'package:app_links/app_links.dart';
 
@@ -50,16 +55,52 @@ void main() {
         await windowManager.ensureInitialized();
       }
 
+      // Initialize Firebase only for mobile platforms (not Windows/Desktop)
+      if (defaultTargetPlatform == TargetPlatform.android ||
+          defaultTargetPlatform == TargetPlatform.iOS) {
+        await Firebase.initializeApp();
+        
+        // Set up background message handler
+        FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+      }
+
       await SupabaseService.init();
       NetworkService().initialize();
+      
+      // Initialize FCM Service only for mobile platforms
+      if (defaultTargetPlatform == TargetPlatform.android ||
+          defaultTargetPlatform == TargetPlatform.iOS) {
+        FCMService().initialize().catchError((e) {
+          if (kDebugMode) {
+            print('FCM Service init error: $e');
+          }
+        });
+      }
+      
+      // 🚀 Initialize user tracking first (must be before other services)
+      // Non-blocking initialization to not delay app startup
+      UserLoadTracker.initialize().catchError((e) {
+        // Silent error handling - app should still work without tracking
+        if (kDebugMode) {
+          print('UserLoadTracker init error: $e');
+        }
+      });
+      
+      
       
       // 🚀 Initialize monitoring and optimization services
       try {
         await FreePlanOptimizerService.initialize();
-        await MonitoringReportingService.initialize();
       } catch (e) {
-        // Continue without monitoring - app should still work
+        // Continue without optimizer - app should still work
       }
+      
+      // 🎯 Initialize Unity Ads (non-blocking)
+      AdService.initialize().catchError((e) {
+        if (kDebugMode) {
+          print('AdService init error: $e');
+        }
+      });
 
       runApp(
         DevicePreview(

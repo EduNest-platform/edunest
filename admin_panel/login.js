@@ -31,9 +31,20 @@ async function login() {
       document.getElementById('password').focus();
       document.getElementById('password').select();
     } else {
-      // Success - set session and redirect to dashboard
+      // Success - set session and cache user in AuthManager
       sessionStorage.setItem('adminLoggedIn', 'true');
-      // Optionally, store the Supabase session/token if you want to use it elsewhere
+      
+      // Cache the user session in AuthManager for immediate availability
+      if (window.authManager && data.user) {
+        window.authManager.saveCachedSession(data.user);
+      }
+      
+      // Store additional admin info for fallback
+      if (data.user) {
+        sessionStorage.setItem('adminEmail', data.user.email);
+        sessionStorage.setItem('adminId', data.user.id);
+      }
+      
       window.location.href = 'dashboard.html';
     }
   } catch (err) {
@@ -89,9 +100,18 @@ function checkAuthStatus() {
 }
 
 // Logout function
-function logout() {
+async function logout() {
+  // Clear AuthManager cache and sign out from Supabase
+  if (window.authManager) {
+    await window.authManager.signOut();
+  }
+  
+  // Clear session storage
   sessionStorage.removeItem('adminLoggedIn');
+  sessionStorage.removeItem('adminEmail');
+  sessionStorage.removeItem('adminId');
   sessionStorage.removeItem('redirecting');
+  
   window.location.href = 'index.html';
 }
 

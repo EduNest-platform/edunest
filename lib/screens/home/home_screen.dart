@@ -30,16 +30,23 @@ import 'package:url_launcher/url_launcher.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
+import '../../widgets/skeleton_loading.dart';
+import '../../widgets/whats_new_dialog.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
+
+  /// Public static method to clear home screen cache
+  static void clearHomeScreenCache() {
+    _HomeScreenState.clearHomeScreenCache();
+  }
 }
 
 class _HomeScreenState extends State<HomeScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   static bool _didCheckAndroidUpdateForSession = false;
   UserProfile? _userProfile;
   bool _isLoading = true;
@@ -121,7 +128,22 @@ class _HomeScreenState extends State<HomeScreen>
       vsync: this,
       duration: const Duration(milliseconds: 300),
     );
+    
+    // Register callback for profile changes to clear cache
+    UserProfileService.registerHomeScreenCacheClearCallback(clearHomeScreenCache);
+    
+    // Add lifecycle observer to detect when app comes to foreground
+    WidgetsBinding.instance.addObserver(this);
+    
     _initializeApp();
+    
+    // Show What's New dialog if needed (mobile)
+    if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showWhatsNewIfNeeded();
+      });
+    }
+    
     // Android in-app update check
     if (!kIsWeb &&
         Platform.isAndroid &&
@@ -146,8 +168,23 @@ class _HomeScreenState extends State<HomeScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _searchFocusNode.unfocus();
+        // Check if we need to refresh data when returning to home screen
+        _checkForDataRefreshNeeded();
       }
     });
+  }
+
+  /// Check if data refresh is needed when returning to home screen
+  void _checkForDataRefreshNeeded() {
+    // If UserProfileService cache was invalidated but home screen cache still exists,
+    // it means profile was updated elsewhere and we need to refresh
+    if (!UserProfileService.isCacheValid && 
+        (_cachedUserProfile != null || _cachedCurrentSubjects != null)) {
+      if (kDebugMode) {
+        print('🏠 HomeScreen: Profile cache invalidated, refreshing home data');
+      }
+      forceRefreshHomeData();
+    }
   }
 
   Future<void> _initializeApp() async {
@@ -789,7 +826,7 @@ class _HomeScreenState extends State<HomeScreen>
       case 1:
         return [AppTheme.secondaryGreen, AppTheme.secondaryLight];
       case 2:
-        return [Colors.redAccent, Colors.red.shade300];
+        return [Colors.blue, Colors.blue.shade300];
       case 3:
         return [AppTheme.accentOrange, AppTheme.accentLight];
       case 4:
@@ -1033,6 +1070,39 @@ class _HomeScreenState extends State<HomeScreen>
   static final Map<String, List<Map<String, dynamic>>> _searchCache = {};
   static final Map<String, DateTime> _searchCacheTimestamps = {};
   static const int _searchCacheValidityMinutes = 10;
+
+  // ============================================================================
+  // CACHE MANAGEMENT METHODS
+  // ============================================================================
+
+  /// Clear all cached data in home screen
+  static void clearHomeScreenCache() {
+    _cachedUserProfile = null;
+    _cachedCurrentSubjects = null;
+    _cachedAllSubjects = null;
+    _cachedRecentFiles = null;
+    _lastProfileRefresh = null;
+    _lastSubjectsRefresh = null;
+    _lastRecentRefresh = null;
+    _searchCache.clear();
+    _searchCacheTimestamps.clear();
+    
+    if (kDebugMode) {
+      print('🏠 HomeScreen: All caches cleared');
+    }
+  }
+
+  /// Force refresh all data by clearing cache and reloading
+  Future<void> forceRefreshHomeData() async {
+    clearHomeScreenCache();
+    setState(() {
+      _isLoading = true;
+      _subjectsLoading = true;
+      _recentLoading = true;
+      _subjectsLoadedForSearch = false;
+    });
+    await _initializeApp();
+  }
 
   void _onInlineSearchChanged(String query) {
     if (_searchDebounce?.isActive ?? false) _searchDebounce!.cancel();
@@ -1375,7 +1445,11 @@ class _HomeScreenState extends State<HomeScreen>
     _searchController.dispose();
     _searchFocusNode.dispose();
     _searchDebounce?.cancel();
-    _removeSearchOverlay();
+    if (_searchOverlayEntry?.mounted ?? false) {
+      _searchOverlayEntry?.remove();
+    }
+    UserProfileService.unregisterHomeScreenCacheClearCallback();
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
@@ -1385,6 +1459,22 @@ class _HomeScreenState extends State<HomeScreen>
       _searchFocusNode.unfocus();
       _searchController.clear();
       _removeSearchOverlay();
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    
+    // Refresh data when app comes to foreground to ensure fresh data
+    if (state == AppLifecycleState.resumed && mounted) {
+      // Check if profile cache is expired and refresh if needed
+      if (!UserProfileService.isCacheValid) {
+        if (kDebugMode) {
+          print('🏠 HomeScreen: App resumed with expired cache, refreshing data');
+        }
+        forceRefreshHomeData();
+      }
     }
   }
 
@@ -1712,7 +1802,7 @@ class _HomeScreenState extends State<HomeScreen>
                 key: _onboardingKeys[1],
                 icon: Icons.book_rounded,
                 title: 'Browse All Subjects',
-                subtitle: 'Discover all subjects',
+                subtitle: 'Study Materials',
                 color: AppTheme.primaryBlue,
                 onTap: () {
                   Navigator.pushNamed(context, '/subjects');
@@ -1725,7 +1815,7 @@ class _HomeScreenState extends State<HomeScreen>
                 key: _onboardingKeys[2],
                 icon: Icons.info_outline_rounded,
                 title: 'Academic Info',
-                subtitle: 'Syllabus & Timetable',
+                subtitle: 'Assignment & Syllabus',
                 color: AppTheme.primaryLight,
                 onTap: () {
                   Navigator.push(
@@ -1761,7 +1851,7 @@ class _HomeScreenState extends State<HomeScreen>
                 key: _onboardingKeys[4],
                 icon: Icons.calendar_today_rounded,
                 title: 'Attendance',
-                subtitle: 'Track your attendance',
+                subtitle: 'Track attendance',
                 color: Colors.purple,
                 onTap: () {
                   Navigator.push(
@@ -2037,9 +2127,14 @@ class _HomeScreenState extends State<HomeScreen>
           ],
         ),
         const SizedBox(height: 16),
-        if (_subjectsLoading)
-          const Center(
-            child: CircularProgressIndicator(color: AppTheme.primaryBlue),
+        if (_subjectsLoading && _currentSubjects.isEmpty)
+          Column(
+            children: List.generate(4, (index) => 
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: SubjectCardSkeleton(),
+              ),
+            ),
           ),
         if (!_subjectsLoading && _currentSubjects.isEmpty)
           Center(
@@ -2537,5 +2632,20 @@ class _HomeScreenState extends State<HomeScreen>
             ),
           ),
     );
+  }
+
+  Future<void> _showWhatsNewIfNeeded() async {
+    final prefs = await SharedPreferences.getInstance();
+    final lastSeenVersion = prefs.getString('last_seen_version') ?? '';
+    if (lastSeenVersion != currentVersion) {
+      // Only show if not already seen for this version
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => const WhatsNewDialog(),
+        );
+      }
+      await prefs.setString('last_seen_version', currentVersion);
+    }
   }
 }

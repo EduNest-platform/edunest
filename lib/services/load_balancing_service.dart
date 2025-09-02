@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
+import 'user_load_tracker.dart';
 
 class LoadBalancingService {
   static int _currentUserLoad = 0;
@@ -16,19 +17,40 @@ class LoadBalancingService {
     return _peakHours.contains(now.hour);
   }
 
-  /// Get current system load (0-100%)
+  /// Get current system load (0-100%) - Performance optimized
+  static int? _cachedLoad;
+  static DateTime? _lastLoadCalculation;
+  
   static int getCurrentLoad() {
-    // Reset load counter every hour
-    if (DateTime.now().difference(_lastResetTime).inHours >= 1) {
-      _currentUserLoad = 0;
-      _lastResetTime = DateTime.now();
+    final now = DateTime.now();
+    
+    // Cache load calculation for 5 seconds to reduce CPU usage
+    if (_cachedLoad == null || _lastLoadCalculation == null ||
+        now.difference(_lastLoadCalculation!).inSeconds > 5) {
+      
+      // Reset load counter every hour
+      if (now.difference(_lastResetTime).inHours >= 1) {
+        _currentUserLoad = 0;
+        _lastResetTime = now;
+      }
+      
+      // Optimized load calculation for 100+ users
+      final userCount = UserLoadTracker.currentUsers;
+      final activeConnections = UserLoadTracker.activeConnections;
+      
+      // Production-ready calculation for educational apps
+      final baseLoad = (userCount * 0.6).round(); // Reduced impact for scalability
+      final connectionLoad = (activeConnections * 1.2).round(); // Balanced connection weight
+      final operationLoad = (_currentUserLoad * 0.8).round(); // Reduced operation weight
+      
+      _cachedLoad = (baseLoad + connectionLoad + operationLoad).clamp(0, 100);
+      _lastLoadCalculation = now;
     }
     
-    // Estimate load based on concurrent operations
-    return (_currentUserLoad * 2).clamp(0, 100);
+    return _cachedLoad!;
   }
 
-  /// Execute operation with load balancing
+  /// Execute operation with smart load balancing
   static Future<T> executeWithLoadBalancing<T>(
     String operationName,
     Future<T> Function() operation, {
@@ -38,6 +60,26 @@ class LoadBalancingService {
     _currentUserLoad++;
     
     try {
+      // 🚀 SMART MODE: Check user load level
+      if (UserLoadTracker.isLowLoadMode) {
+        // Low load: Execute immediately, no delays or balancing
+        if (kDebugMode) {
+          print('🚀 LoadBalancer: Fast execution (${UserLoadTracker.currentUsers} users)');
+        }
+        return await operation();
+      }
+      
+      if (UserLoadTracker.isMediumLoadMode) {
+        // Medium load: Light optimization, minimal delays
+        final load = getCurrentLoad();
+        if (load > 70 && canDefer && priority < 3) {
+          // Short delay only if really needed
+          await Future.delayed(Duration(milliseconds: 100));
+        }
+        return await operation();
+      }
+      
+      // High load: Full sophisticated load balancing
       final load = getCurrentLoad();
       
       // If system is overloaded and operation can be deferred
@@ -45,9 +87,11 @@ class LoadBalancingService {
         return _deferOperation<T>(operationName, operation, priority);
       }
       
-      // Add artificial delay during peak times for non-critical operations
-      if (isPeakTime() && priority == 1) {
-        await Future.delayed(Duration(milliseconds: Random().nextInt(1000) + 500));
+      // Minimal delay for 100+ user production environment
+      if (isPeakTime() && priority == 1 && UserLoadTracker.currentUsers > 100) {
+        // Production: Very short delays only for extreme load
+        final delayMs = Random().nextInt(100) + 25; // 25-125ms delay
+        await Future.delayed(Duration(milliseconds: delayMs));
       }
       
       return await operation();
@@ -56,7 +100,7 @@ class LoadBalancingService {
     }
   }
 
-  /// Defer operation to execute later
+  /// Defer operation to execute later (non-blocking)
   static Future<T> _deferOperation<T>(
     String operationName,
     Future<T> Function() operation,
@@ -66,12 +110,20 @@ class LoadBalancingService {
       print('⏸️ Deferring operation: $operationName (load: ${getCurrentLoad()}%)');
     }
     
-    // Wait for load to decrease
-    while (getCurrentLoad() > 60) {
+    // 🚀 SMART: Non-blocking wait with timeout
+    int attempts = 0;
+    const maxAttempts = 5; // Maximum 10 seconds wait
+    
+    while (getCurrentLoad() > 60 && attempts < maxAttempts) {
       await Future.delayed(const Duration(seconds: 2));
+      attempts++;
     }
     
-    if (kDebugMode) {
+    if (attempts >= maxAttempts) {
+      if (kDebugMode) {
+        print('⚠️ Executing despite high load: $operationName (timeout reached)');
+      }
+    } else if (kDebugMode) {
       print('▶️ Executing deferred operation: $operationName');
     }
     
@@ -113,12 +165,13 @@ class LoadBalancingService {
     return Duration.zero;
   }
 
-  /// Schedule operation for off-peak time
+  /// Schedule operation for off-peak time (non-blocking)
   static Future<T> scheduleForOffPeak<T>(
     String operationName,
     Future<T> Function() operation,
   ) async {
-    if (!isPeakTime()) {
+    // 🚀 SMART: Only defer for high load scenarios
+    if (!isPeakTime() || UserLoadTracker.isLowLoadMode) {
       return await operation();
     }
     
@@ -126,9 +179,19 @@ class LoadBalancingService {
       print('📅 Scheduling for off-peak: $operationName');
     }
     
-    // Wait until we're out of peak hours or load decreases significantly
-    while (isPeakTime() && getCurrentLoad() > 50) {
+    // 🚀 SMART: Non-blocking wait with reasonable timeout
+    int attempts = 0;
+    const maxAttempts = 3; // Maximum 15 minutes wait
+    
+    while (isPeakTime() && getCurrentLoad() > 50 && attempts < maxAttempts && UserLoadTracker.isHighLoadMode) {
       await Future.delayed(const Duration(minutes: 5));
+      attempts++;
+    }
+    
+    if (attempts >= maxAttempts) {
+      if (kDebugMode) {
+        print('⚠️ Executing despite peak time: $operationName (timeout reached)');
+      }
     }
     
     return await operation();

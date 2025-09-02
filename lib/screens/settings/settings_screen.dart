@@ -51,16 +51,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
   // Helper function to launch URLs
   Future<void> _launchInApp(BuildContext context, String urlString) async {
     final Uri url = Uri.parse(urlString);
-    if (!await launchUrl(
+    if (!(await launchUrl(
       url,
       mode: LaunchMode.inAppWebView, // This opens the URL inside the app
-    )) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Could not launch $urlString'),
-          backgroundColor: Colors.red,
-        ),
-      );
+    ))) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not launch $urlString'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 

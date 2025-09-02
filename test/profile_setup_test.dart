@@ -39,7 +39,7 @@ void main() {
         notified = true;
       });
 
-      controller.updateRollNumber('CS2021001');
+      controller.rollNumberController.text = 'CS2021001';
 
       expect(controller.rollNumberController.text, equals('CS2021001'));
       expect(notified, isTrue);

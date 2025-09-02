@@ -1,7 +1,7 @@
 ; NSIS Script for EduNest Updater - Final Simplified Version
 
 !define APP_NAME "EduNest"
-!define APP_VERSION "1.3.0"
+!define APP_VERSION "1.1.0"
 !define APP_PUBLISHER "EduNest Team"
 !define APP_EXE "EduNest.exe"
 !define UNINSTALL_KEY "SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}"

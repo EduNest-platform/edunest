@@ -34,6 +34,39 @@ class _SubjectAssignmentMarksScreenState extends State<SubjectAssignmentMarksScr
     _loadAssignmentMarks();
   }
 
+  /// Calculate statistics for the current subject only
+  Map<String, dynamic> _calculateSubjectStatistics(List<AssignmentMark> marks) {
+    if (marks.isEmpty) {
+      return {
+        'totalAssignments': 0,
+        'averagePercentage': 0.0,
+        'totalMarksObtained': 0.0,
+        'totalMaxMarks': 0.0,
+        'gradeDistribution': <String, int>{},
+      };
+    }
+
+    final totalAssignments = marks.length;
+    final totalMarksObtained = marks.fold(0.0, (sum, mark) => sum + (mark.marks ?? 0));
+    final totalMaxMarks = marks.fold(0.0, (sum, mark) => sum + (mark.maxMarks ?? 0));
+    final averagePercentage = totalMaxMarks > 0 ? (totalMarksObtained / totalMaxMarks) * 100 : 0;
+
+    // Grade distribution
+    final gradeDistribution = <String, int>{};
+    for (final mark in marks) {
+      final grade = mark.grade;
+      gradeDistribution[grade] = (gradeDistribution[grade] ?? 0) + 1;
+    }
+
+    return {
+      'totalAssignments': totalAssignments,
+      'averagePercentage': averagePercentage,
+      'totalMarksObtained': totalMarksObtained,
+      'totalMaxMarks': totalMaxMarks,
+      'gradeDistribution': gradeDistribution,
+    };
+  }
+
   Future<void> _loadAssignmentMarks() async {
     setState(() {
       _isLoading = true;
@@ -53,8 +86,8 @@ class _SubjectAssignmentMarksScreenState extends State<SubjectAssignmentMarksScr
       // Get marks for this subject/class
       final marks = await AssignmentMarksService.getAssignmentMarksByClass(widget.subject.id);
       
-      // Calculate statistics
-      final statistics = await AssignmentMarksService.getAssignmentStatistics();
+      // Calculate statistics for this subject only
+      final statistics = _calculateSubjectStatistics(marks);
 
       if (mounted) {
         setState(() {
@@ -239,7 +272,7 @@ class _SubjectAssignmentMarksScreenState extends State<SubjectAssignmentMarksScr
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
@@ -283,7 +316,7 @@ class _SubjectAssignmentMarksScreenState extends State<SubjectAssignmentMarksScr
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -364,7 +397,7 @@ class _SubjectAssignmentMarksScreenState extends State<SubjectAssignmentMarksScr
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -375,7 +408,7 @@ class _SubjectAssignmentMarksScreenState extends State<SubjectAssignmentMarksScr
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
@@ -417,7 +450,7 @@ class _SubjectAssignmentMarksScreenState extends State<SubjectAssignmentMarksScr
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
@@ -461,7 +494,7 @@ class _SubjectAssignmentMarksScreenState extends State<SubjectAssignmentMarksScr
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -536,7 +569,7 @@ class _SubjectAssignmentMarksScreenState extends State<SubjectAssignmentMarksScr
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: AppTheme.primaryBlue.withOpacity(0.1),
+                color: AppTheme.primaryBlue.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
@@ -567,7 +600,9 @@ class _SubjectAssignmentMarksScreenState extends State<SubjectAssignmentMarksScr
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  '${mark.marks.toStringAsFixed(1)}/${mark.maxMarks.toStringAsFixed(0)}',
+                  mark.marks != null && mark.maxMarks != null
+                      ? '${mark.marks!.toStringAsFixed(1)}/${mark.maxMarks!.toStringAsFixed(0)}'
+                      : 'Not Graded',
                   style: GoogleFonts.poppins(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -588,9 +623,9 @@ class _SubjectAssignmentMarksScreenState extends State<SubjectAssignmentMarksScr
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: gradeColor.withOpacity(0.1),
+                color: gradeColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: gradeColor.withOpacity(0.3)),
+                border: Border.all(color: gradeColor.withValues(alpha: 0.3)),
               ),
               child: Text(
                 grade,
@@ -630,9 +665,9 @@ class _SubjectAssignmentMarksScreenState extends State<SubjectAssignmentMarksScr
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: gradeColor.withOpacity(0.1),
+                    color: gradeColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: gradeColor.withOpacity(0.3)),
+                    border: Border.all(color: gradeColor.withValues(alpha: 0.3)),
                   ),
                   child: Text(
                     grade,
@@ -650,7 +685,9 @@ class _SubjectAssignmentMarksScreenState extends State<SubjectAssignmentMarksScr
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Marks: ${mark.marks.toStringAsFixed(1)}/${mark.maxMarks.toStringAsFixed(0)}',
+                  mark.marks != null && mark.maxMarks != null
+                      ? 'Marks: ${mark.marks!.toStringAsFixed(1)}/${mark.maxMarks!.toStringAsFixed(0)}'
+                      : 'Marks: Not Graded',
                   style: GoogleFonts.poppins(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,

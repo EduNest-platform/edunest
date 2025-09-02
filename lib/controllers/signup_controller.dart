@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/supabase_service.dart';
 
-enum SignupStatus { success, emailConfirmationRequired, existingUser, error }
+enum SignupStatus { success, emailConfirmationRequired, existingUser, error, rateLimited }
 
 class SignupController extends ChangeNotifier {
   final nameController = TextEditingController();
@@ -13,10 +13,70 @@ class SignupController extends ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
   bool _hasExistingAccount = false;
+  DateTime? _lastRequestTime;
+  int _requestCount = 0;
+  int _failureCount = 0;
+  static const int _maxRequestsPerMinute = 1;
+  static const Duration _requestCooldown = Duration(minutes: 2);
+  static const Duration _baseBackoffDelay = Duration(minutes: 1);
 
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   bool get hasExistingAccount => _hasExistingAccount;
+  
+  bool get canMakeRequest {
+    final now = DateTime.now();
+    if (_lastRequestTime == null) return true;
+    
+    // Reset counters if more than 5 minutes have passed
+    if (now.difference(_lastRequestTime!).inMinutes >= 5) {
+      _requestCount = 0;
+      _failureCount = 0;
+      return true;
+    }
+    
+    // Apply exponential backoff for failures
+    if (_failureCount > 0) {
+      final backoffDelay = Duration(
+        minutes: _baseBackoffDelay.inMinutes * (1 << (_failureCount - 1)),
+      );
+      final timeSinceLastRequest = now.difference(_lastRequestTime!);
+      if (timeSinceLastRequest < backoffDelay) {
+        return false;
+      }
+    }
+    
+    // Check if we're within rate limits
+    if (_requestCount >= _maxRequestsPerMinute) {
+      final timeSinceLastRequest = now.difference(_lastRequestTime!);
+      return timeSinceLastRequest >= _requestCooldown;
+    }
+    
+    return true;
+  }
+  
+  Duration? get remainingCooldown {
+    if (_lastRequestTime == null) return null;
+    final now = DateTime.now();
+    final timeSinceLastRequest = now.difference(_lastRequestTime!);
+    
+    // Check exponential backoff first
+    if (_failureCount > 0) {
+      final backoffDelay = Duration(
+        minutes: _baseBackoffDelay.inMinutes * (1 << (_failureCount - 1)),
+      );
+      if (timeSinceLastRequest < backoffDelay) {
+        return backoffDelay - timeSinceLastRequest;
+      }
+    }
+    
+    // Check rate limit cooldown
+    if (_requestCount >= _maxRequestsPerMinute && timeSinceLastRequest < _requestCooldown) {
+      return _requestCooldown - timeSinceLastRequest;
+    }
+    
+    return null;
+  }
 
   void setLoading(bool value) {
     _isLoading = value;
@@ -34,6 +94,19 @@ class SignupController extends ChangeNotifier {
   }
 
   Future<SignupStatus> signUp() async {
+    // Check rate limiting before proceeding
+    if (!canMakeRequest) {
+      final cooldown = remainingCooldown;
+      if (cooldown != null) {
+        setError('Too many requests. Please wait ${cooldown.inSeconds} seconds before trying again.');
+        return SignupStatus.rateLimited;
+      }
+    }
+
+    // Update request tracking
+    _lastRequestTime = DateTime.now();
+    _requestCount++;
+    
     setLoading(true);
     setError(null);
     setHasExistingAccount(false);
@@ -85,6 +158,7 @@ class SignupController extends ChangeNotifier {
         setLoading(false);
         return SignupStatus.existingUser;
       } else {
+        _failureCount++;
         setError('Sign up failed. Please try again.');
         setLoading(false);
         return SignupStatus.error;
@@ -108,9 +182,11 @@ class SignupController extends ChangeNotifier {
         default:
           setError('Sign up failed: ${e.message}');
       }
+      _failureCount++;
       setLoading(false);
       return SignupStatus.error;
     } catch (e) {
+      _failureCount++;
       setError('An unexpected error occurred. Please try again.');
       setLoading(false);
       return SignupStatus.error;

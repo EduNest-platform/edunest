@@ -1,4 +1,4 @@
-// Attendance Management System
+// Attendance Management System with Caching
 let currentUser = null;
 let currentUserRole = null;
 let selectedClass = null;
@@ -6,12 +6,41 @@ let classes = [];
 let roster = [];
 let attendanceData = {};
 let assignedCollege = { id: null, name: null };
+let cacheEnabled = true; // Enable caching by default
+
+// Cache configuration
+const CACHE_CONFIG = {
+  CLASSES_KEY: 'attendance_classes_cache',
+  CLASSES_TTL: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
+  TIMESTAMP_KEY: 'attendance_classes_timestamp'
+};
 
 // Initialize the attendance system
 document.addEventListener('DOMContentLoaded', async function() {
-  await checkAuthStatus();
-  await loadUserInfo();
+  // Show skeleton cards immediately
+  showSkeletonCards();
+  
+  // Run auth and user info loading first, then check role
+  await Promise.all([
+    checkAuthStatus(),
+    loadUserInfo()
+  ]);
+  
+  // Check professor role after user info is loaded
   await checkProfessorRole();
+  
+  // Wait for cache manager to be available (non-blocking)
+  if (cacheEnabled) {
+    let attempts = 0;
+    while (!window.adminCache && attempts < 10) {
+      await new Promise(resolve => setTimeout(resolve, 50));
+      attempts++;
+    }
+    if (window.adminCache) {
+      console.log('Cache manager ready for attendance system');
+    }
+  }
+  
   await initializeAttendanceSystem();
 });
 
@@ -27,23 +56,17 @@ async function checkAuthStatus() {
 // Load user information
 async function loadUserInfo() {
   try {
-    const { data: { user } } = await window.supabaseAdmin.auth.getUser();
+    const user = await window.authManager.getCurrentUser();
     if (!user) {
       window.location.href = 'index.html';
       return;
     }
     
     currentUser = user;
+    console.log('User loaded:', user.email);
     
-    // Update UI with user info
-    const userName = document.getElementById('userName');
-    const userEmail = document.getElementById('userEmail');
-    const userAvatar = document.getElementById('userAvatar');
-    const mobileUserName = document.getElementById('mobileUserName');
-    const mobileUserEmail = document.getElementById('mobileUserEmail');
-    const mobileUserAvatar = document.getElementById('mobileUserAvatar');
-    
-    if (userName) userName.textContent = user.email.split('@')[0];
+    // Check if user is a professor after loading user info
+    await checkProfessorRole();
     if (userEmail) userEmail.textContent = user.email;
     if (userAvatar) userAvatar.textContent = user.email.charAt(0).toUpperCase();
     if (mobileUserName) mobileUserName.textContent = user.email.split('@')[0];
@@ -59,6 +82,12 @@ async function loadUserInfo() {
 // Check if user is a professor
 async function checkProfessorRole() {
   try {
+    // Ensure currentUser is loaded before proceeding
+    if (!currentUser || !currentUser.id) {
+      console.error('currentUser not loaded yet, skipping role check');
+      return;
+    }
+    
     const { data: adminData, error: roleError } = await window.supabaseAdmin
       .from('community_admins')
       .select('role')
@@ -94,6 +123,41 @@ async function checkProfessorRole() {
     console.error('Error checking professor role:', error);
     showMsg('messageDisplay', 'Error loading user role.', true);
   }
+}
+
+// Show skeleton loading cards immediately
+function showSkeletonCards() {
+  const classesGrid = document.getElementById('classesGrid');
+  if (!classesGrid) return;
+  
+  const skeletonCards = Array(3).fill(0).map(() => `
+    <div class="class-card skeleton-card">
+      <div class="class-header">
+        <div class="skeleton-title"></div>
+      </div>
+      <div class="class-details">
+        <div class="class-detail">
+          <span>🏢</span>
+          <div class="skeleton-text"></div>
+        </div>
+        <div class="class-detail">
+          <span>📚</span>
+          <div class="skeleton-text"></div>
+        </div>
+        <div class="class-detail">
+          <span>🏫</span>
+          <div class="skeleton-text"></div>
+        </div>
+      </div>
+      <div class="class-actions-grid">
+        <div class="skeleton-button"></div>
+        <div class="skeleton-button"></div>
+        <div class="skeleton-button"></div>
+      </div>
+    </div>
+  `).join('');
+  
+  classesGrid.innerHTML = skeletonCards;
 }
 
 // Initialize attendance system
@@ -141,10 +205,81 @@ async function resolveAssignedCollege() {
   }
 }
 
-// Load classes for the professor
-async function loadClasses() {
+// Cache utility functions
+function getCachedClasses() {
   try {
-    showLoading('Loading classes...');
+    const cachedData = localStorage.getItem(CACHE_CONFIG.CLASSES_KEY);
+    const timestamp = localStorage.getItem(CACHE_CONFIG.TIMESTAMP_KEY);
+    
+    if (!cachedData || !timestamp) return null;
+    
+    const now = Date.now();
+    const cacheAge = now - parseInt(timestamp);
+    
+    if (cacheAge > CACHE_CONFIG.CLASSES_TTL) {
+      // Cache expired
+      localStorage.removeItem(CACHE_CONFIG.CLASSES_KEY);
+      localStorage.removeItem(CACHE_CONFIG.TIMESTAMP_KEY);
+      return null;
+    }
+    
+    return JSON.parse(cachedData);
+  } catch (error) {
+    console.error('Error reading classes cache:', error);
+    return null;
+  }
+}
+
+function setCachedClasses(classesData) {
+  try {
+    localStorage.setItem(CACHE_CONFIG.CLASSES_KEY, JSON.stringify(classesData));
+    localStorage.setItem(CACHE_CONFIG.TIMESTAMP_KEY, Date.now().toString());
+    console.log('Classes cached successfully');
+  } catch (error) {
+    console.error('Error caching classes:', error);
+  }
+}
+
+function clearClassesCache() {
+  localStorage.removeItem(CACHE_CONFIG.CLASSES_KEY);
+  localStorage.removeItem(CACHE_CONFIG.TIMESTAMP_KEY);
+  console.log('Classes cache cleared');
+}
+
+// Load classes for the professor with caching
+async function loadClasses(forceRefresh = false) {
+  try {
+    // Try to load from cache first (unless force refresh)
+    if (!forceRefresh && cacheEnabled) {
+      const cachedClasses = getCachedClasses();
+      if (cachedClasses && cachedClasses.length > 0) {
+        console.log('Loading classes from cache');
+        classes = cachedClasses.filter(classItem => !assignedCollege.name || classItem.college === assignedCollege.name);
+        renderClasses();
+        
+        // Background refresh - update cache silently (immediate)
+        loadClassesFromDatabase(true);
+        
+        return;
+      }
+    }
+    
+    // Load from database
+    await loadClassesFromDatabase(false);
+    
+  } catch (error) {
+    console.error('Error loading classes:', error);
+    showMsg('messageDisplay', 'Error loading classes: ' + error.message, true);
+    hideLoading();
+  }
+}
+
+// Load classes from database
+async function loadClassesFromDatabase(isBackgroundRefresh = false) {
+  try {
+    if (!isBackgroundRefresh) {
+      showLoading('Loading classes...');
+    }
     
     // Get classes created by this professor using simplified structure
     const { data: professorClasses, error } = await window.supabaseClient
@@ -155,7 +290,7 @@ async function loadClasses() {
     if (error) throw error;
 
     // Map the simplified data to the expected format
-    classes = (professorClasses || [])
+    const fetchedClasses = (professorClasses || [])
       .map(professorClass => ({
         id: professorClass.id, // This is the professor_class id
         name: professorClass.subject_name, // Use subject name as main title
@@ -168,16 +303,38 @@ async function loadClasses() {
         subject: professorClass.subject_name,
         subjectId: professorClass.subject_id || null, // Get actual subject ID
         className: professorClass.class_name
-      }))
-      .filter(classItem => !assignedCollege.name || classItem.college === assignedCollege.name);
+      }));
 
-    renderClasses();
-    hideLoading();
+    // Cache the fetched classes
+    if (cacheEnabled) {
+      setCachedClasses(fetchedClasses);
+    }
+
+    // Filter and update classes
+    classes = fetchedClasses.filter(classItem => !assignedCollege.name || classItem.college === assignedCollege.name);
+
+    if (!isBackgroundRefresh) {
+      renderClasses();
+      hideLoading();
+    } else {
+      // Silent background update - only re-render if data changed
+      const currentClassIds = classes.map(c => c.id).sort();
+      const newClassIds = fetchedClasses.filter(classItem => !assignedCollege.name || classItem.college === assignedCollege.name).map(c => c.id).sort();
+      
+      if (JSON.stringify(currentClassIds) !== JSON.stringify(newClassIds)) {
+        console.log('Classes updated in background, refreshing UI');
+        renderClasses();
+      }
+    }
     
   } catch (error) {
-    console.error('Error loading classes:', error);
-    showMsg('messageDisplay', 'Error loading classes: ' + error.message, true);
-    hideLoading();
+    if (!isBackgroundRefresh) {
+      console.error('Error loading classes:', error);
+      showMsg('messageDisplay', 'Error loading classes: ' + error.message, true);
+      hideLoading();
+    } else {
+      console.warn('Background refresh failed:', error);
+    }
   }
 }
 
@@ -203,7 +360,6 @@ function renderClasses() {
     <div class="class-card" data-class-id="${classItem.id}" data-class-name="${classItem.subject}" onclick="handleClassCardClick(event, this)">
       <div class="class-header">
         <h3 class="class-title">${classItem.subject}</h3>
-        <div class="class-code">${classItem.id}</div>
       </div>
       <div class="class-details">
         <div class="class-detail">
@@ -240,9 +396,17 @@ function renderClasses() {
           <span class="btn-icon">✏️</span>
           <span class="btn-text">Assignment Marks</span>
         </button>
+        <button class="action-btn midsem-btn" onclick="event.stopPropagation(); openMidsemMarks('${classItem.id}', '${classItem.subject}', '${classItem.college}', '${classItem.branch}', '${classItem.semester}')" title="Midsem Marks">
+          <span class="btn-icon">📝</span>
+          <span class="btn-text">Midsem Marks</span>
+        </button>
         <button class="action-btn feedback-btn" onclick="event.stopPropagation(); openFeedbackAnalytics('${classItem.id}', '${classItem.subject}', '${classItem.subjectId}', '${classItem.college}', '${classItem.branch}', '${classItem.semester}')" title="View Feedback">
           <span class="btn-icon">💬</span>
           <span class="btn-text">Feedback</span>
+        </button>
+        <button class="action-btn students-btn" onclick="event.stopPropagation(); openManageStudents('${classItem.id}', '${classItem.subject}', '${classItem.college}', '${classItem.branch}', '${classItem.semester}')" title="Manage Students">
+          <span class="btn-icon">👥</span>
+          <span class="btn-text">Manage Students</span>
         </button>
       </div>
     </div>
@@ -501,6 +665,19 @@ function openAttendanceTracker(classId) {
 function openAttendanceAnalytics(classId) {
   console.log('Opening attendance analytics for class:', classId);
   window.location.href = `attendance_analytics.html?classId=${classId}`;
+}
+
+// Open manage students page
+function openManageStudents(classId, subject, college, branch, semester) {
+  console.log('Opening manage students for class:', classId);
+  const params = new URLSearchParams({
+    classId: classId,
+    subject: subject,
+    college: college,
+    branch: branch,
+    semester: semester
+  });
+  window.location.href = `manage_students.html?${params.toString()}`;
 }
 
 // Mark attendance for a class
@@ -865,8 +1042,9 @@ async function createClass() {
 
     showMsg('messageDisplay', 'Class created successfully!', false);
     
-    // Refresh the classes list
-    await loadClasses();
+    // Clear cache and refresh the classes list
+    clearClassesCache();
+    await loadClasses(true); // Force refresh from database
     
     // Close modal and reset form
     closeModal('addClassModal');
@@ -1152,17 +1330,22 @@ function openAssignmentMarks(classId, subjectName, collegeName, branchName, seme
   sessionStorage.setItem('selectedCollegeName', collegeName);
   sessionStorage.setItem('selectedBranchName', branchName);
   sessionStorage.setItem('selectedSemesterName', semesterName);
-  sessionStorage.setItem('assignmentMarksContext', 'class');
   
-  // Redirect to assignment marks page with full context
-  const params = new URLSearchParams({
-    classId: classId,
-    subject: subjectName,
-    college: collegeName,
-    branch: branchName,
-    semester: semesterName
-  });
-  window.location.href = `assignment_marks.html?${params.toString()}`;
+  // Navigate to assignment marks page
+  window.location.href = `assignment_marks.html?classId=${classId}&subject=${encodeURIComponent(subjectName)}`;
+}
+
+// Open Midsem Marks for specific class
+function openMidsemMarks(classId, subjectName, collegeName, branchName, semesterName) {
+  // Store complete class context in sessionStorage
+  sessionStorage.setItem('selectedClassId', classId);
+  sessionStorage.setItem('selectedSubjectName', subjectName);
+  sessionStorage.setItem('selectedCollegeName', collegeName);
+  sessionStorage.setItem('selectedBranchName', branchName);
+  sessionStorage.setItem('selectedSemesterName', semesterName);
+  
+  // Navigate to midsem marks page
+  window.location.href = `midsem_marks.html?classId=${classId}&subject=${encodeURIComponent(subjectName)}`;
 }
 
 function openFeedbackAnalytics(classId, subjectName, subjectId, collegeName, branchName, semesterName) {
@@ -1344,9 +1527,10 @@ async function confirmDeleteSelectedClasses() {
       showMsg('messageDisplay', `Deleted ${successCount} class${successCount > 1 ? 'es' : ''} successfully. ${errorCount} failed: ${errors.join(', ')}`, true);
     }
 
-    // Refresh the classes list
-    console.log('Refreshing classes list...');
-    await loadClasses();
+    // Clear cache and refresh the classes list
+    console.log('Clearing cache and refreshing classes list...');
+    clearClassesCache();
+    await loadClasses(true); // Force refresh from database
 
   } catch (error) {
     hideLoading();
@@ -1423,7 +1607,7 @@ async function deleteClassData(classId) {
       console.log('Class roster deleted successfully');
     }
 
-    // 3. Delete from professor_attendance (optional - might not exist)
+    // 3. Delete from professor_attendance (legacy attendance table)
     console.log('Deleting professor attendance...');
     const { error: profAttendanceError } = await window.supabaseClient
       .from('professor_attendance')
@@ -1440,7 +1624,90 @@ async function deleteClassData(classId) {
       console.log('Professor attendance deleted successfully');
     }
 
-    // 4. Finally, delete the main class record
+    // 4. Delete from class_attendance_sessions (new optimized attendance table)
+    console.log('Deleting class attendance sessions...');
+    const { error: sessionsError } = await window.supabaseClient
+      .from('class_attendance_sessions')
+      .delete()
+      .eq('class_id', classId);
+    
+    if (sessionsError) {
+      if (sessionsError.code === '42P01') {
+        console.log('Class attendance sessions table does not exist - skipping');
+      } else {
+        console.warn('Class attendance sessions deletion warning:', sessionsError);
+      }
+    } else {
+      console.log('Class attendance sessions deleted successfully');
+    }
+
+    // 5. Delete midsem marks (separate from regular assignment marks)
+    console.log('Deleting midsem marks...');
+    const { error: midsemError } = await window.supabaseClient
+      .from('class_assignment_marks')
+      .delete()
+      .eq('class_id', classId)
+      .like('assignment_name', 'Midsem:%');
+    
+    if (midsemError) {
+      if (midsemError.code === '42P01') {
+        console.log('Midsem marks table does not exist - skipping');
+      } else {
+        console.warn('Midsem marks deletion warning:', midsemError);
+      }
+    } else {
+      console.log('Midsem marks deleted successfully');
+    }
+
+    // 6. Delete assigned tests from Questions database
+    console.log('Deleting assigned tests...');
+    try {
+      // Initialize Questions Supabase client if not already done
+      const SUPABASE_QUESTIONS_URL = 'https://pfuzvpihupvhjshxiofn.supabase.co';
+      const SUPABASE_QUESTIONS_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBmdXp2cGlodXB2aGpzaHhpb2ZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE1Mjg1MjIsImV4cCI6MjA2NzEwNDUyMn0.WAPJG6iaxuCAM75yCRu6UOcck37XuilVoDJK3uwyx-k';
+      
+      if (!window.supabaseQuestions) {
+        window.supabaseQuestions = window.supabase.createClient(SUPABASE_QUESTIONS_URL, SUPABASE_QUESTIONS_KEY, {
+          auth: { storageKey: 'supabase.questions.temp' }
+        });
+      }
+
+      const { error: testsError } = await window.supabaseQuestions
+        .from('assigned_tests')
+        .delete()
+        .eq('class_id', classId);
+      
+      if (testsError) {
+        if (testsError.code === '42P01') {
+          console.log('Assigned tests table does not exist - skipping');
+        } else {
+          console.warn('Assigned tests deletion warning:', testsError);
+        }
+      } else {
+        console.log('Assigned tests deleted successfully');
+      }
+    } catch (testsError) {
+      console.warn('Could not delete assigned tests:', testsError.message);
+    }
+
+    // 7. Delete feedback data
+    console.log('Deleting feedback data...');
+    const { error: feedbackError } = await window.supabaseClient
+      .from('class_feedback')
+      .delete()
+      .eq('class_id', classId);
+    
+    if (feedbackError) {
+      if (feedbackError.code === '42P01') {
+        console.log('Class feedback table does not exist - skipping');
+      } else {
+        console.warn('Class feedback deletion warning:', feedbackError);
+      }
+    } else {
+      console.log('Class feedback deleted successfully');
+    }
+
+    // 8. Finally, delete the main class record
     console.log('Deleting main class record...');
     const { error: classError, data: deletedData } = await window.supabaseClient
       .from('professor_classes')

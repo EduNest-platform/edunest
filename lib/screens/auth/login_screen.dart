@@ -4,7 +4,7 @@ import '../../theme/app_theme.dart';
 import '../../controllers/login_controller.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../services/supabase_auth_service.dart';
+import '../../services/auth_service.dart';
 import 'change_password_screen.dart';
 import 'dart:io';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -51,6 +51,16 @@ class _LoginScreenBodyState extends State<_LoginScreenBody> {
     super.didChangeDependencies();
     _controller = Provider.of<LoginController>(context, listen: false);
     _loadSavedCredentials();
+    _handleRouteArguments();
+  }
+
+  void _handleRouteArguments() {
+    final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    if (args != null && args['prefillEmail'] != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _controller?.emailController.text = args['prefillEmail'];
+      });
+    }
   }
 
   Future<void> _loadSavedCredentials() async {
@@ -167,7 +177,7 @@ class _LoginScreenBodyState extends State<_LoginScreenBody> {
                                   setModalState(() {
                                     _savedCredentials.removeAt(i);
                                   });
-                                  if (mounted) {
+                                  if (context.mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
                                         content: Text('Credential deleted'),
@@ -426,7 +436,7 @@ class _LoginScreenBodyState extends State<_LoginScreenBody> {
 
     return PopScope(
       canPop: false,
-      onPopInvoked: (didPop) async {
+      onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
 
         // Show confirmation dialog before closing app
@@ -779,7 +789,7 @@ class _LoginScreenBodyState extends State<_LoginScreenBody> {
                               ),
                               const SizedBox(height: 12),
 
-                              if (SupabaseAuthService.isLoggedIn)
+                              if (AuthService.currentUser != null)
                                 SizedBox(
                                   width: double.infinity,
                                   child: OutlinedButton(

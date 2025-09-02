@@ -4,30 +4,38 @@ import 'connection_queue_service.dart';
 import 'free_optimized_cache_service.dart';
 import 'load_balancing_service.dart';
 import 'performance_optimization_service.dart';
+import 'global_system_monitor.dart';
 
 /// Master service that combines all free plan optimizations
 class FreePlanOptimizerService {
   static bool _isInitialized = false;
   static Timer? _cleanupTimer;
 
-  /// Initialize all optimization services
+  /// Initialize all optimization services with smart user tracking
   static Future<void> initialize() async {
     if (_isInitialized) return;
 
-    // Start periodic cleanup
+    // Initialize global system monitoring
+    await GlobalSystemMonitor.initialize();
+
+    // Start periodic cleanup with smart intervals based on real global load
+    final isLowLoad = await GlobalSystemMonitor.isLowLoadMode();
     _cleanupTimer = Timer.periodic(
-      const Duration(minutes: 15),
+      Duration(minutes: isLowLoad ? 30 : 15), // Longer intervals for low load
       (_) => _performMaintenance(),
     );
 
-    // Preload critical data during initialization
-    final user = await _getCurrentUser();
-    if (user != null) {
-      await FreeOptimizedCacheService.preloadCriticalData(user);
+    // Preload critical data during initialization (only for medium/high load)
+    if (!isLowLoad) {
+      final user = await _getCurrentUser();
+      if (user != null) {
+        await FreeOptimizedCacheService.preloadCriticalData(user);
+      }
     }
 
     _isInitialized = true;
-    if (kDebugMode) print('✅ Free Plan Optimizer initialized');
+    final stats = await GlobalSystemMonitor.getGlobalSystemStats();
+    if (kDebugMode) print('✅ Smart Free Plan Optimizer initialized (Global Users: ${stats['active_users']}, Load: ${stats['crash_risk']})');
   }
 
   /// Execute database operation with all optimizations
@@ -48,26 +56,61 @@ class FreePlanOptimizerService {
       }
     }
 
-    // 2. Use connection queue to manage concurrent connections
+    // 🚀 SMART EXECUTION: Choose optimization level based on real global load
+    final isLowLoad = await GlobalSystemMonitor.isLowLoadMode();
+    final isMediumLoad = await GlobalSystemMonitor.isMediumLoadMode();
+    
+    if (isLowLoad) {
+      // Low load: Simple, fast execution with minimal overhead
+      return PerformanceOptimizationService.trackOperation(
+        operationName,
+        () async {
+          if (useCache) {
+            return await FreeOptimizedCacheService.getCachedOrExecute(
+              operationName,
+              operation,
+              duration: cacheDuration ?? const Duration(minutes: 5),
+            );
+          }
+          return await operation();
+        },
+      );
+    }
+    
+    if (isMediumLoad) {
+      // Medium load: Moderate optimization
+      return ConnectionQueueService.executeWithQueue(
+        operationName,
+        () async {
+          if (useCache) {
+            return await FreeOptimizedCacheService.getCachedOrExecute(
+              operationName,
+              operation,
+              duration: cacheDuration ?? const Duration(minutes: 10),
+            );
+          }
+          return await operation();
+        },
+        priority: priority,
+      );
+    }
+    
+    // High load: Full sophisticated optimization pipeline
     return ConnectionQueueService.executeWithQueue(
       operationName,
       () async {
-        // 3. Apply load balancing
         return LoadBalancingService.executeWithLoadBalancing(
           operationName,
           () async {
-            // 4. Track performance
             return PerformanceOptimizationService.trackOperation(
               operationName,
               () async {
-                // 5. Execute with timeout
                 final result = await PerformanceOptimizationService.executeWithTimeout(
                   operation(),
-                  timeout: const Duration(seconds: 8), // Shorter timeout for free plan
+                  timeout: const Duration(seconds: 8), // Shorter timeout for high load
                   operationName: operationName,
                 );
 
-                // 6. Cache the result
                 if (useCache) {
                   final cacheKey = 'db_$operationName';
                   await FreeOptimizedCacheService.cacheData(

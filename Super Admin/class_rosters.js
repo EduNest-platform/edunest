@@ -426,6 +426,7 @@ function renderStudentsModal() {
   `;
 }
 
+
 // Link student to app profile
 async function linkStudent(studentId) {
   const student = currentStudents.find(s => s.id === studentId);
